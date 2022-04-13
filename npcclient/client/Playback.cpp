@@ -46,7 +46,7 @@ void OnServerCycle()
             if (mPlayback.type == PLAYER_RECORDING_TYPE_DRIVER)
             {
                 DWORD dw_TimeDifference = GetTickCount() - mPlayback.dw_pausedTime;
-                bool bCondition1 = dw_TimeDifference % 100 >= (100 - CYCLE_SLEEP);
+                bool bCondition1 = (dw_TimeDifference % 100) >= (100 - CYCLE_SLEEP);
                 if (  bCondition1 )
                 {
                     //To stop the car or wait in car (otherwise car respawns!)

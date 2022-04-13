@@ -15,7 +15,7 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 #include "main.h"
-HSQUIRRELVM v; NPC* iNPC;
+HSQUIRRELVM v; NPC* iNPC = NULL;
 RakNet::RakPeerInterface* peer;
 RakNet::SystemAddress systemAddress;
 CPlayerPool* m_pPlayerPool;
@@ -62,6 +62,9 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 	printf("Starting the client.\n");
 	peer->Connect(hostname.c_str(), port, password.c_str(), password.length() + 1);
 	
+	if (!m_pPlayerPool)
+		m_pPlayerPool = new CPlayerPool();
+
 	while (1)
 	{
 		for (packet = peer->Receive(); packet; peer->DeallocatePacket(packet), packet = peer->Receive())
@@ -72,8 +75,6 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 			{
 				ConnectAsVCMPClient(peer, npcname.c_str(), (uint8_t)npcname.length(), packet->systemAddress);
 				systemAddress = packet->systemAddress;
-				if (!m_pPlayerPool)
-					m_pPlayerPool = new CPlayerPool();
 			}
 			break;
 			case ID_SERVER_MESSAGE_CLIENT_CONNECT:
@@ -92,10 +93,26 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				if (playername)
 				{
 					playername[namelen] = '\0';
-					m_pPlayerPool->New(playerid, playername);
+					if (m_pPlayerPool->GetSlotState(playerid))
+					{
+						if (strcmp(playername, m_pPlayerPool->GetPlayerName(playerid)) == 0);
+						else
+						{
+							printf("Same slot- different player names\n");
+							m_pPlayerPool->Delete(playerid);
+							m_pPlayerPool->New(playerid, playername);
+						}
+					}
+					else
+					{
+						m_pPlayerPool->New(playerid, playername);
+					}
 				}
-				else exit(1);
-
+				else
+				{
+					printf("Failed to allocate name\n");
+					exit(1);
+				}
 			}
 			break;
 			case ID_GAME_MESSAGE_PLAYERUPDATE_PASSENGER:
@@ -148,11 +165,13 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				call_OnNPCDisconnect(0);
 				m_pPlayerPool->Delete(iNPC->GetID());
 				StopSquirrel();
+				printf("Disconnected\n");
 				exit(0);
 			case ID_CONNECTION_LOST:
 				call_OnNPCDisconnect(0);
 				m_pPlayerPool->Delete(iNPC->GetID());
 				StopSquirrel();
+				printf("Disconnected\n");
 				exit(0);
 			case ID_GAME_MESSAGE_JOIN:
 			{
@@ -165,18 +184,22 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				iNPC->SetID(npcid);
 				char* name;
 				name = (char*)malloc(sizeof(char) * (npcname.length() + 1));
-				strcpy(name, npcname.c_str());
-				name[npcname.length()] = '\0';
 				if (name)
 				{
+					strcpy(name, npcname.c_str());
+					name[npcname.length()] = '\0';
 					bool bSuccess=m_pPlayerPool->New(npcid, name);
 					if (bSuccess)
 						npc = m_pPlayerPool->GetAt(npcid);
 					if (!bSuccess || !npc)
+					{
 						exit(1);
+					}
 					delete name;
 				}
-				else exit(1);
+				else {
+					exit(1);
+				}
 				call_OnNPCConnect(iNPC->GetID());
 				RakNet::BitStream bsOut, bsOut2, bsOut3;
 				bsOut.Write((RakNet::MessageID)0xb9);
@@ -227,13 +250,12 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
 				uint8_t playerid;
 				bsIn.ReadAlignedBytes(&playerid, 1);
-				if (iNPC->Initialized() && playerid == iNPC->GetID() && iNPC->IsSpawned() == false)
+				if (iNPC && iNPC->Initialized() && playerid == iNPC->GetID() && iNPC->IsSpawned() == false)
 				{
 					RakNet::BitStream bsOut;
 					bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_REQUEST_SPAWN);
 					peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, packet->systemAddress, false);
 				}
-
 			}
 			break;
 			case ID_GAME_MESSAGE_SPAWN_GRANTED:
