@@ -6,5 +6,4 @@ The first two are built from https://github.com/albertodemichelis/squirrel. ( Wi
 
 libnpc contains a function to connect to server. It is made so not to expose some properties of vc-mp public.
 
-A note regarding bitness of outputs
 Both Windows 32 and 64 bit systems use npcclient.exe, which is 32 bit. It might need vc_redist.x86
