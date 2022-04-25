@@ -10,4 +10,4 @@ The third library 'libnpc' contains a function to connect to server. It is made 
 
 Both Windows 32 and 64 bit systems use npcclient.exe, which is 32 bit. It might need vc_redist.x86
 
-Note: The libs needed for linux x86 is yet to be made.
+The libs needed for Linux x86 project is now ready.
