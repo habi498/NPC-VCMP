@@ -3,6 +3,8 @@ Implements Non Player Characters (NPC) for VCMP 0.4
 
 # Instructions for building the project. 
 
+This is a Visual Studio 'CMake Project'.
+
 The sub project npcclient uses three pre-built static libraries - libsquirrel, libsqstd and libnpc.
 All libraries are included with the project. And first two libraries can be built again from [here](https://github.com/albertodemichelis/squirrel)
 
