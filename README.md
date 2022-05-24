@@ -24,3 +24,9 @@ The third library 'libnpc' contains a function to connect to server. It is made 
 Both Windows 32 and 64 bit systems use npcclient.exe, which is 32 bit. It might need vc_redist.x86
 
 In linux, 32 bit systems and 64 bit systems use different executables. They are distinguished as by appending the bitness at the end of it.
+
+## Project Configurations
+1. WINODWS_32 (Release)
+2. WINDOWS_64 (Release)
+3. LINUX_32 (Release)
+4. LINUX_64 (Release)
