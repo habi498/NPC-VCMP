@@ -4,7 +4,7 @@ Implements Non Player Characters (NPC) for VCMP 0.4
 # Instructions for building the project. 
 
 The sub project npcclient uses three pre-built static libraries - libsquirrel, libsqstd and libnpc.
-All libraries are included with the project. And first two libraries can be built again from https://github.com/albertodemichelis/squirrel.
+All libraries are included with the project. And first two libraries can be built again from [here](https://github.com/albertodemichelis/squirrel)
 
 The third library 'libnpc' contains a function to connect to server. It is made so not to expose some properties of vc-mp public.
 
