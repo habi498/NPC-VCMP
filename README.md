@@ -48,4 +48,6 @@ Both Windows 32 and 64 bit systems use npcclient.exe, which is 32 bit. It might 
 
 In linux, 32 bit systems and 64 bit systems use different executables. They are distinguished as by appending the bitness at the end of it.
 
+## Binaries can be downloaded from sourceforge.net
+Select version 1.1 at the files over [here](https://sourceforge.net/projects/npc-for-vcmp/files/)
 
