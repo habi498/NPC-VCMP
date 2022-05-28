@@ -18,6 +18,7 @@ The bitness of npcclient.exe is currently 32 bit always. This is made in view of
   Building on WINDOWS_**64** will produce the npc04rel64.dll in _out\build\WINDOWS_64\plugin_ folder.
   
   Building after selecting WINDOWS_32 will produce both npcclient.exe and the plugin npc04rel32.dll in _out\build\WINDOWS_32\npcclient_ folder and _out\build\WINDOWS_32\plugin_ folder respectively.
+  
   This can be summarised on the following table:
   <img src="https://github.com/habi498/npc-vcmp/blob/master/binaries.png" width="510"></img>
 ## Building for LINUX on windows
