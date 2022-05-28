@@ -4,6 +4,9 @@ Implements Non Player Characters (NPC) for VCMP 0.4
 # Instructions for building the project. 
 
 This is a Visual Studio 'CMake Project'.
+## Visual Studio -> File -> Clone Repository
+![alt text](https://github.com/habi498/npc-vcmp/blob/master/pciture.png?raw=true)
+
 ## There are two sub projects. 
 ### 1. npcclient
 This is the executable which uses Raknet to connect to a VC-MP Server.
