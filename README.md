@@ -51,3 +51,32 @@ In linux, 32 bit systems and 64 bit systems use different executables. They are 
 ## Binaries can be downloaded from sourceforge.net
 Select version 1.1 at the files over [here](https://sourceforge.net/projects/npc-for-vcmp/files/)
 
+## NPC Application (npcclient.exe) Command-line arguments
+The tclap libary has been made use and hence the the application can be run with the following parameters:
+```
+USAGE:
+
+   npcclient  [-] [-h <IP address>] [-p <port>] [-z <password>] -m <scriptfile> -n <name>
+   
+Where:
+
+   -h <IP address>,  --hostname <IP address>
+     IP address of host
+
+   -p <port>,  --port <port>
+     Port to connect to
+
+   -n <name>,  --name <name>
+     (required) Name of the NPC
+
+   -m <scriptfile>,  --scriptfile <scriptfile>
+     (required) Squirrel Script file to be used
+
+   -z <password>,  --password <password>
+     Password of the server to connect
+
+   --,  --ignore_rest
+     Ignores the rest of the labeled arguments following this flag.
+
+   VCMP-Non Player Characters
+```
