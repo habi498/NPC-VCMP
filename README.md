@@ -13,9 +13,9 @@ This is a Visual Studio 'CMake Project'.
 4. LINUX_64 (Release)
 ## Building on windows
 As you can see below (section titled "There are two sub projects"), we have to build two binaries: npcclient.exe (The application which runs NPCs as client) and npc04relxx.dll (the VC-MP Server plugin).
-The bitness of npcclient.exe is currently 32 bit always. This is made in view of the idea that 64 bit machines can run 32 bit applications in windows. Since, the bitness of **npcclient.exe is 32 bit**, it can be built only on the configuration "WINDOWS_32".
-Building on "WINDOWS_**64**" will produce the npc04rel64.dll in "out\build\WINDOWS_64\plugin" folder.
-Building after selecting "WINDOWS_32" will produce both npcclient.exe and the plugin npc04rel32.dll in "out\build\WINDOWS_32\npcclient" folder and "out\build\WINDOWS_32\plugin" folder respectively.
+The bitness of npcclient.exe is currently 32 bit always. This is made in view of the idea that 64 bit machines can run 32 bit applications in windows. Since, the bitness of **npcclient.exe is 32 bit**, it can be built only on the configuration WINDOWS_32.
+Building on WINDOWS_**64** will produce the npc04rel64.dll in _out\build\WINDOWS_64\plugin_ folder.
+Building after selecting "WINDOWS_32" will produce both npcclient.exe and the plugin npc04rel32.dll in _out\build\WINDOWS_32\npcclient_ folder and _out\build\WINDOWS_32\plugin_ folder respectively.
 ## Building for LINUX on windows
 You must have **Linux-development-workload** installed on Visual Studio.( See "Visual Studio Setup" and "Ubuntu on remote Linux systems" at [this](https://docs.microsoft.com/en-us/cpp/linux/download-install-and-setup-the-linux-development-workload?view=msvc-170) page.
 
