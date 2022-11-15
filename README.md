@@ -93,3 +93,5 @@ Where:
 --Added ability for npc to shoot through sniper rifle.  
 --Added boolean parameter for crouching in SendOnFootSyncData.  
 --Windows builds were made.  
+
+wiki available at https://npc-for-vcmp.sourceforge.io/wikiw/index.php
