@@ -82,11 +82,11 @@ Where:
 ```
 
 ## Version Changes November 2022  
-1.2  
+**1.2  **
 --Implemented function SendOnFootSyncData through which NPCs can shoot by normal weapons.  
 --Only windows builds were made  
 
-1.3 (15.11.2022)  
+**1.3** (15.11.2022)  
 --Timer new implemented SetTimerEx  
 --Fixed npc running unwantedly due to an error while writing 4 bits through raknet.  
 --Fixed potential issue of not killing Timer if function not found at proper time.  
