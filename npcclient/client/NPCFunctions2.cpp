@@ -187,6 +187,115 @@ SQInteger fn_SetTimer(HSQUIRRELVM v)
     sq_pushinteger(v, TimerID);
     return 1;//we return timer id
 }
+SQInteger fn_SetTimerEx(HSQUIRRELVM v)
+{
+    // char * pFuncName, float interval, int maxPulses
+    if (sq_gettop(v) < 4)
+        return sq_throwerror(v, "Unexpected number of parameters for SetTimerEx [string, integer, integer]");
+    else if (sq_gettype(v, 2) != OT_STRING)
+        return sq_throwerror(v, "The function name must be given as a string.");
+    else if (sq_gettype(v, 3) != OT_INTEGER)
+        return sq_throwerror(v, "The interval must be integer.");
+    else if (sq_gettype(v, 4) != OT_INTEGER)
+        return sq_throwerror(v, "The maximum number of timer pulses must be integer.");
+
+    const SQChar* pFuncName;
+    SQInteger maxPulses;
+    SQInteger Interval;
+
+    sq_getstring(v, 2, &pFuncName);
+    {
+        sq_getinteger(v, 3, &Interval);
+
+        sq_getinteger(v, 4, &maxPulses);
+    }
+    //Check if the function exists
+    int top = sq_gettop(v); //saves the stack size before the call
+    sq_pushroottable(v); //pushes the global table
+    sq_pushstring(v, _SC(pFuncName), -1);
+    bool bFuncExists = SQ_SUCCEEDED(sq_get(v, -2));
+    sq_settop(v, top); //restores the original stack size
+    if (!bFuncExists)  //gets the field 'foo' from the global table
+        return sq_throwerror(v, "The given timer callback does not exist.");
+    sq_settop(v, top); //restores the original stack size
+    if (Interval <= 0)
+        return sq_throwerror(v, "The timer's interval must be > 0");
+    else if (maxPulses < 0)
+        return sq_throwerror(v, "The timer's maximum number of pulses must be >= 0");
+
+    CTimer* pTimer = new CTimer;
+    if (sq_gettop(v) > 4)
+    {
+        pTimer->paramCount = sq_gettop(v) - 4;
+        for (int i = 5; i <= sq_gettop(v); i++)
+        {
+            TimerParam pTempParam;
+            pTempParam.datatype = sq_gettype(v, i);
+            switch (pTempParam.datatype)
+            {
+            case OT_INTEGER:
+                pTempParam.pData = new SQInteger();
+                sq_getinteger(v, i, (SQInteger*)pTempParam.pData);
+                break;
+
+            case OT_FLOAT:
+                pTempParam.pData = new SQFloat();
+                sq_getfloat(v, i, (SQFloat*)pTempParam.pData);
+                break;
+
+            case OT_BOOL:
+                pTempParam.pData = new SQBool();
+                sq_getbool(v, i, (SQBool*)pTempParam.pData);
+                break;
+
+            case OT_STRING:
+            {
+                const SQChar* pString = NULL;
+                sq_getstring(v, i, &pString);
+                size_t len = strlen(pString);
+                char* data = (char*)malloc((len + 1) * sizeof(SQChar));
+                if (data)
+                {
+                    strcpy(data, pString);
+                    pTempParam.pData = data;
+                }
+
+                break;
+            }
+
+            /*case OT_TABLE:
+            case OT_ARRAY:
+            case OT_CLASS:*/
+            case OT_USERDATA:
+            case OT_USERPOINTER:
+            case OT_INSTANCE:
+            case OT_CLOSURE:
+            case OT_NATIVECLOSURE:
+            {
+                HSQOBJECT* o = new HSQOBJECT();
+                sq_getstackobj(v, i, o);
+                pTempParam.pData = o;
+                break;
+            }
+
+            case OT_NULL:
+            default:
+                break;
+            }
+
+            pTimer->params.push_back(pTempParam);
+        }
+
+    }//else of get_top > 4
+    pTimer->pFunc = const_cast<SQChar*>(pFuncName);
+    pTimer->intervalInTicks = Interval;
+    
+    pTimer->maxNumberOfPulses = maxPulses;
+    pTimer->SetAlarmParam();//Equivalent of calling _Update in ordinary 
+    int TimerID = AddTimer(pTimer);
+    sq_pushinteger(v, TimerID);
+    return 1;//we return timer id*/
+}
 SQInteger fn_KillTimer(HSQUIRRELVM v)
 {
     SQInteger TimerID;
@@ -210,5 +319,7 @@ void RegisterNPCFunctions2()
 	register_global_func(v, ::fn_GetPlayerPosZ, "GetPlayerPosZ", 2, "ti");
 	register_global_func(v, ::fn_SetTimer, "SetTimer", 4, "tsii");
 	register_global_func(v, ::fn_KillTimer, "KillTimer", 2, "ti");
+	
+    register_global_func(v, ::fn_SetTimerEx, "SetTimerEx", 0, "");
 
 }

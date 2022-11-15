@@ -186,6 +186,8 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData)
 	if (action & 0x10)
 	{
 		uint8_t msb = 0x1;//most significant byte
+		if (m_pOfSyncData->dwKeys & 0x01) //aiming
+			msb = 0;
 		#ifdef NPC_SHOOTING_ENABLED
 			msb = reloading_weapon ? 0 : msb;
 		#endif
@@ -199,11 +201,11 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData)
 		bsOut.Write(keybyte2);
 		bsOut.Write(msb);
 		#ifdef NPC_SHOOTING_ENABLED
-			uint8_t byteVal;
+			uint8_t byteVal = 0;
 			if ((m_pOfSyncData->dwKeys & 1) && !reloading_weapon)
-				byteVal = 0xc;
+				byteVal = uint8_t(0xc);
 			else if (reloading_weapon)
-				byteVal = 0x1;
+				byteVal = uint8_t(0x1);
 			WriteNibble(byteVal, &bsOut);
 		#else	
 			WriteNibble(1, &bsOut);
@@ -238,7 +240,7 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData)
 
 void WriteNibble(uint8_t nibble, RakNet::BitStream *bsOut)
 {
-	uint8_t bytearray[] = { nibble };
+	const uint8_t bytearray[] = { nibble };
 	bsOut->WriteBits(bytearray, 4);
 }
 void SetActionFlags(ONFOOT_SYNC_DATA* m_pOfSyncData, uint8_t* action)

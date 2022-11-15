@@ -27,7 +27,7 @@ enum GameMessages
 	ID_GAME_MESSAGE_PLAYER_DEATH = 0x9b,
 	ID_GAME_MESSAGE_PLAYER_TEXT = 0xcd,
 	ID_GAME_MESSAGE_VEHICLE_ENTER = 0xa2,
-	ID_GAME_MESSAGE_VEHICLE_EXIT=0xa4,
+	ID_GAME_MESSAGE_VEHICLE_EXIT = 0xa4,
 	ID_GAME_MESSAGE_NPC_VEHICLE_EXIT = 0xf8,
 	//another message 0xf9 is also send by server on exiting vehicle, 
 	//which appears to be same as 0xf8. 
@@ -50,5 +50,6 @@ enum GameMessages
 	ID_SERVER_MESSAGE_CLIENT_CONNECT = 0x98,
 	ID_GAME_MESSAGE_NAME_CHANGE = 0x9a,
 	ID_GAME_MESSAGE_CHAT = 0xa2,
-	ID_GAME_MESSAGE_COMMAND=0xa4//client
+	ID_GAME_MESSAGE_COMMAND=0xa4,//client
+	ID_GAME_MESSAGE_SNIPERFIRE = 0xae
 };

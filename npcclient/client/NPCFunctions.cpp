@@ -231,6 +231,111 @@ SQInteger fn_SendCommand(HSQUIRRELVM v)
     return 0;
 }
 
+//05-Nov 22
+void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData);
+SQInteger fn_SendOnFootSyncData(HSQUIRRELVM v)
+{
+    if (!npc) {
+        return 0;
+    }
+    //i fff f i i i fff fff fff
+    SQInteger dwKeys;
+    sq_getinteger(v, 2, &dwKeys);
+    //Position
+    SQFloat x, y, z;
+    sq_getfloat(v, 3, &x);
+    sq_getfloat(v, 4, &y);
+    sq_getfloat(v, 5, &z);
+    
+    SQFloat fAngle;
+    sq_getfloat(v, 6, &fAngle);
+
+    SQInteger byteHealth;
+    sq_getinteger(v, 7, &byteHealth);
+
+    SQInteger byteArmour;
+    sq_getinteger(v, 8, &byteArmour);
+
+    SQInteger byteCurrentWeapon;
+    sq_getinteger(v, 9, &byteCurrentWeapon);
+
+    //Speed
+    SQFloat vx, vy, vz;
+    sq_getfloat(v, 10, &vx);
+    sq_getfloat(v, 11, &vy);
+    sq_getfloat(v, 12, &vz);
+
+
+    //Aim Position
+    SQFloat s, t, u;
+    sq_getfloat(v, 13, &s);
+    sq_getfloat(v, 14, &t);
+    sq_getfloat(v, 15, &u);
+
+    //Aim Direction
+    SQFloat p, q, r;
+    sq_getfloat(v, 16, &p);
+    sq_getfloat(v, 17, &q);
+    sq_getfloat(v, 18, &r);
+    
+    //IsCrouching
+    SQBool bIsCrouching;
+    sq_getbool(v, 19, &bIsCrouching);
+    ONFOOT_SYNC_DATA m_pOfSyncData;
+    m_pOfSyncData.byteArmour = (uint8_t)byteArmour;
+    m_pOfSyncData.byteCurrentWeapon = (uint8_t)byteCurrentWeapon;
+    m_pOfSyncData.byteHealth = (uint8_t)byteHealth;
+    m_pOfSyncData.dwKeys = (uint32_t)dwKeys;
+    m_pOfSyncData.fAngle = fAngle;
+    m_pOfSyncData.IsAiming = ((dwKeys & 1)||(dwKeys &576) == 576);
+    m_pOfSyncData.IsCrouching = bIsCrouching != 0 ? true : false;
+    m_pOfSyncData.vecAimDir.X = p;
+    m_pOfSyncData.vecAimDir.Y = q;
+    m_pOfSyncData.vecAimDir.Z = r;
+
+    m_pOfSyncData.vecAimPos.X = s;
+    m_pOfSyncData.vecAimPos.Y = t;
+    m_pOfSyncData.vecAimPos.Z = u;
+
+    m_pOfSyncData.vecPos.X = x;
+    m_pOfSyncData.vecPos.Y = y;
+    m_pOfSyncData.vecPos.Z = z;
+
+    m_pOfSyncData.vecSpeed.X = vx;
+    m_pOfSyncData.vecSpeed.Y = vy;
+    m_pOfSyncData.vecSpeed.Z = vz;
+   
+    SendNPCSyncData(&m_pOfSyncData);
+    return 0;//0 because we are returning nothing!
+}
+SQInteger fn_FireSniperRifle(HSQUIRRELVM v)
+{
+    if (!npc)
+        return 0;
+    int weapon;
+    float x, y, z, alpha,angle;
+    // x y x aiming position
+    sq_getinteger(v, 2, &weapon);
+    sq_getfloat(v, 3, &x);
+    sq_getfloat(v, 4, &y);
+    sq_getfloat(v, 5, &z);
+    sq_getfloat(v, 6, &alpha);
+    sq_getfloat(v, 7, &angle);
+    RakNet::BitStream bsOut;
+    bsOut.Write((RakNet::MessageID)(ID_GAME_MESSAGE_SNIPERFIRE));
+    bsOut.Write((char)weapon);
+    bsOut.Write(z);// z first
+    bsOut.Write(y);
+    bsOut.Write(x);
+    float p= 5 * PI * alpha;
+    float q= 16 * cos(angle);
+    float r = -16 * sin(angle);
+    bsOut.Write(p);
+    bsOut.Write(q);
+    bsOut.Write(r);
+    peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE, 0, systemAddress, false);
+    return 0;
+}
 void RegisterNPCFunctions()
 {
     register_global_func(v, ::fn_StartRecordingPlayback,"StartRecordingPlayback",3,"tis");
@@ -248,6 +353,9 @@ void RegisterNPCFunctions()
     register_global_func(v, ::fn_StopRecordingPlayback,"StopRecordingPlayback",1,"t");
     register_global_func(v, ::fn_SendCommand, "SendCommand", 2, "ts");
     register_global_func(v, ::fn_SendChat,"SendChat",2,"ts");
+   
+    register_global_func(v, ::fn_SendOnFootSyncData, "SendOnFootSyncData", 19, "tiffffiiifffffffffb");
+    register_global_func(v, ::fn_FireSniperRifle, "FireSniperRifle", 7, "tifffff");
 }
 SQInteger RegisterSquirrelConst(HSQUIRRELVM v, const SQChar* cname, SQInteger cvalue) {
     sq_pushconsttable(v);

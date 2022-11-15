@@ -80,3 +80,5 @@ Where:
 
    VCMP-Non Player Characters
 ```
+Version 2.0 Major changes
+Timer new implemented.
