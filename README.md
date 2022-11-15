@@ -82,7 +82,7 @@ Where:
 ```
 
 ## Version Changes November 2022  
-**1.2  **
+**1.2**  
 --Implemented function SendOnFootSyncData through which NPCs can shoot by normal weapons.  
 --Only windows builds were made  
 
