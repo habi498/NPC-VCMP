@@ -25,6 +25,7 @@ void ReceivePlayerSyncData(RakNet::BitStream* bsIn, INCAR_SYNC_DATA* m_pIcSyncDa
 void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncDataOut, uint8_t* bytePlayerIdOut);
 VECTOR ConvertFromUINT16_T(uint16_t w_ComponentX, uint16_t w_ComponentY, uint16_t w_ComponentZ, float base);
 float ConvertFromUINT16_T(uint16_t compressedFloat, float base);
+uint8_t GetSlotId(uint8_t byteWeapon); 
 unsigned short calculate(unsigned char h, unsigned char t, unsigned char r)
 {
 	return h * 32 + t * 2 + (r >> 3);
@@ -143,6 +144,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				CPlayer* player = m_pPlayerPool->GetAt(bytePlayerId);
 				if (player)
 					player->StoreInCarFullSyncData(&m_IcSyncData);
+				call_OnPlayerUpdate(bytePlayerId, vcmpPlayerUpdateDriver);
 			}
 			break;
 			case ID_GAME_MESSAGE_ONFOOT_UPDATE_AIM:
@@ -155,7 +157,109 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				ReceivePlayerSyncData(&bsIn, &m_OfSyncData, &bytePlayerId);
 				CPlayer* player = m_pPlayerPool->GetAt(bytePlayerId);
 				if (player)
-					player->StoreOnFootFullSyncData(&m_OfSyncData);
+				{
+					player->StoreOnFootFullSyncData(&m_OfSyncData); 
+					if (packet->data[0] == ID_GAME_MESSAGE_ONFOOT_UPDATE)
+						call_OnPlayerUpdate(bytePlayerId, vcmpPlayerUpdateNormal);
+					else
+						call_OnPlayerUpdate(bytePlayerId, vcmpPlayerUpdateAiming);
+					/*int top = sq_gettop(v); //saves the stack size before the call
+					sq_pushroottable(v); //pushes the global table
+					sq_pushstring(v, _SC("OnPlayerUpdate"), -1);
+					if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
+						sq_pushroottable(v); //push the '.dw'
+						sq_pushinteger(v, bytePlayerId);
+						uint8_t updateType = packet->data[0] == ID_GAME_MESSAGE_ONFOOT_UPDATE ? vcmpPlayerUpdateNormal :
+							vcmpPlayerUpdateAiming;
+						sq_pushinteger(v, updateType);
+						sq_newclass(v, false);
+						
+						sq_pushstring(v, _SC("Keys"), -1);
+						sq_pushinteger(v, m_OfSyncData.dwKeys);
+						sq_newslot(v, -3, SQTrue);
+
+						sq_pushstring(v, _SC("PosX"), -1);
+						sq_pushfloat(v, m_OfSyncData.vecPos.X);
+						sq_newslot(v, -3, SQTrue);
+
+						sq_pushstring(v, _SC("PosY"), -1);
+						sq_pushfloat(v, m_OfSyncData.vecPos.Y);
+						sq_newslot(v, -3, SQTrue);
+
+						sq_pushstring(v, _SC("PosZ"), -1);
+						sq_pushfloat(v, m_OfSyncData.vecPos.Z);
+						sq_newslot(v, -3, SQTrue);
+
+						sq_pushstring(v, _SC("Angle"), -1);
+						sq_pushfloat(v, m_OfSyncData.fAngle);
+						sq_newslot(v, -3, SQTrue);
+
+						sq_pushstring(v, _SC("Health"), -1);
+						sq_pushinteger(v, m_OfSyncData.byteHealth);
+						sq_newslot(v, -3, SQTrue);
+
+						sq_pushstring(v, _SC("Armour"), -1);
+						sq_pushinteger(v, m_OfSyncData.byteArmour);
+						sq_newslot(v, -3, SQTrue);
+
+						sq_pushstring(v, _SC("Weapon"), -1);
+						sq_pushinteger(v, m_OfSyncData.byteCurrentWeapon);
+						sq_newslot(v, -3, SQTrue);
+
+						sq_pushstring(v, _SC("IsCrouching"), -1);
+						sq_pushbool(v, m_OfSyncData.IsCrouching);
+						sq_newslot(v, -3, SQTrue);
+
+						sq_pushstring(v, _SC("SpeedX"), -1);
+						sq_pushfloat(v, m_OfSyncData.vecSpeed.X);
+						sq_newslot(v, -3, SQTrue);
+
+						sq_pushstring(v, _SC("SpeedY"), -1);
+						sq_pushfloat(v, m_OfSyncData.vecSpeed.Y);
+						sq_newslot(v, -3, SQTrue);
+
+						sq_pushstring(v, _SC("SpeedZ"), -1);
+						sq_pushfloat(v, m_OfSyncData.vecSpeed.Z);
+						sq_newslot(v, -3, SQTrue);
+
+						sq_pushstring(v, _SC("AimDirX"), -1);
+						sq_pushfloat(v, m_OfSyncData.vecAimDir.X);
+						sq_newslot(v, -3, SQTrue);
+
+						sq_pushstring(v, _SC("AimDirY"), -1);
+						sq_pushfloat(v, m_OfSyncData.vecAimDir.Y);
+						sq_newslot(v, -3, SQTrue);
+
+						sq_pushstring(v, _SC("AimDirZ"), -1);
+						sq_pushfloat(v, m_OfSyncData.vecAimDir.Z);
+						sq_newslot(v, -3, SQTrue);
+
+						sq_pushstring(v, _SC("AimPosX"), -1);
+						sq_pushfloat(v, m_OfSyncData.vecAimPos.X);
+						sq_newslot(v, -3, SQTrue);
+
+						sq_pushstring(v, _SC("AimPosY"), -1);
+						sq_pushfloat(v, m_OfSyncData.vecAimPos.Y);
+						sq_newslot(v, -3, SQTrue);
+
+						sq_pushstring(v, _SC("AimPosZ"), -1);
+						sq_pushfloat(v, m_OfSyncData.vecAimPos.Z);
+						sq_newslot(v, -3, SQTrue);
+
+						sq_pushstring(v, _SC("IsReloading"), -1);
+						sq_pushbool(v, m_OfSyncData.bIsReloading);
+						sq_newslot(v, -3, SQTrue);
+
+						sq_pushstring(v, _SC("Ammo"), -1);
+						sq_pushinteger(v, m_OfSyncData.wAmmo);
+						sq_newslot(v, -3, SQTrue);
+
+						sq_call(v, 4, 0, 1); //calls the function 
+					}
+					sq_settop(v, top); //restores the original stack size */
+					
+
+				}
 			}
 			break;
 			case ID_NO_FREE_INCOMING_CONNECTIONS:
@@ -268,7 +372,8 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_SPAWN);
 					peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE, 0, packet->systemAddress, false);
 					npc->m_byteHealth = 100;
-					//npc->byteCurWeap = 0;
+					npc->SetState(PLAYER_STATE_SPAWNED);
+					//npc->m_byteCurWeap = 0;
 					iNPC->SetSpawnStatus(true);
 					call_OnNPCSpawn();
 				}
@@ -495,6 +600,8 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				RakNet::BitStream bsIn(packet->data, packet->length, false);
 				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
 				bsIn.Read(npc->m_fAngle);
+				if(iNPC->IsSpawned())
+					SendNPCOfSyncDataLV();
 			}
 			break;
 			case ID_GAME_MESSAGE_SET_HEALTH:
@@ -521,6 +628,46 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				npc->m_byteArmour = newarmour;*/
 			}
 			break;
+			case ID_GAME_MESSAGE_SET_PLAYER_WEAPON_SLOT:
+			{	
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				BYTE slotId;
+				bsIn.Read(slotId);
+				if (slotId < 9)
+					npc->SetWeaponSlot(slotId, 0, 0);
+			}
+			break;
+			case ID_GAME_MESSAGE_REMOVE_ALL_WEAPONS:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint32_t anticheatid;
+				bsIn.Read(anticheatid);
+				iNPC->anticheatID = anticheatid;
+				BYTE i;
+				for (i = 0; i < 9; i++)
+				{
+					npc->m_byteSlotWeapon[i] = 0;
+					npc->m_wSlotAmmo[i] = 0;
+				}
+				npc->GetONFOOT_SYNC_DATA()->byteCurrentWeapon = 0;
+			}
+			break;
+			case ID_GAME_MESSAGE_REMOVE_WEAPON:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint32_t anticheatid;
+				bsIn.Read(anticheatid);
+				iNPC->anticheatID = anticheatid;
+				uint8_t weapon; 
+				bsIn.Read(weapon);
+				npc->m_byteSlotWeapon[GetSlotId(weapon)] = 0;
+				npc->m_wSlotAmmo[GetSlotId(weapon)] = 0;
+				npc->GetONFOOT_SYNC_DATA()->byteCurrentWeapon = 0;
+			}
+			break;
 			case ID_GAME_MESSAGE_SET_WEAPON:
 			{
 				RakNet::BitStream bsIn(packet->data, packet->length, false);
@@ -528,11 +675,33 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				uint32_t anticheatid;
 				bsIn.Read(anticheatid);
 				iNPC->anticheatID = anticheatid;
-				/*uint8_t weapon; uint16_t ammo;
+				uint8_t weapon; uint16_t ammo;
 				bsIn.Read(weapon);
 				bsIn.Read(ammo);
-				//npc->byteCurWeap = weapon;*/
+				npc->SetWeaponSlot(GetSlotId(weapon), weapon, ammo);
+				npc->GetONFOOT_SYNC_DATA()->byteCurrentWeapon = weapon;
+				npc->GetONFOOT_SYNC_DATA()->wAmmo = ammo;
 				//one more byte is there. it was 01 when i tested.
+			}
+			break;
+			case ID_GAME_MESSAGE_SNIPER_RIFLE_FIRED:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				bsIn.IgnoreBytes(3);//need to find out 00 00 01 
+				if (packet->length != 30)break;
+
+				BYTE playerid;
+				bsIn.Read(playerid);
+				BYTE weapon;
+				bsIn.Read(weapon);
+				float x, y, z;
+				bsIn.Read(z); bsIn.Read(y); bsIn.Read(x);
+				float dx, dy, dz;
+				bsIn.Read(dz); bsIn.Read(dy); bsIn.Read(dx);
+				
+				if( iNPC->GetID() != playerid )
+					call_OnSniperRifleFired(playerid, weapon, x, y, z, dx, dy, dz);
 			}
 			break;
 			}
@@ -660,7 +829,7 @@ void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncD
 	uint8_t action;
 	bsIn->ReadAlignedBytes(&action, 1);
 	uint8_t nibble = 0;
-	if (action & 0x80)
+	if (action & OF_FLAGCROUCHING)
 	{
 		//This means a nibble is there to read
 		ReadNibble(&nibble, bsIn);//This may not be of anyuse in particular
@@ -672,7 +841,7 @@ void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncD
 	float fAngle = ConvertFromUINT16_T(w_encodedAngle, 2 * (float)PI);
 	uint16_t speedx = 0, speedy = 0, speedz = 0;
 	VECTOR vecSpeed; vecSpeed.X = 0; vecSpeed.Y = 0; vecSpeed.Z = 0;
-	if (action & 1)
+	if (action & OF_FLAGSPEED)
 	{
 		bsIn->Read(speedx); bsIn->Read(speedy);
 		bsIn->Read(speedz);
@@ -680,15 +849,15 @@ void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncD
 		vecSpeed.Y = ConvertFromUINT16_T(speedy, 20.0);
 		vecSpeed.Z = ConvertFromUINT16_T(speedz, 20.0);
 	}
-	uint8_t byteWeapon = 0;
-	if (action & 0x40)
+	uint8_t byteWeapon = 0; uint16_t ammo = 0;
+	if (action & OF_FLAGWEAPON)
 	{
 		bsIn->Read(byteWeapon);
 		if (byteWeapon > 11)
-			bsIn->IgnoreBytes(2);//ammo
+			bsIn->Read(ammo);//ammo
 	}
 	uint32_t dw_Keys = 0;
-	if (action & 0x10)
+	if (action & OF_FLAGKEYS)
 	{
 		uint8_t keybyte1, keybyte2, msb; //bool bReloading = 0;
 		bsIn->Read(keybyte1); bsIn->Read(keybyte2);
@@ -701,7 +870,7 @@ void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncD
 	uint8_t byteHealth;
 	bsIn->Read(byteHealth);
 	uint8_t byteArmour = 0;
-	if (action & 0x04)
+	if (action & OF_FLAGARMOUR)
 		bsIn->Read(byteArmour);
 	bsIn->IgnoreBytes(1);
 	if (bIsAiming)
@@ -726,10 +895,11 @@ void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncD
 	//ONFOOT_SYNC_DATA m_pOfSyncDataPlayer;
 	m_pOfSyncDataOut->byteArmour = byteArmour;
 	m_pOfSyncDataOut->byteCurrentWeapon = byteWeapon;
+	m_pOfSyncDataOut->wAmmo = ammo;
 	m_pOfSyncDataOut->byteHealth = byteHealth;
 	m_pOfSyncDataOut->dwKeys = dw_Keys;
 	m_pOfSyncDataOut->fAngle = fAngle;
-	m_pOfSyncDataOut->IsAiming = bIsAiming;
+	m_pOfSyncDataOut->IsPlayerUpdateAiming = bIsAiming;
 	m_pOfSyncDataOut->IsCrouching = (action & 0x80) != 0 ? 1 : 0;
 	m_pOfSyncDataOut->vecPos.X = x;
 	m_pOfSyncDataOut->vecPos.Y = y;
@@ -743,4 +913,70 @@ vecSpeed.Z, byteWeapon, dw_Keys, byteHealth, byteArmour,\
 m_pOfSyncDataOut->vecAimDir.X,m_pOfSyncDataOut->vecAimDir.Y,
 m_pOfSyncDataOut->vecAimDir.Z,m_pOfSyncDataOut->vecAimPos.X, \
 m_pOfSyncDataOut->vecAimPos.Y, m_pOfSyncDataOut->vecAimPos.Z);*/
+}
+uint8_t GetSlotId(uint8_t byteWeapon)
+{
+	uint8_t byteWeaponSlot;
+	switch (byteWeapon)
+	{
+	case 0:
+	case 1:
+		byteWeaponSlot = 0;
+		break;
+	case 2:
+	case 3:
+	case 4:
+	case 5:
+	case 6:
+	case 7:
+	case 8:
+	case 9:
+	case 10:
+	case 11:
+		byteWeaponSlot = 1;
+		break;
+	case 12:
+	case 13:
+	case 14:
+	case 15:
+	case 16:
+		byteWeaponSlot = 2;
+		break;
+	case 17:
+	case 18:
+		byteWeaponSlot = 3;
+		break;
+	case 19:
+	case 20:
+	case 21:
+		byteWeaponSlot = 4;
+		break;
+	case 22:
+	case 23:
+	case 24:
+	case 25:
+		byteWeaponSlot = 5;
+		break;
+
+	case 26:
+	case 27:
+		byteWeaponSlot = 6;
+		break;
+	case 28:
+	case 29:
+		byteWeaponSlot = 8;
+		break;
+	case 30:
+	case 31:
+	case 32:
+	case 33:
+		byteWeaponSlot = 7;
+		break;
+
+	default:
+		// If invalid weapon then set fists as weapon
+		byteWeaponSlot = 0;
+		break;
+	}
+	return byteWeaponSlot;
 }

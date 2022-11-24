@@ -40,6 +40,13 @@
 #else 
 #define scvprintf vprintf 
 #endif 
+typedef enum {
+    vcmpPlayerUpdateNormal = 0,
+    vcmpPlayerUpdateAiming = 1,
+    vcmpPlayerUpdateDriver = 2,
+    vcmpPlayerUpdatePassenger = 3,
+    forceSizeVcmpPlayerUpdate = INT32_MAX
+} vcmpPlayerUpdate;
 void printfunc(HSQUIRRELVM v, const SQChar* s, ...);
 bool StartSquirrel(std::string file);
 int StopSquirrel();
@@ -57,7 +64,11 @@ void call_OnPlayerStreamOut(uint8_t playerid);
 void call_OnVehicleStreamIn(uint16_t vehicleid);
 void call_OnVehicleStreamOut(uint16_t vehicleid);
 void call_OnRecordingPlaybackEnd();
+void call_OnPlayerUpdate(uint8_t bytePlayerId, vcmpPlayerUpdate updateType );
+void call_OnSniperRifleFired(uint8_t bytePlayerID, uint8_t byteWeaponId, float x, float y, float z, float dx, float dy, float dz);
+SQInteger fn_SetLocalValue(HSQUIRRELVM v);
 void RegisterNPCFunctions();
 void RegisterNPCFunctions2();
+void RegisterNPCFunctions3();
 void RegisterConsts();
 #endif

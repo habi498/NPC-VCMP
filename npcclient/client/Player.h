@@ -43,10 +43,18 @@ private:
 	//AIM_SYNC_DATA			m_aimSync;
 public:
 	uint16_t m_VehicleID;
-	uint8_t byteCurWeap;
+	//uint8_t m_byteCurWeap;
+	//uint16_t m_wAmmo;
+	// Weapon data
+	WORD					m_wSlotAmmo[9];
+	BYTE					m_byteSlotWeapon[9];
 	void SetState(uint8_t byteState);
 	uint8_t GetState() { return m_byteState; };
 	uint32_t GetKeys() { return m_dwLastKeys; };
+	void SetKeys(uint32_t dw_keys) {
+		//used in player: npc
+		m_dwLastKeys = dw_keys;
+	}
 	INCAR_SYNC_DATA* GetINCAR_SYNC_DATA() { return &m_icSync; };
 	ONFOOT_SYNC_DATA* GetONFOOT_SYNC_DATA() { return &m_ofSync; };
 	CPlayer();
@@ -58,7 +66,15 @@ public:
 	void UpdatePosition(float x, float y, float z);
 	void SetID(uint8_t bytePlayerID) { m_bytePlayerID = bytePlayerID; };
 	void StoreOnFootFullSyncData(ONFOOT_SYNC_DATA* pofSync);
-	//void StoreAimSyncData(AIM_SYNC_DATA* paimSync);
 	void StoreInCarFullSyncData(INCAR_SYNC_DATA* picSync);
+
+	void SetWeaponSlot(BYTE byteSlot, BYTE byteWeapon, WORD wAmmo);
+
+	BYTE GetSlotWeapon(BYTE bSlot) { return m_byteSlotWeapon[bSlot]; };
+	WORD GetSlotAmmo(BYTE bSlot) { return m_wSlotAmmo[bSlot]; };
+	BYTE GetCurrentWeapon() { return m_ofSync.byteCurrentWeapon; };
+	
+	//only for npcs
+	void SetCurrentWeaponAmmo(WORD wAmmo);
 };
 #endif

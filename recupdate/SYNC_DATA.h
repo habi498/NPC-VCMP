@@ -15,8 +15,9 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 /*
-Note: The npcclient program and npc04relxx also uses this file. So any editing
-in one of the files must be made on the other too
+Note: The npcclient program also uses this file. So any editing
+in the structure of the classes has to be made on the corresponding
+file with same name in project npcclient.
 */
 #include <stdint.h>
 #ifdef _WIN32
@@ -50,14 +51,14 @@ typedef struct _ONFOOT_SYNC_DATA
 	uint8_t byteCurrentWeapon;
 	bool IsCrouching;
 	VECTOR vecSpeed;
-	bool IsPlayerUpdateAiming;
+	bool IsAiming;
 	VECTOR vecAimDir;
 	VECTOR vecAimPos;
-	bool bIsReloading; //1 byte
-	uint16_t wAmmo; // 2 byte
+	//bool bIsReloading; //1 byte
+	//uint16_t wAmmo; // 2 byte
 } ONFOOT_SYNC_DATA;
-//64+ 4 =68 datablock
-//68+8=76 size taken by header+first datablock
+//61+ 4 =65 datablock
+//65+8=73 size taken by header+first datablock
 
 #pragma pack(1)
 typedef struct _INCAR_SYNC_DATA
@@ -75,7 +76,7 @@ typedef struct _INCAR_SYNC_DATA
 	float Turretx;
 	float Turrety;
 } INCAR_SYNC_DATA;
-//65 byte
+
 /*Used to save to .rec file*/
 #pragma pack(1)
 typedef struct _ONFOOT_DATABLOCK

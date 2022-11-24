@@ -203,11 +203,44 @@ void call_OnNPCScriptLoad()
     }
     sq_settop(v, top); //restores the original stack size
 }
+void call_OnPlayerUpdate(uint8_t bytePlayerID, vcmpPlayerUpdate UpdateType)
+{
+    int top = sq_gettop(v); //saves the stack size before the call
+    sq_pushroottable(v); //pushes the global table
+    sq_pushstring(v, _SC("OnPlayerUpdate"), -1);
+    if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
+        sq_pushroottable(v); //push the 'this'
+        sq_pushinteger(v, bytePlayerID);
+        sq_pushinteger(v, UpdateType);
+        sq_call(v, 3, 0, 1); //calls the function 
+    }
+    sq_settop(v, top); //restores the original stack size
+}
+void call_OnSniperRifleFired(uint8_t bytePlayerID, uint8_t byteWeaponId, float x, float y, float z, float dx, float dy, float dz)
+{
+    int top = sq_gettop(v); //saves the stack size before the call
+    sq_pushroottable(v); //pushes the global table
+    sq_pushstring(v, _SC("OnSniperRifleFired"), -1);
+    if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
+        sq_pushroottable(v); //push the 'this'
+        sq_pushinteger(v, bytePlayerID);
+        sq_pushinteger(v, byteWeaponId);
+        sq_pushfloat(v, x);
+        sq_pushfloat(v, y);
+        sq_pushfloat(v, z);
+        sq_pushfloat(v, dx);
+        sq_pushfloat(v, dy);
+        sq_pushfloat(v, dz);
+        sq_call(v, 9, 0, 1); //calls the function 
+    }
+    sq_settop(v, top); //restores the original stack size
+}
 bool StartSquirrel(std::string file)
 {
     v = sq_open(1024); // creates a VM with initial stack size 1024 
     RegisterNPCFunctions();
     RegisterNPCFunctions2();
+    RegisterNPCFunctions3();
     RegisterConsts();
     sqstd_seterrorhandlers(v);
     sq_setprintfunc(v, printfunc, printfunc); //sets the print function

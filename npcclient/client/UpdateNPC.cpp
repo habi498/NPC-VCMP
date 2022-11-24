@@ -25,6 +25,7 @@ void SetActionFlags(INCAR_SYNC_DATA* m_InSyncData, uint8_t* action);
 void SetTypeFlags(INCAR_SYNC_DATA* m_InSyncData, uint8_t* type);
 void SetRotationFlags(INCAR_SYNC_DATA* m_InSyncData, uint8_t* flag);
 void SetVehicleIDFlag(INCAR_SYNC_DATA* m_pIcSyncData, uint8_t* nibble, uint8_t* byte);
+uint8_t GetSlotId(uint8_t byteWeapon);
 float ConvertFromUINT16_T(uint16_t compressedFloat, float base)
 {
 	if (base != -1)
@@ -81,7 +82,7 @@ void SendNPCSyncData(INCAR_SYNC_DATA* m_pInSyncData, PacketPriority mPriority=HI
 	{
 		bsOut.Write(m_pInSyncData->byteCurrentWeapon);
 		if (m_pInSyncData->byteCurrentWeapon > 11)
-			bsOut.Write((uint16_t)1);
+			bsOut.Write((uint16_t)npc->GetSlotAmmo(npc->GetCurrentWeapon()));
 	}
 	if (action & 0x40)
 		bsOut.Write(m_pInSyncData->bytePlayerArmour);
@@ -133,11 +134,13 @@ void SendNPCSyncData(INCAR_SYNC_DATA* m_pInSyncData, PacketPriority mPriority=HI
 	bsOut.Write((uint8_t)0);//Changes when vehicle is on water.?
 	bsOut.Write((uint8_t)0);
 	peer->Send(&bsOut, mPriority, UNRELIABLE_SEQUENCED, 0, systemAddress, false);
+	npc->StoreInCarFullSyncData(m_pInSyncData);
 }
+
 void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData)
 {
 	RakNet::BitStream bsOut;
-	if(!m_pOfSyncData->IsAiming)
+	if(!m_pOfSyncData->IsPlayerUpdateAiming)
 		bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_ONFOOT_UPDATE);
 	else
 		bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_ONFOOT_UPDATE_AIM);
@@ -149,7 +152,7 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData)
 		nibble |= 0x2;
 	#ifdef NPC_SHOOTING_ENABLED
 		bool reloading_weapon = false;
-		if (m_pOfSyncData->IsAiming)
+		if (m_pOfSyncData->IsPlayerUpdateAiming)
 		{
 			if ((m_pOfSyncData->dwKeys & 512) == 0)
 			{
@@ -181,7 +184,7 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData)
 	{
 		bsOut.Write(m_pOfSyncData->byteCurrentWeapon);
 		if (m_pOfSyncData->byteCurrentWeapon > 11)
-			bsOut.Write((WORD)1);//ammo
+			bsOut.Write((WORD)(m_pOfSyncData->wAmmo));//ammo
 	}
 	if (action & 0x10)
 	{
@@ -211,15 +214,17 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData)
 			WriteNibble(1, &bsOut);
 		#endif	
 	}
-	bsOut.Write(m_pOfSyncData->byteHealth);
-	if (action & 0x04)
-		bsOut.Write(m_pOfSyncData->byteArmour);
+	if (!(action & 0x08))
+	{
+		bsOut.Write(m_pOfSyncData->byteHealth);
+		if (action & 0x04)
+			bsOut.Write(m_pOfSyncData->byteArmour);
 	#ifdef NPC_SHOOTING_ENABLED
-		if (m_pOfSyncData->IsAiming)
+		if (m_pOfSyncData->IsPlayerUpdateAiming)
 			bsOut.Write((uint8_t)0xa7);
 		else
 			bsOut.Write((uint8_t)0x03);
-		if (m_pOfSyncData->IsAiming)
+		if (m_pOfSyncData->IsPlayerUpdateAiming)
 		{
 			uint16_t wAimDirX, wAimDirY, wAimDirZ;
 			wAimDirX = ConvertToUINT16_T(m_pOfSyncData->vecAimDir.X, 2 * (float)PI);
@@ -234,7 +239,9 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData)
 	#else
 		bsOut.Write((uint8_t)0x03);
 	#endif
+	}
 	peer->Send(&bsOut, HIGH_PRIORITY, UNRELIABLE_SEQUENCED, 0, systemAddress, false);	
+	npc->StoreOnFootFullSyncData(m_pOfSyncData);//v1.4
 }
 
 
@@ -243,6 +250,7 @@ void WriteNibble(uint8_t nibble, RakNet::BitStream *bsOut)
 	const uint8_t bytearray[] = { nibble };
 	bsOut->WriteBits(bytearray, 4);
 }
+
 void SetActionFlags(ONFOOT_SYNC_DATA* m_pOfSyncData, uint8_t* action)
 {
 	if (m_pOfSyncData->byteCurrentWeapon)(*action) |= 0x40;
@@ -251,6 +259,7 @@ void SetActionFlags(ONFOOT_SYNC_DATA* m_pOfSyncData, uint8_t* action)
 		m_pOfSyncData->vecSpeed.Z != 0)(*action) |= 0x01;
 	if (m_pOfSyncData->dwKeys)(*action) |= 0x10;
 	if (m_pOfSyncData->IsCrouching)(*action) |= 0x80;
+	if (m_pOfSyncData->byteHealth <= 0)(*action) |= 0x08;
 }
 //Set Flags for Weapon and Armour of player
 void SetActionFlags(INCAR_SYNC_DATA* m_pInSyncData, uint8_t* action)
@@ -289,7 +298,7 @@ void SendNPCUpdate()
 	bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_ONFOOT_UPDATE);
 	bsOut.Write(iNPC->anticheatID);
 	uint8_t action = 0;
-	if (npc->byteCurWeap != 0)action += 0x40;
+	if (npc->GetCurrentWeapon() != 0)action += 0x40;
 	if (npc->m_byteArmour != 0)action += 0x04;
 	bsOut.Write(action);
 	bsOut.Write(npc->m_vecPos.X);
@@ -301,9 +310,9 @@ void SendNPCUpdate()
 	if ((action & 64) == 64)
 	{
 		//NPC posses weapon
-		bsOut.Write(npc->byteCurWeap);
-		if (npc->byteCurWeap > 11)
-			bsOut.Write((uint16_t)0x01);//Let ammo be 1
+		bsOut.Write(npc->GetCurrentWeapon());
+		if (npc->GetCurrentWeapon() > 11)
+			bsOut.Write((uint16_t)npc->GetSlotAmmo(GetSlotId(npc->GetCurrentWeapon())));//Let ammo be 1
 	}
 	bsOut.Write(npc->m_byteHealth);
 	if ((action & 4) == 4)
@@ -316,3 +325,15 @@ void SendNPCUpdate()
 	//Send the packet
 	peer->Send(&bsOut, HIGH_PRIORITY, UNRELIABLE_SEQUENCED, 0, systemAddress, false);
 }	
+void SendNPCOfSyncDataLV() //with existing values, send a packet. Normally to update health or angle
+{
+	ONFOOT_SYNC_DATA* m_pOfSyncData;
+	m_pOfSyncData = npc->GetONFOOT_SYNC_DATA();
+	m_pOfSyncData->byteHealth = npc->m_byteHealth;
+	m_pOfSyncData->byteArmour = npc->m_byteArmour;
+	m_pOfSyncData->byteCurrentWeapon = npc->GetCurrentWeapon();
+	m_pOfSyncData->dwKeys = npc->GetKeys();
+	m_pOfSyncData->fAngle = npc->m_fAngle;
+	m_pOfSyncData->vecPos = npc->m_vecPos;
+	SendNPCSyncData(m_pOfSyncData);
+}

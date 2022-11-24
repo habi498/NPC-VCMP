@@ -18,6 +18,7 @@
 extern HSQUIRRELVM v;
 extern CPlayerPool* m_pPlayerPool;
 extern NPC* iNPC;
+uint8_t GetSlotId(uint8_t byteWeapon);
 SQInteger fn_GetPlayerPosZ(HSQUIRRELVM v)
 {
     SQInteger playerId;
@@ -119,8 +120,48 @@ SQInteger fn_GetPlayerArmedWeapon(HSQUIRRELVM v)
     if (m_pPlayerPool->GetSlotState(playerId))
     {
         CPlayer* player = m_pPlayerPool->GetAt(playerId);
-        uint8_t weapon = player->byteCurWeap;
+        uint8_t weapon = player->GetCurrentWeapon();
         sq_pushinteger(v, weapon);
+        return 1;
+    }
+    sq_pushinteger(v, -1);
+    return 1;
+}
+SQInteger fn_GetPlayerSlotWeapon(HSQUIRRELVM v)
+{
+    SQInteger playerId;
+    sq_getinteger(v, 2, &playerId);
+    if (m_pPlayerPool->GetSlotState(playerId))
+    {
+        CPlayer* player = m_pPlayerPool->GetAt(playerId);
+        SQInteger slot;
+        sq_getinteger(v, 3, &slot);
+        uint8_t weapon = player->GetSlotWeapon(slot);
+        sq_pushinteger(v, weapon);
+        return 1;
+    }
+    sq_pushinteger(v, -1);
+    return 1;
+}
+SQInteger fn_GetWeaponSlotFromWeaponId(HSQUIRRELVM v)
+{
+    SQInteger weaponId;
+    sq_getinteger(v, 2, &weaponId);
+    uint8_t slotId = GetSlotId(weaponId);
+    sq_pushinteger(v, slotId);
+    return 1;
+}
+SQInteger fn_GetPlayerSlotAmmo(HSQUIRRELVM v)
+{
+    SQInteger playerId;
+    sq_getinteger(v, 2, &playerId);
+    if (m_pPlayerPool->GetSlotState(playerId))
+    {
+        CPlayer* player = m_pPlayerPool->GetAt(playerId);
+        SQInteger slot;
+        sq_getinteger(v, 3, &slot);
+        uint16_t wAmmo = player->GetSlotAmmo(slot);
+        sq_pushinteger(v, wAmmo);
         return 1;
     }
     sq_pushinteger(v, -1);
@@ -303,6 +344,9 @@ SQInteger fn_KillTimer(HSQUIRRELVM v)
     KillTimer(TimerID);
     return 0;//return nothing
 }
+
+
+
 void RegisterNPCFunctions2()
 {
 	register_global_func(v, ::fn_IsPlayerConnected, "IsPlayerConnected", 2, "ti");
@@ -310,6 +354,11 @@ void RegisterNPCFunctions2()
 	register_global_func(v, ::fn_GetPlayerState, "GetPlayerState", 2, "ti");
 	register_global_func(v, ::fn_GetPlayerVehicleID, "GetPlayerVehicleID", 2, "ti");
 	register_global_func(v, ::fn_GetPlayerArmedWeapon, "GetPlayerArmedWeapon", 2, "ti");
+	
+    register_global_func(v, ::fn_GetPlayerSlotWeapon, "GetPlayerSlotWeapon", 3, "tii");
+	register_global_func(v, ::fn_GetPlayerSlotAmmo, "GetPlayerSlotAmmo", 3, "tii");
+    register_global_func(v, ::fn_GetWeaponSlotFromWeaponId, "GetSlotFromWeaponId", 2, "ti");
+
 	register_global_func(v, ::fn_GetPlayerHealth, "GetPlayerHealth", 2, "ti");
 	register_global_func(v, ::fn_GetPlayerArmour, "GetPlayerArmour", 2, "ti");
 	register_global_func(v, ::fn_GetPlayerKeys, "GetPlayerKeys", 2, "ti");

@@ -22,7 +22,7 @@ github https://github.com/dashr9230/SA-MP just for fun*/
 #include <stdio.h>
 #include <string>
 #define RECDIR "recordings"
-#define NPC_RECFILE_IDENTIFIER 1000
+#define NPC_RECFILE_IDENTIFIER 1001 //From Nov 2022 onwards
 #define MAX_PLAYERS 100
 #define PLAYER_RECORDING_TYPE_DRIVER	2
 #define PLAYER_RECORDING_TYPE_ONFOOT	1

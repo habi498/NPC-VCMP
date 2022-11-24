@@ -51,16 +51,18 @@
 
 #define REC_DIR "npcscripts/recordings"
 #define PLAYBACK_OVERRIDE_VEHICLEID
-//Taken from VCMP plugin header
-typedef enum {
-	vcmpPlayerUpdateNormal = 0,
-	vcmpPlayerUpdateAiming = 1,
-	vcmpPlayerUpdateDriver = 2,
-	vcmpPlayerUpdatePassenger = 3,
-	forceSizeVcmpPlayerUpdate = INT32_MAX
-} vcmpPlayerUpdate;
+
+
+#define OF_FLAGWEAPON 0x40
+#define OF_FLAGARMOUR 0x04
+#define OF_FLAGSPEED 0x01
+#define OF_FLAGKEYS 0x10
+#define OF_FLAGCROUCHING 0x80
+#define OF_FLAGNOHEALTH 0x08
+
 int ConnectToServer(std::string hostname, int port, std::string npcname, std::string password);
 void OnServerCycle();//in Playback.cpp
 void SendNPCUpdate();//in UpdateNPC.cpp
+void SendNPCOfSyncDataLV();// in UpdateNPC.cpp
 void WriteNibble(uint8_t nibble, RakNet::BitStream* bsOut);
 #endif

@@ -86,7 +86,7 @@ Implemented function SendOnFootSyncData through which NPCs can shoot by normal w
 Only windows builds were made
 
 Version 1.3 Changes (15.11.2022)
-Timer new implemented SetTimerEx
+Extended Timer implemented SetTimerEx (https://npc-for-vcmp.sourceforge.io/wikiw/index.php/SetTimerEx)
 Fixed npc running unwantedly due to an error while writing 4 bits through raknet.
 Fixed potential issue of not killing Timer if function not found at proper time.
 Added ability for npc to shoot through sniper rifle

@@ -121,7 +121,7 @@ add_executable (npcclient
 "Raknet/VitaIncludes.cpp"
 "Raknet/WSAStartupSingleton.cpp"
 "Raknet/_FindFirst.cpp"
-)
+ "client/NPCFunctions3.cpp")
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	set(OUTPUT_BITNESS 64)
 else()

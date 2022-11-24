@@ -93,7 +93,7 @@ uint8_t ReadDatablock2()
             return 0;
         }
         SendNPCSyncData(&m_pOfDatablock.m_pOfSyncData);
-        npc->StoreOnFootFullSyncData(&m_pOfDatablock.m_pOfSyncData);
+        //npc->StoreOnFootFullSyncData(&m_pOfDatablock.m_pOfSyncData);
        
     }
     else if (mPlayback.type == PLAYER_RECORDING_TYPE_DRIVER)
@@ -108,7 +108,7 @@ uint8_t ReadDatablock2()
             m_pIcDatablock.m_pIcSyncData.VehicleID = npc->m_VehicleID;
         #endif
         SendNPCSyncData(&m_pIcDatablock.m_pIcSyncData);
-        npc->StoreInCarFullSyncData(&m_pIcDatablock.m_pIcSyncData);
+        //npc->StoreInCarFullSyncData(&m_pIcDatablock.m_pIcSyncData);
     }
     DWORD nexttick;
     size_t count = fread(&nexttick, sizeof(nexttick), 1, pFile);

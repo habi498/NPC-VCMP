@@ -28,7 +28,6 @@ private:
 	bool initialized = false;//true implies ID is set
 	std::map<uint16_t,bool>strmdvhcls;
 	bool strmdplrs[MAX_PLAYERS];
-	
 public:
 	NPC()
 	{
@@ -76,4 +75,16 @@ public:
 	bool IsSpawned() { return isSpawned; }
 	void SetSpawnStatus(bool status) {  isSpawned = status; }
 };
+typedef enum tagNPCFIELDS
+{
+	I_KEYS, 
+	F_POSX,
+	F_POSY,
+	F_POSZ,
+	F_ANGLE,
+	I_HEALTH,
+	I_ARMOUR,
+	I_CURWEP,
+	I_CURWEP_AMMO
+}NPCFIELDS;
 #endif

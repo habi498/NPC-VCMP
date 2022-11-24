@@ -63,7 +63,7 @@ void CPlayer::ProcessUpdate2(PluginFuncs* VCMP, vcmpPlayerUpdate updateType)
 		DWORD time = GetTickCount();
 		m_pOfDatablock.time = time;
 		ONFOOT_SYNC_DATA m_pOfSynDat;
-		m_pOfSynDat.IsAiming = (updateType == vcmpPlayerUpdateAiming) ? 1 : 0;
+		m_pOfSynDat.IsPlayerUpdateAiming = (updateType == vcmpPlayerUpdateAiming) ? 1 : 0;
 		VCMP->GetPlayerSpeed(playerId, &m_pOfSynDat.vecSpeed.X,
 			&m_pOfSynDat.vecSpeed.Y, &m_pOfSynDat.vecSpeed.Z);
 		m_pOfSynDat.dwKeys = VCMP->GetPlayerGameKeys(playerId);

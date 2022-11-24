@@ -1,8 +1,5 @@
 /*
-	Copyright (C) 2004-2005 SA:MP Team
-	file: player.h
-	
-	Modified and Copyright (C) 2022  habi
+	Copyright (C) 2022  habi
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -16,6 +13,10 @@
 
 	You should have received a copy of the GNU General Public License
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+/*
+Note: The npcclient program and npc04relxx also uses this file. So any editing
+in one of the files must be made on the other too
 */
 #include <stdint.h>
 #ifdef _WIN32
@@ -49,10 +50,14 @@ typedef struct _ONFOOT_SYNC_DATA
 	uint8_t byteCurrentWeapon;
 	bool IsCrouching;
 	VECTOR vecSpeed;
-	bool IsAiming;
+	bool IsPlayerUpdateAiming;
 	VECTOR vecAimDir;
 	VECTOR vecAimPos;
+	bool bIsReloading; //1 byte
+	uint16_t wAmmo; // 2 byte
 } ONFOOT_SYNC_DATA;
+//64+ 4 =68 datablock
+//68+8=76 size taken by header+first datablock
 
 #pragma pack(1)
 typedef struct _INCAR_SYNC_DATA
