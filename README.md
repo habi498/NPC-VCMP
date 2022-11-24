@@ -81,14 +81,27 @@ Where:
    VCMP-Non Player Characters
 ```
 
-Version 1.2 Changes(05-Nov-2022)
-Implemented function SendOnFootSyncData through which NPCs can shoot by normal weapons.
-Only windows builds were made
+## Version Changes November 2022  
+**1.2**  
+--Implemented function SendOnFootSyncData through which NPCs can shoot by normal weapons.  
+--Only windows builds were made  
+
+**1.3** (15.11.2022)  
+--Timer new implemented SetTimerEx  
+--Fixed npc running unwantedly due to an error while writing 4 bits through raknet.  
+--Fixed potential issue of not killing Timer if function not found at proper time.  
+--Added ability for npc to shoot through sniper rifle.  
+--Added boolean parameter for crouching in SendOnFootSyncData.  
+--Windows builds were made.  
 
 Version 1.3 Changes (15.11.2022)
-Extended Timer implemented SetTimerEx (https://npc-for-vcmp.sourceforge.io/wikiw/index.php/SetTimerEx)
+Timer new implemented SetTimerEx
 Fixed npc running unwantedly due to an error while writing 4 bits through raknet.
 Fixed potential issue of not killing Timer if function not found at proper time.
 Added ability for npc to shoot through sniper rifle
 Added boolean parameter for crouching in SendOnFootSyncData
 Windows builds were made.
+
+wiki available at https://npc-for-vcmp.sourceforge.io/wikiw/index.php
+
+
