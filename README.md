@@ -103,14 +103,13 @@ Added boolean parameter for crouching in SendOnFootSyncData
 Windows builds were made.
 
 Version 1.5 (upcoming )
-1. NPCs can be called with -a "xPos yPos zPos aAngle" where
+1. NPCs can be called with (l flag) -l "xPos yPos zPos aAngle sSkin wWeapon cClass" where
    Pos and Angle are floating points. The npc after connecting
    will spawn at the Pos specified with angle Angle.
-2. If the argument string specified above contain words starting 
-with f (eg."f27"), the value after 'f', will be passed to script. See (3)
-3. OnNPCScriptLoad() is changed to OnNPCScriptLoad(argv)
-where argv is an array of strings and whose values are obtained 
-by the sub arguments specified in (2). similar to argv={ "27", "37", "..."};
+2. Arguments can be passed to the npc script via w flag. (-w "Sniper" ). See (3)
+3. OnNPCScriptLoad() is changed to OnNPCScriptLoad(params)
+    where params is an array of strings and whose values are the arguments used in calling the program 
+    with w flag. See (2). 
 4. Has made -m scriptfile argument optional. Now NPCs can be connected
 without script.
 wiki available at https://npc-for-vcmp.sourceforge.io/wikiw/index.php
