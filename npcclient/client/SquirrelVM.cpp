@@ -16,6 +16,7 @@
 */
 #include "main.h"
 extern HSQUIRRELVM v;
+extern NPC* iNPC;
 void printfunc(HSQUIRRELVM vm, const SQChar* s, ...)
 {
     va_list arglist;
@@ -192,14 +193,20 @@ void call_OnNPCScriptUnload()
     }
     sq_settop(v, top); //restores the original stack size
 }
-void call_OnNPCScriptLoad()
+void call_OnNPCScriptLoad(std::vector<std::string>argv)
 {
     int top = sq_gettop(v); //saves the stack size before the call
     sq_pushroottable(v); //pushes the global table
     sq_pushstring(v, _SC("OnNPCScriptLoad"), -1);
     if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
         sq_pushroottable(v); //push the 'this' (in this case is the global table)
-        sq_call(v, 1, 0, 1); //calls the function 
+        sq_newarray(v, 0);
+        for (size_t i = 0; i < argv.size(); i++)
+        {
+            sq_pushstring(v, _SC(argv[i].c_str()), -1);
+            sq_arrayappend(v, -2);
+        }
+        sq_call(v, 2, 0, 1); //calls the function 
     }
     sq_settop(v, top); //restores the original stack size
 }
@@ -235,7 +242,7 @@ void call_OnSniperRifleFired(uint8_t bytePlayerID, uint8_t byteWeaponId, float x
     }
     sq_settop(v, top); //restores the original stack size
 }
-bool StartSquirrel(std::string file)
+bool StartSquirrel(std::string file, std::string location, std::vector<std::string> params)
 {
     v = sq_open(1024); // creates a VM with initial stack size 1024 
     RegisterNPCFunctions();
@@ -256,12 +263,71 @@ bool StartSquirrel(std::string file)
         return 0;
     if (!SQ_SUCCEEDED(sqstd_dofile(v, _SC(UNIT3), 0, 1)))
         return 0;
-    if (SQ_SUCCEEDED(sqstd_dofile(v, _SC(file.c_str()), 0, 1))) // also prints syntax errors if any 
+    if (location.length() > 0)
     {
-        call_OnNPCScriptLoad();
-        return 1;
+        char* loc = (char*)malloc(sizeof(char) * location.length());
+        if (loc)
+        {
+            strcpy(loc, location.c_str());
+            char* pch = strtok(loc, " ");
+            uint8_t flag = 0; std::string val;
+            double x, y, z, angle; uint8_t skin = 0;
+            uint8_t weapon = 0;
+            uint8_t spawnclass = 0;
+            while (pch != NULL)
+            {
+                switch (pch[0])
+                {
+                case 'x': flag |= 1;//p-656.4 756 11.2
+                    x = strtod(pch + 1, NULL);
+                    break;
+                case 'y': flag |= 2;//p-656.4 756 11.2
+                    y = strtod(pch + 1, NULL);
+                    break;
+                case 'z': flag |= 4;//p-656.4 756 11.2
+                    z = strtod(pch + 1, NULL);
+                    break;
+                case 'a': flag |= 8;
+                    angle = strtod(pch + 1, NULL);
+                    break;
+                case 's': flag |= 16;
+                    skin = (uint8_t)strtol(pch + 1, NULL, 10);
+                    break;
+                case 'w': flag |= 32;
+                    weapon = (uint8_t)strtol(pch + 1, NULL, 10);
+                    break;
+                case 'c':flag |= 64;
+                    spawnclass = (uint8_t)strtol(pch + 1, NULL, 10);
+                    break;
+                }
+                pch = strtok(NULL, " ");
+            }
+            if ((flag & 7) == 7)
+            {
+                if (flag & 8)
+                    iNPC->SetSpawnLocation((float)x, (float)y, (float)z, (float)angle);
+                else
+                    iNPC->SetSpawnLocation((float)x, (float)y, (float)z);
+            }
+            if (flag & 16)
+                iNPC->SpecialSkin = skin;
+            if (flag & 32)
+                iNPC->SpawnWeapon = weapon;
+            if (flag & 64)
+                iNPC->SpawnClass = spawnclass;
+        }
     }
-    else return 0;
+
+    if (file.length() > 0)
+    {
+        if (SQ_SUCCEEDED(sqstd_dofile(v, _SC(file.c_str()), 0, 1))) // also prints syntax errors if any 
+        {
+            call_OnNPCScriptLoad(params);
+            return 1;
+        }
+        else return 0;
+    }
+    else return 1; //npc without any script
 }
 int StopSquirrel()
 {

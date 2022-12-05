@@ -23,11 +23,21 @@ using namespace std;
 #define NPC_DIR "npcscripts"
 #ifdef LINUX
 #include <time.h>
-
+ long getTick() {
+    struct timespec ts;
+    long theTick = 0U;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    theTick = ts.tv_nsec / 1000000;
+    theTick += ts.tv_sec * 1000;
+    return theTick;
+}
 long GetTickCount()
 {
-    tms tm;
-    return (times(&tm) * 10);
+ /* Version 1.4 Bug noticed
+ tms tm; CLOCKS_PER_SEC
+  return (times(&tm) * 10); 
+  */
+    return getTick();
 }
 #endif
 //static BOOL WINAPI console_ctrl_handler(DWORD dwCtrlType);
@@ -40,20 +50,26 @@ int main(int argc, char **argv) {
 
         // Define a value argument and add it to the command line.
         ValueArg<string> hostnameArg("h", "hostname", "IP address of host", false, "127.0.0.1",
-                                 "IP address");
+                                 "string");
         ValueArg<int> portArg("p", "port", "Port to connect to", false, 8192,
-            "port");
+            "integer");
         ValueArg<string> npcnameArg("n", "name", "Name of the NPC", true, "NPC",
-            "name");
-        ValueArg<string> fileArg("m", "scriptfile", "Squirrel Script file to be used", true, "npc",
-            "scriptfile");
+            "string");
+        ValueArg<string> fileArg("m", "scriptfile", "Squirrel Script file to be used", false, "",
+            "string");
         ValueArg<string> passwdArg("z", "password", "Password of the server to connect", false, "",
-            "password");
+            "string");
         cmd.add(hostnameArg);
         cmd.add(portArg);
         cmd.add(npcnameArg);
         cmd.add(fileArg);
         cmd.add(passwdArg);
+        ValueArg<string> LocationArg("l", "location", "The location and skin to spawn eg. \"x__ y__ z__ s__\"", false, "",
+            "string");
+        MultiArg<string> scriptArg("w", "params", "The params to be passed to script", false, 
+            "string");
+        cmd.add(LocationArg);
+        cmd.add(scriptArg);
         // Parse the args.
         cmd.parse(argc, argv);
         // Get the value parsed by each arg.
@@ -62,8 +78,13 @@ int main(int argc, char **argv) {
         std::string npcname = npcnameArg.getValue();
         std::string npcscript = fileArg.getValue();
         std::string password = passwdArg.getValue();
+        std::string location = LocationArg.getValue();
+        std::vector<string> params=scriptArg.getValue();
         TimersInit();
-        bool success = StartSquirrel(std::string(NPC_DIR+std::string("/")+npcscript).c_str());
+        std::string scriptpath = "";
+        if (npcscript.length() > 0)
+            scriptpath = std::string(NPC_DIR + std::string("/") + npcscript);
+        bool success = StartSquirrel(scriptpath.c_str(), location, params);
         if (success)
         {
              //SetConsoleCtrlHandler(console_ctrl_handler, TRUE);

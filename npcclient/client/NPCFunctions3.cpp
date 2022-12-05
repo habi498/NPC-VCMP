@@ -91,7 +91,7 @@ SQInteger fn_SendOnFootSyncData(HSQUIRRELVM v)
     m_pOfSyncData.byteHealth = (uint8_t)byteHealth;
     m_pOfSyncData.dwKeys = (uint32_t)dwKeys;
     m_pOfSyncData.fAngle = fAngle;
-    if ((dwKeys & 64) == 64)
+    if ((dwKeys & 512) == 512)
         m_pOfSyncData.IsPlayerUpdateAiming = true;
     else if ((dwKeys & 1) == 1 && byteCurrentWeapon > 11)
         m_pOfSyncData.IsPlayerUpdateAiming = true;
@@ -116,6 +116,7 @@ SQInteger fn_SendOnFootSyncData(HSQUIRRELVM v)
 
     m_pOfSyncData.wAmmo = static_cast<uint16_t>(wAmmo);
     m_pOfSyncData.bIsReloading = static_cast<bool>(bIsReloading);
+	//if bIsReloading is provided then set off the fire key
     if (bIsReloading && ( (dwKeys & 512) == 512))
         dwKeys = dwKeys & (~(1 << 9));//2^9 = 512. Set 9th bit from right off.
     m_pOfSyncData.dwKeys = (uint32_t)dwKeys;
@@ -127,26 +128,24 @@ SQInteger fn_FireSniperRifle(HSQUIRRELVM v)
     if (!npc)
         return 0;
     SQInteger weapon;
-    float x, y, z, alpha, angle;
+    float x, y, z, dx, dy, dz;
     // x y x aiming position
     sq_getinteger(v, 2, &weapon);
     sq_getfloat(v, 3, &x);
     sq_getfloat(v, 4, &y);
     sq_getfloat(v, 5, &z);
-    sq_getfloat(v, 6, &alpha);
-    sq_getfloat(v, 7, &angle);
+    sq_getfloat(v, 6, &dx);
+    sq_getfloat(v, 7, &dy);
+    sq_getfloat(v, 8, &dz);
     RakNet::BitStream bsOut;
     bsOut.Write((RakNet::MessageID)(ID_GAME_MESSAGE_SNIPERFIRE));
     bsOut.Write((char)weapon);
     bsOut.Write(z);// z first
     bsOut.Write(y);
     bsOut.Write(x);
-    float p = (float)(5 * PI * alpha);
-    float q = (float)(16 * cos(angle));
-    float r = (float)(- 16 * sin(angle));
-    bsOut.Write(p);
-    bsOut.Write(q);
-    bsOut.Write(r);
+    bsOut.Write(dz);
+    bsOut.Write(dy);
+    bsOut.Write(dx);
     peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE, 0, systemAddress, false);
     return 0;
 }
@@ -279,16 +278,94 @@ SQInteger fn_SendDeathInfo(HSQUIRRELVM v)
     peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE, 0, systemAddress, false);
     npc->SetState(PLAYER_STATE_WASTED);
     iNPC->SetSpawnStatus( false );
+    iNPC->ClassSelectionCounter = 0;
     return 0;
 }
+SQInteger fn_FaceNPCToPlayer(HSQUIRRELVM v)
+{
+    if (!npc)
+        return 0;
+    SQInteger playerId;
+    sq_getinteger(v, 2, &playerId);
+    if (m_pPlayerPool->GetSlotState(playerId))
+    {
+        //player is connected
+        CPlayer* player = m_pPlayerPool->GetAt(playerId);
+        uint8_t state = player->GetState();
+        if (state == PLAYER_STATE_ONFOOT ||
+            state == PLAYER_STATE_AIM)
+        {
+            VECTOR vecPos = player->m_vecPos;
+            VECTOR vecnpcPos = npc->m_vecPos;
+            float angle = (float)atan2((float)(-(vecPos.X - vecnpcPos.X) ),
+                (float)(vecPos.Y - vecnpcPos.Y));
+            npc->m_fAngle = angle;
+            SendNPCOfSyncDataLV();
+            sq_pushbool(v, SQTrue);
+            return 1;
+        }
+    }
+    sq_pushbool(v, SQFalse);
+    return 1;
+}
+SQInteger fn_WhereIsPlayer(HSQUIRRELVM v)
+{
+    if (!npc)
+        return 0;
+    SQInteger playerId;
+    sq_getinteger(v, 2, &playerId);
+    if (m_pPlayerPool->GetSlotState(playerId))
+    {
+        //player is connected
+        CPlayer* player = m_pPlayerPool->GetAt(playerId);
+        uint8_t state = player->GetState();
+        if (state == PLAYER_STATE_ONFOOT || 
+            state == PLAYER_STATE_AIM )
+        {
+            VECTOR vecPos = player->m_vecPos;
+            VECTOR vecnpcPos = npc->m_vecPos;
+            float theta = (float)atan2((float)(-(vecPos.X - vecnpcPos.X)),
+                (float)(vecPos.Y - vecnpcPos.Y)); //npcs angle to player
+            float alpha = npc->m_fAngle;//current angle of npc;
+            float change = theta - alpha; //this much is the difference
+            float beta;
+            if (change > 0 && change < PI)
+                beta = change; //positive
+            else if (change > 0 && change > PI)
+                beta = change - 2 * (float) PI; //negative
+            else if (change <0 && change > -PI)
+                beta = change; //negative
+            else if (change < 0 && change < -PI)
+                beta = change + 2 * (float) PI;//positive
+            else if (change == PI || change == -PI)
+                beta = change; //does not matter
+            else if (change == 0)
+                beta = 0;
+            /* beta is like npc's angle, but considering
+             the player as north pole */
+            /* Or simply, beta is zero  means player is in front.
+            is PI or -PI means is in the back
+            and if it is positive it means player is on the left
+            and negative means player is on the right*/
+            sq_pushfloat(v, beta);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
+
 void RegisterNPCFunctions3()
 {
-    register_global_func(v, ::fn_SendOnFootSyncData, "SendOnFootSyncData", 21, "tiffffiiiifffffffffbb");
-    register_global_func(v, ::fn_FireSniperRifle, "FireSniperRifle", 7, "tifffff");
+    register_global_func(v, ::fn_SendOnFootSyncData, "SendOnFootSyncData", 21, "tiffffiiiifffffff|if|if|ibb");
+    register_global_func(v, ::fn_FireSniperRifle, "FireSniperRifle", 8, "tiffff|if|if|i");
     //register_global_func(v, ::fn_FireProjectile, "FireProjectile", 7, "tifffff");
     register_global_func(v, ::fn_SendShotInfo, "SendShotInfo", 3, "tii");
     register_global_func(v, ::fn_SetLocalValue, "SetLocalValue", 3, "tii|f");
     register_global_func(v, ::fn_GetLocalValue, "GetLocalValue", 2, "ti");
     register_global_func(v, ::fn_SendOnFootSyncDataLV, "SendOnFootSyncDataLV", 1, "t");
     register_global_func(v, ::fn_SendDeathInfo, "SendDeathInfo", 4, "tiii");
+    register_global_func(v, ::fn_FaceNPCToPlayer, "FaceNPCToPlayer", 2, "ti");
+    register_global_func(v, ::fn_WhereIsPlayer, "WhereIsPlayer", 2, "ti");
 }

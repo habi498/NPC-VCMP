@@ -181,7 +181,10 @@ void CPlayer::SetWeaponSlot(BYTE byteSlot, BYTE byteWeapon, WORD wAmmo)
 }
 
 //----------------------------------------------------
-
+void CPlayer::SetCurrentWeapon(BYTE byteWeapon)
+{
+	m_ofSync.byteCurrentWeapon = byteWeapon;
+}
 void CPlayer::SetCurrentWeaponAmmo(WORD wAmmo)
 {
 	BYTE i;
@@ -193,6 +196,8 @@ void CPlayer::SetCurrentWeaponAmmo(WORD wAmmo)
 			break;
 		}
 	}
+	m_ofSync.wAmmo = wAmmo;
 }
+
 
 //----------------------------------------------------

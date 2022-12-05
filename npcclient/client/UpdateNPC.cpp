@@ -78,13 +78,13 @@ void SendNPCSyncData(INCAR_SYNC_DATA* m_pInSyncData, PacketPriority mPriority=HI
 	bsOut.Write(byte);
 	WriteNibble(nibble, &bsOut);
 	bsOut.Write(m_pInSyncData->bytePlayerHealth);
-	if (action & 0x80)
+	if (action & IC_FLAG_WEAPON)
 	{
 		bsOut.Write(m_pInSyncData->byteCurrentWeapon);
 		if (m_pInSyncData->byteCurrentWeapon > 11)
 			bsOut.Write((uint16_t)npc->GetSlotAmmo(npc->GetCurrentWeapon()));
 	}
-	if (action & 0x40)
+	if (action & IC_FLAG_ARMOUR)
 		bsOut.Write(m_pInSyncData->bytePlayerArmour);
 	bool bTurret = false;
 	if (m_pInSyncData->Turretx != 0 || m_pInSyncData->Turrety != 0)
@@ -99,7 +99,7 @@ void SendNPCSyncData(INCAR_SYNC_DATA* m_pInSyncData, PacketPriority mPriority=HI
 	bsOut.Write(m_pInSyncData->vecPos.X);
 	bsOut.Write(m_pInSyncData->vecPos.Y);
 	bsOut.Write(m_pInSyncData->vecPos.Z);
-	if (type & 0x1)
+	if (type & IC_TFLAG_SPEED)
 	{
 		uint16_t speedx, speedy, speedz;
 		speedx = ConvertToUINT16_T(m_pInSyncData->vecMoveSpeed.X, 20.0);
@@ -116,9 +116,9 @@ void SendNPCSyncData(INCAR_SYNC_DATA* m_pInSyncData, PacketPriority mPriority=HI
 	w_rotz= ConvertToUINT16_T(m_pInSyncData->quatRotation.Z, -1);
 	bsOut.Write(w_rotx);
 	bsOut.Write(w_roty); bsOut.Write(w_rotz);
-	if (type & 0x2)
+	if (type & IC_TFLAG_DAMAGE)
 		bsOut.Write(m_pInSyncData->dDamage);
-	if (type & 0x4)
+	if (type & IC_TFLAG_CARHEALTH)
 		bsOut.Write(m_pInSyncData->fCarHealth);
 	if (bTurret)
 	{
@@ -148,7 +148,7 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData)
 	uint8_t action = 0;
 	SetActionFlags(m_pOfSyncData, &action);
 	uint8_t nibble = 0;
-	if (action & 0x80)
+	if (action & OF_FLAG_CROUCHING)
 		nibble |= 0x2;
 	#ifdef NPC_SHOOTING_ENABLED
 		bool reloading_weapon = false;
@@ -172,7 +172,7 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData)
 	bsOut.Write(m_pOfSyncData->vecPos.Z);
 	WORD angle=ConvertToUINT16_T(m_pOfSyncData->fAngle, 2 * (float)PI);
 	bsOut.Write(angle);
-	if (action & 1)
+	if (action & OF_FLAG_SPEED)
 	{
 		VECTOR vecSpeed = m_pOfSyncData->vecSpeed;
 		uint16_t speedx= ConvertToUINT16_T(vecSpeed.X, 20.0);
@@ -180,13 +180,13 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData)
 		uint16_t speedz= ConvertToUINT16_T(vecSpeed.Z, 20.0);
 		bsOut.Write(speedx); bsOut.Write(speedy); bsOut.Write(speedz);
 	}
-	if (action & 0x40)
+	if (action & OF_FLAG_WEAPON)
 	{
 		bsOut.Write(m_pOfSyncData->byteCurrentWeapon);
 		if (m_pOfSyncData->byteCurrentWeapon > 11)
 			bsOut.Write((WORD)(m_pOfSyncData->wAmmo));//ammo
 	}
-	if (action & 0x10)
+	if (action & OF_FLAG_KEYS)
 	{
 		uint8_t msb = 0x1;//most significant byte
 		if (m_pOfSyncData->dwKeys & 0x01) //aiming
@@ -214,10 +214,10 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData)
 			WriteNibble(1, &bsOut);
 		#endif	
 	}
-	if (!(action & 0x08))
+	if (!(action & OF_FLAG_NOHEALTH))
 	{
 		bsOut.Write(m_pOfSyncData->byteHealth);
-		if (action & 0x04)
+		if (action & OF_FLAG_ARMOUR)
 			bsOut.Write(m_pOfSyncData->byteArmour);
 	#ifdef NPC_SHOOTING_ENABLED
 		if (m_pOfSyncData->IsPlayerUpdateAiming)
@@ -253,27 +253,27 @@ void WriteNibble(uint8_t nibble, RakNet::BitStream *bsOut)
 
 void SetActionFlags(ONFOOT_SYNC_DATA* m_pOfSyncData, uint8_t* action)
 {
-	if (m_pOfSyncData->byteCurrentWeapon)(*action) |= 0x40;
-	if (m_pOfSyncData->byteArmour)(*action) |= 0x04;
+	if (m_pOfSyncData->byteCurrentWeapon)(*action) |= OF_FLAG_WEAPON;
+	if (m_pOfSyncData->byteArmour)(*action) |= OF_FLAG_ARMOUR;
 	if (m_pOfSyncData->vecSpeed.X != 0 || m_pOfSyncData->vecSpeed.Y != 0 ||
-		m_pOfSyncData->vecSpeed.Z != 0)(*action) |= 0x01;
-	if (m_pOfSyncData->dwKeys)(*action) |= 0x10;
-	if (m_pOfSyncData->IsCrouching)(*action) |= 0x80;
-	if (m_pOfSyncData->byteHealth <= 0)(*action) |= 0x08;
+		m_pOfSyncData->vecSpeed.Z != 0)(*action) |= OF_FLAG_SPEED;
+	if (m_pOfSyncData->dwKeys)(*action) |= OF_FLAG_KEYS;
+	if (m_pOfSyncData->IsCrouching)(*action) |= OF_FLAG_CROUCHING;
+	if (m_pOfSyncData->byteHealth <= 0)(*action) |= OF_FLAG_NOHEALTH;
 }
 //Set Flags for Weapon and Armour of player
 void SetActionFlags(INCAR_SYNC_DATA* m_pInSyncData, uint8_t* action)
 {
-	if (m_pInSyncData->byteCurrentWeapon)(*action) |= 0x80;
-	if (m_pInSyncData->bytePlayerArmour)(*action) |= 0x40;
+	if (m_pInSyncData->byteCurrentWeapon)(*action) |= IC_FLAG_WEAPON;
+	if (m_pInSyncData->bytePlayerArmour)(*action) |= IC_FLAG_ARMOUR;
 }
 //Set Flags for Health, Damage and Movement of Car
 void SetTypeFlags(INCAR_SYNC_DATA* m_pInSyncData, uint8_t* type)
 {
 	if (m_pInSyncData->vecMoveSpeed.X != 0 || m_pInSyncData->vecMoveSpeed.Y != 0 ||
-		m_pInSyncData->vecMoveSpeed.Z != 0)(*type) |= 0x1;
-	if (m_pInSyncData->fCarHealth != 1000)(*type) |= 0x4;
-	if (m_pInSyncData->dDamage != 0)(*type) |= 0x2;
+		m_pInSyncData->vecMoveSpeed.Z != 0)(*type) |= IC_TFLAG_SPEED;
+	if (m_pInSyncData->fCarHealth != 1000)(*type) |= IC_TFLAG_CARHEALTH;
+	if (m_pInSyncData->dDamage != 0)(*type) |= IC_TFLAG_DAMAGE;
 }
 //Set Flag for Quaternion Rotation
 void SetRotationFlags(INCAR_SYNC_DATA* m_pInSyncData, uint8_t* flag)
@@ -332,6 +332,7 @@ void SendNPCOfSyncDataLV() //with existing values, send a packet. Normally to up
 	m_pOfSyncData->byteHealth = npc->m_byteHealth;
 	m_pOfSyncData->byteArmour = npc->m_byteArmour;
 	m_pOfSyncData->byteCurrentWeapon = npc->GetCurrentWeapon();
+	
 	m_pOfSyncData->dwKeys = npc->GetKeys();
 	m_pOfSyncData->fAngle = npc->m_fAngle;
 	m_pOfSyncData->vecPos = npc->m_vecPos;

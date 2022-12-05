@@ -18,6 +18,7 @@
 #define SQVM_H
 #include <stdarg.h> 
 #include <string>
+#include <vector>
 #include "Squirrel/squirrel.h"
 #include "Squirrel/sqstdio.h"
 #include "Squirrel/sqstdaux.h"
@@ -48,9 +49,9 @@ typedef enum {
     forceSizeVcmpPlayerUpdate = INT32_MAX
 } vcmpPlayerUpdate;
 void printfunc(HSQUIRRELVM v, const SQChar* s, ...);
-bool StartSquirrel(std::string file);
+bool StartSquirrel(std::string file, std::string location, std::vector<std::string>params);
 int StopSquirrel();
-SQInteger register_global_func(HSQUIRRELVM v, SQFUNCTION f, const char* fname, unsigned char nparamscheck, const SQChar* typemask);
+SQInteger register_global_func(HSQUIRRELVM v, SQFUNCTION f, const char* fname, SQInteger nparamscheck, const SQChar* typemask);
 void call_OnNPCConnect(unsigned char npcplayerid);
 void call_OnNPCDisconnect(unsigned char reason);
 void call_OnClientMessage(uint8_t r, uint8_t g, uint8_t b, char* message, uint16_t len);

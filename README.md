@@ -102,6 +102,17 @@ Added ability for npc to shoot through sniper rifle
 Added boolean parameter for crouching in SendOnFootSyncData
 Windows builds were made.
 
+Version 1.5 (upcoming )
+1. NPCs can be called with -a "xPos yPos zPos aAngle" where
+   Pos and Angle are floating points. The npc after connecting
+   will spawn at the Pos specified with angle Angle.
+2. If the argument string specified above contain words starting 
+with f (eg."f27"), the value after 'f', will be passed to script. See (3)
+3. OnNPCScriptLoad() is changed to OnNPCScriptLoad(argv)
+where argv is an array of strings and whose values are obtained 
+by the sub arguments specified in (2). similar to argv={ "27", "37", "..."};
+4. Has made -m scriptfile argument optional. Now NPCs can be connected
+without script.
 wiki available at https://npc-for-vcmp.sourceforge.io/wikiw/index.php
 
 

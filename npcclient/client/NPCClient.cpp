@@ -15,7 +15,7 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 #include "main.h"
-HSQUIRRELVM v; NPC* iNPC = NULL;
+HSQUIRRELVM v; NPC* iNPC = new NPC();
 RakNet::RakPeerInterface* peer;
 RakNet::SystemAddress systemAddress;
 CPlayerPool* m_pPlayerPool;
@@ -65,11 +65,14 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 	
 	if (!m_pPlayerPool)
 		m_pPlayerPool = new CPlayerPool();
-
+#ifndef WIN32
+	std::setvbuf(stdout, NULL, _IONBF, 0);
+#endif
 	while (1)
 	{
 		for (packet = peer->Receive(); packet; peer->DeallocatePacket(packet), packet = peer->Receive())
 		{
+			//printf("packet with data[0] = %d received\n", packet->data[0]);
 			switch (packet->data[0])
 			{
 			case ID_CONNECTION_REQUEST_ACCEPTED:
@@ -284,7 +287,6 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				bsIn.IgnoreBytes(3);
 				uint8_t npcid;//same as playerid
 				bsIn.ReadAlignedBytes(&npcid, 1);
-				iNPC = new NPC();
 				iNPC->SetID(npcid);
 				char* name;
 				name = (char*)malloc(sizeof(char) * (npcname.length() + 1));
@@ -305,7 +307,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					exit(1);
 				}
 				call_OnNPCConnect(iNPC->GetID());
-				RakNet::BitStream bsOut, bsOut2, bsOut3;
+				RakNet::BitStream bsOut, bsOut2;
 				bsOut.Write((RakNet::MessageID)0xb9);
 				bsOut.Write0(); bsOut.Write0(); bsOut.Write0();
 				peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 0, packet->systemAddress, false);
@@ -313,11 +315,16 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				bsOut2.Write0(); bsOut2.Write0(); bsOut2.Write0();
 				bsOut2.Write1(); bsOut2.Write1();
 				peer->Send(&bsOut2, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 0, packet->systemAddress, false);
-				bsOut3.Write((RakNet::MessageID)ID_GAME_MESSAGE_REQUEST_CLASS);
-				bsOut3.Write0();
-				peer->Send(&bsOut3, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, packet->systemAddress, false);
+				//Not tested thouroughly
+				{
+					RakNet::BitStream bsOut3;
+					bsOut3.Write((RakNet::MessageID)ID_GAME_MESSAGE_REQUEST_CLASS);
+					bsOut3.Write0();
+					peer->Send(&bsOut3, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, packet->systemAddress, false);
+				}
+				
 				//Sometimes client sends an additional message which is omitted here: 0xbd. 
-			}
+			}	
 			break;
 			case ID_GAME_MESSAGE_CLIENT_MESSAGE:
 			{
@@ -348,7 +355,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				}
 			}
 			break;
-			case 0xa0:
+			/*case 0xa0:
 			{
 				RakNet::BitStream bsIn(packet->data, packet->length, false);
 				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
@@ -359,6 +366,31 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					RakNet::BitStream bsOut;
 					bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_REQUEST_SPAWN);
 					peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, packet->systemAddress, false);
+				}
+			}
+			break;
+			*/
+			case ID_GAME_MESSAGE_CLASS_GRANTED:
+			{
+				//::BitStream bsIn(packet->data, packet->length, false);
+				//bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				if (iNPC && iNPC->Initialized() && iNPC->IsSpawned() == false)
+				{
+					if ((iNPC->SpawnClass - iNPC->ClassSelectionCounter++)==0)
+					{
+						RakNet::BitStream bsOut;
+						bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_REQUEST_SPAWN);
+						peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, packet->systemAddress, false);
+					}else
+					{
+						RakNet::BitStream bsOut3;
+						bsOut3.Write((RakNet::MessageID)ID_GAME_MESSAGE_REQUEST_CLASS);
+						bsOut3.Write((uint8_t)1);
+						peer->Send(&bsOut3, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, packet->systemAddress, false);
+						
+					}
+					
+					
 				}
 			}
 			break;
@@ -375,6 +407,28 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					npc->SetState(PLAYER_STATE_SPAWNED);
 					//npc->m_byteCurWeap = 0;
 					iNPC->SetSpawnStatus(true);
+					if (iNPC->bSpawnAtXYZ)
+					{
+						npc->m_vecPos.X = iNPC->fSpawnLocX;
+						npc->m_vecPos.Y = iNPC->fSpawnLocY;
+						npc->m_vecPos.Z = iNPC->fSpawnLocZ;
+						npc->m_fAngle = iNPC->fSpawnAngle;
+						
+						iNPC->StoreFirstSpawnedTime();//for removing lock
+						iNPC->bSpawnAtXYZ = false; //turn off
+					}
+					if (iNPC->SpecialSkin != NOT_DEFINED )
+					{
+						char buffer[100];
+						sprintf(buffer, "_npc_skin_request %d", iNPC->SpecialSkin);
+						SendCommandToServer(buffer);
+						iNPC->SpecialSkin = 255;//turn off the feature
+					}
+					if (iNPC->SpawnWeapon != NOT_DEFINED )
+					{
+						npc->SetCurrentWeapon(iNPC->SpawnWeapon);
+						iNPC->SpawnWeapon = 255;//turn off the feature.
+					}
 					call_OnNPCSpawn();
 				}
 			}
@@ -464,7 +518,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 						player->SetState(PLAYER_STATE_ENTER_VEHICLE_PASSENGER);
 					player->m_VehicleID = vehicleid;
 				}
-				if (playerid == iNPC->GetID())
+				if (iNPC && iNPC->Initialized()  && playerid == iNPC->GetID())
 				{
 					//npc->m_VehicleID = vehicleid;
 					call_OnNPCEnterVehicle(vehicleid, seatid);
@@ -555,7 +609,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				bsIn.ReadAlignedBytes(&playerid,1);
 				uint8_t reason;
 				bsIn.ReadAlignedBytes(&reason, 1);
-				if (playerid == iNPC->GetID())
+				if (iNPC && iNPC->Initialized() && playerid == iNPC->GetID())
 				{
 					call_OnNPCDisconnect(reason);
 					m_pPlayerPool->Delete(playerid);
@@ -590,17 +644,29 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 			{
 				RakNet::BitStream bsIn(packet->data, packet->length, false);
 				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
-				bsIn.Read(npc->m_vecPos.Z);
-				bsIn.Read(npc->m_vecPos.Y);
-				bsIn.Read(npc->m_vecPos.X);
+				if (!iNPC->IsSyncPaused())
+				{
+					bsIn.Read(npc->m_vecPos.Z);
+					bsIn.Read(npc->m_vecPos.Y);
+					bsIn.Read(npc->m_vecPos.X);
+					if (iNPC->IsSpawned())
+						SendNPCOfSyncDataLV();
+				}
 			}
 			break;
 			case ID_GAME_MESSAGE_SET_ANGLE:
 			{
 				RakNet::BitStream bsIn(packet->data, packet->length, false);
 				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
-				bsIn.Read(npc->m_fAngle);
-				if(iNPC->IsSpawned())
+				//NPC has spawn position or spawn angle set. don't read this
+				if (!iNPC->IsSyncPaused())
+				{
+					bsIn.Read(npc->m_fAngle);
+				}
+				/* The setting of angle by server when npc is
+				spawning is used as a 'go' for sending
+				spawn datas. Below it happens*/
+				if (iNPC->IsSpawned())
 					SendNPCOfSyncDataLV();
 			}
 			break;
@@ -611,9 +677,11 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				uint32_t anticheatid; 
 				bsIn.Read(anticheatid);
 				iNPC->anticheatID = anticheatid;
-				/*uint8_t newhealth;
+				uint8_t newhealth;
 				bsIn.Read(newhealth);
-				npc->m_byteHealth = newhealth;*/
+				npc->m_byteHealth = newhealth;
+				if(!iNPC->IsSyncPaused())
+					SendNPCOfSyncDataLV();
 			}
 			break;
 			case ID_GAME_MESSAGE_SET_ARMOUR:
@@ -623,9 +691,11 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				uint32_t anticheatid;
 				bsIn.Read(anticheatid);
 				iNPC->anticheatID = anticheatid;
-				/*uint8_t newarmour;
+				uint8_t newarmour;
 				bsIn.Read(newarmour);
-				npc->m_byteArmour = newarmour;*/
+				npc->m_byteArmour = newarmour;
+				if (!iNPC->IsSyncPaused())
+					SendNPCOfSyncDataLV();
 			}
 			break;
 			case ID_GAME_MESSAGE_SET_PLAYER_WEAPON_SLOT:
@@ -651,7 +721,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					npc->m_byteSlotWeapon[i] = 0;
 					npc->m_wSlotAmmo[i] = 0;
 				}
-				npc->GetONFOOT_SYNC_DATA()->byteCurrentWeapon = 0;
+				npc->SetCurrentWeapon(0);
 			}
 			break;
 			case ID_GAME_MESSAGE_REMOVE_WEAPON:
@@ -665,7 +735,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				bsIn.Read(weapon);
 				npc->m_byteSlotWeapon[GetSlotId(weapon)] = 0;
 				npc->m_wSlotAmmo[GetSlotId(weapon)] = 0;
-				npc->GetONFOOT_SYNC_DATA()->byteCurrentWeapon = 0;
+				npc->SetCurrentWeapon(0);
 			}
 			break;
 			case ID_GAME_MESSAGE_SET_WEAPON:
@@ -679,8 +749,17 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				bsIn.Read(weapon);
 				bsIn.Read(ammo);
 				npc->SetWeaponSlot(GetSlotId(weapon), weapon, ammo);
-				npc->GetONFOOT_SYNC_DATA()->byteCurrentWeapon = weapon;
-				npc->GetONFOOT_SYNC_DATA()->wAmmo = ammo;
+				if (!iNPC->IsSyncPaused())
+				{
+					//Set current weapon
+					npc->SetCurrentWeaponAmmo( ammo );
+					if (npc->GetCurrentWeapon() != weapon)
+					{
+						npc->SetCurrentWeapon(weapon);
+						if (iNPC->IsSpawned())
+							SendNPCOfSyncDataLV();
+					}
+				}
 				//one more byte is there. it was 01 when i tested.
 			}
 			break;
@@ -829,7 +908,7 @@ void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncD
 	uint8_t action;
 	bsIn->ReadAlignedBytes(&action, 1);
 	uint8_t nibble = 0;
-	if (action & OF_FLAGCROUCHING)
+	if (action & OF_FLAG_CROUCHING)
 	{
 		//This means a nibble is there to read
 		ReadNibble(&nibble, bsIn);//This may not be of anyuse in particular
@@ -841,7 +920,7 @@ void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncD
 	float fAngle = ConvertFromUINT16_T(w_encodedAngle, 2 * (float)PI);
 	uint16_t speedx = 0, speedy = 0, speedz = 0;
 	VECTOR vecSpeed; vecSpeed.X = 0; vecSpeed.Y = 0; vecSpeed.Z = 0;
-	if (action & OF_FLAGSPEED)
+	if (action & OF_FLAG_SPEED)
 	{
 		bsIn->Read(speedx); bsIn->Read(speedy);
 		bsIn->Read(speedz);
@@ -850,14 +929,14 @@ void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncD
 		vecSpeed.Z = ConvertFromUINT16_T(speedz, 20.0);
 	}
 	uint8_t byteWeapon = 0; uint16_t ammo = 0;
-	if (action & OF_FLAGWEAPON)
+	if (action & OF_FLAG_WEAPON)
 	{
 		bsIn->Read(byteWeapon);
 		if (byteWeapon > 11)
 			bsIn->Read(ammo);//ammo
 	}
 	uint32_t dw_Keys = 0;
-	if (action & OF_FLAGKEYS)
+	if (action & OF_FLAG_KEYS)
 	{
 		uint8_t keybyte1, keybyte2, msb; //bool bReloading = 0;
 		bsIn->Read(keybyte1); bsIn->Read(keybyte2);
@@ -870,7 +949,7 @@ void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncD
 	uint8_t byteHealth;
 	bsIn->Read(byteHealth);
 	uint8_t byteArmour = 0;
-	if (action & OF_FLAGARMOUR)
+	if (action & OF_FLAG_ARMOUR)
 		bsIn->Read(byteArmour);
 	bsIn->IgnoreBytes(1);
 	if (bIsAiming)

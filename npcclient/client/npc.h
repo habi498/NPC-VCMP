@@ -20,6 +20,10 @@
 #define NPC_H
 #define MAX_PLAYERS 100
 #define NPC_SHOOTING_ENABLED
+#define SPAWN_LOCK 4000  //amount in ms not to respond to server setting pos
+#define NOT_DEFINED 255
+
+//used to store internal data
 class NPC
 {
 private:
@@ -28,6 +32,19 @@ private:
 	bool initialized = false;//true implies ID is set
 	std::map<uint16_t,bool>strmdvhcls;
 	bool strmdplrs[MAX_PLAYERS];
+	bool bLockOnSync = false;//prevent server setting position
+	DWORD dw_SpawnedTick = 0;//dword to store tickcount of first spawn
+	
+	
+public:
+	bool bSpawnAtXYZ = false;
+	
+	float fSpawnLocX = 0.0, fSpawnLocY = 0.0, fSpawnLocZ = 0.0;
+	float fSpawnAngle = 0.0;
+	uint8_t SpecialSkin = 255;
+	uint8_t SpawnWeapon = 255;
+	uint8_t SpawnClass = 0;
+	uint8_t ClassSelectionCounter = 0;
 public:
 	NPC()
 	{
@@ -74,6 +91,45 @@ public:
 	bool Initialized() { return initialized; }
 	bool IsSpawned() { return isSpawned; }
 	void SetSpawnStatus(bool status) {  isSpawned = status; }
+	void SetSpawnLocation(float x, float y, float z, float angle=0.0)
+	{
+		bSpawnAtXYZ = true;
+		fSpawnLocX = x;
+		fSpawnLocY = y;
+		fSpawnLocZ = z;
+		fSpawnAngle = angle;
+		bLockOnSync = true;
+	}
+	void SetSpawnWeapon(BYTE weapon)
+	{
+		SpawnWeapon = weapon;
+		bLockOnSync = true;
+	}
+	void StoreFirstSpawnedTime()
+	{
+		dw_SpawnedTick = GetTickCount();
+	}
+	bool IsSyncPaused()
+	{
+		if (bLockOnSync)
+		{
+			DWORD tick = GetTickCount();
+			if (tick > dw_SpawnedTick)
+			{
+				if (tick > (dw_SpawnedTick + SPAWN_LOCK) )
+					return false;
+				else return true;
+			}
+			else
+			{
+				//one possibility with 49.7 days system wrap around zero
+				if (tick > SPAWN_LOCK) //wait for SPAWN_LOCK ms anyway
+					return false;
+				else return true;
+			}
+		}
+		return false;
+	}
 };
 typedef enum tagNPCFIELDS
 {

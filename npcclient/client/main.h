@@ -45,6 +45,7 @@
 #include "Playerpool.h"
 #include "npc32.h"
 #include "CTimer.h"
+#include "ClientFunctions.h"
 #define ZeroVEC(V){V.X=0;V.Y=0;V.Z=0;}
 #define MulVEC(V,f){V.X*=f;V.Y*=f;V.Z*=f;}
 #define PI 3.1415926
@@ -53,13 +54,18 @@
 #define PLAYBACK_OVERRIDE_VEHICLEID
 
 
-#define OF_FLAGWEAPON 0x40
-#define OF_FLAGARMOUR 0x04
-#define OF_FLAGSPEED 0x01
-#define OF_FLAGKEYS 0x10
-#define OF_FLAGCROUCHING 0x80
-#define OF_FLAGNOHEALTH 0x08
+#define OF_FLAG_WEAPON 0x40
+#define OF_FLAG_ARMOUR 0x04
+#define OF_FLAG_SPEED 0x01
+#define OF_FLAG_KEYS 0x10
+#define OF_FLAG_CROUCHING 0x80
+#define OF_FLAG_NOHEALTH 0x08
 
+#define IC_FLAG_ARMOUR 0x40
+#define IC_FLAG_WEAPON 0x80
+#define IC_TFLAG_SPEED 0x01
+#define IC_TFLAG_CARHEALTH 0x04
+#define IC_TFLAG_DAMAGE 0x02
 int ConnectToServer(std::string hostname, int port, std::string npcname, std::string password);
 void OnServerCycle();//in Playback.cpp
 void SendNPCUpdate();//in UpdateNPC.cpp

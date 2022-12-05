@@ -76,5 +76,8 @@ public:
 	
 	//only for npcs
 	void SetCurrentWeaponAmmo(WORD wAmmo);
+	//only for npcs
+	//----------------------------------------------------
+	void SetCurrentWeapon(BYTE byteWeapon);
 };
 #endif

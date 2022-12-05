@@ -25,7 +25,7 @@ extern RakNet::SystemAddress systemAddress;
 #define CHAT_MESSAGE_ORDERING_CHANNEL 3
 #define NPC_RECFILE_IDENTIFIER 1001 //From Nov 2022 onwards
 Playback mPlayback;
-SQInteger register_global_func(HSQUIRRELVM v, SQFUNCTION f, const char* fname, unsigned char nparamscheck, const SQChar* typemask)
+SQInteger register_global_func(HSQUIRRELVM v, SQFUNCTION f, const char* fname, SQInteger nparamscheck, const SQChar* typemask)
 {
     sq_pushroottable(v);
     sq_pushstring(v, fname, -1);
@@ -107,8 +107,9 @@ SQInteger fn_StartRecordingPlayback(HSQUIRRELVM v)
         mPlayback.prevtick = tick;
         mPlayback.running = true;
         fseek(mPlayback.pFile, -1 * (long)sizeof(DWORD), SEEK_CUR);
+        sq_pushbool(v, SQTrue);
+        return 1;
     }
-    return 0; 
 }
 SQInteger fn_SetMyFacingAngle(HSQUIRRELVM v)
 {
@@ -125,19 +126,31 @@ SQInteger fn_SetMyFacingAngle(HSQUIRRELVM v)
 SQInteger fn_PauseRecordingPlayback(HSQUIRRELVM v)
 {
     if (mPlayback.running == true)
+    {
         mPlayback.Pause();
+        sq_pushbool(v, SQTrue);
+        return 1;
+    }
     return 0;//0 because we are returning nothing
 }
 SQInteger fn_ResumeRecordingPlayback(HSQUIRRELVM v)
 {
     if (mPlayback.running == true)
+    {
         mPlayback.Resume();
+        sq_pushbool(v, SQTrue);
+        return 1;
+    }
     return 0;//0 because we are returning nothing
 }
 SQInteger fn_StopRecordingPlayback(HSQUIRRELVM v)
 {
     if (mPlayback.running == true)
+    {   
         mPlayback.Stop();
+        sq_pushbool(v, SQTrue);
+        return 1;
+    }
     return 0;//0 because we are returning nothing
 }
 SQInteger fn_GetMyFacingAngle(HSQUIRRELVM v)
@@ -226,32 +239,34 @@ SQInteger fn_SendCommand(HSQUIRRELVM v)
 {
     const SQChar* message;
     sq_getstring(v, 2, &message);
-    RakNet::BitStream bsOut;
-    bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_COMMAND);
-    uint16_t len = (uint16_t)strlen(message);
-    bsOut.Write(len);
-    bsOut.Write(message, len);
-    peer->Send(&bsOut, HIGH_PRIORITY, RELIABLE, 0, systemAddress, false);
+    SendCommandToServer(message);
     return 0;
 }
-
+SQInteger fn_GetTickCount(HSQUIRRELVM v)
+{
+    long t = GetTickCount();
+    int t_ = static_cast<int>(t); //don't know what else to do with long 
+    sq_pushinteger(v, t_);
+    return 1;
+}
 void RegisterNPCFunctions()
 {
     register_global_func(v, ::fn_StartRecordingPlayback,"StartRecordingPlayback",3,"tis");
     register_global_func(v, ::fn_IsPlayerStreamedIn,"IsPlayerStreamedIn",2,"ti");
     register_global_func(v, ::fn_IsVehicleStreamedIn,"IsVehicleStreamedIn",2,"ti");
-    register_global_func(v, ::fn_SetMyFacingAngle,"SetMyFacingAngle",2,"tf");
+    register_global_func(v, ::fn_SetMyFacingAngle,"SetMyFacingAngle",2,"tf|i");
     register_global_func(v, ::fn_GetMyFacingAngle,"GetMyFacingAngle",1,"t");
-    register_global_func(v, ::fn_SetMyPos,"SetMyPos2",4,"tfff");
+    register_global_func(v, ::fn_SetMyPos,"SetMyPos2",4,"tf|if|if|i");
     register_global_func(v, ::fn_GetMyPosX,"GetMyPosX",1,"t");
     register_global_func(v, ::fn_GetMyPosY,"GetMyPosY",1,"t");
     register_global_func(v, ::fn_GetMyPosZ,"GetMyPosZ",1,"t");
-    register_global_func(v, ::fn_GetDistanceFromMeToPoint,"GetDistanceFromMeToPoint2",4,"tfff");
+    register_global_func(v, ::fn_GetDistanceFromMeToPoint,"GetDistanceFromMeToPoint2",4,"tf|if|if|i");
     register_global_func(v, ::fn_PauseRecordingPlayback,"PauseRecordingPlayback",1,"t");
     register_global_func(v, ::fn_ResumeRecordingPlayback,"ResumeRecordingPlayback",1,"t");
     register_global_func(v, ::fn_StopRecordingPlayback,"StopRecordingPlayback",1,"t");
     register_global_func(v, ::fn_SendCommand, "SendCommand", 2, "ts");
     register_global_func(v, ::fn_SendChat,"SendChat",2,"ts");
+    register_global_func(v, ::fn_GetTickCount,"GetTickCount",1,"t");
 }
 SQInteger RegisterSquirrelConst(HSQUIRRELVM v, const SQChar* cname, SQInteger cvalue) {
     sq_pushconsttable(v);

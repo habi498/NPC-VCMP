@@ -31,7 +31,7 @@ long GetTickCount()
 	return (times(&tm) * 10);
 }
 #endif
-#define COMMANDS_OUTSIDE
+#define PLAYBACK_CMDS_DISABLE
 PluginFuncs* VCMP;
 HSQUIRRELVM v;
 HSQAPI sq; 
@@ -54,6 +54,7 @@ uint8_t OnPlayerCommand2(int32_t playerId, const char* message)
 	{
 		text= mes.substr(r + 1);
 	}
+#ifndef PLAYBACK_CMDS_DISABLE
 	if(command==std::string("ofrecord") )
 	{
 		if (VCMP->IsPlayerAdmin(playerId) == false)
@@ -108,6 +109,16 @@ uint8_t OnPlayerCommand2(int32_t playerId, const char* message)
 			VCMP->SendClientMessage(playerId, SUCCESS, "[Recording]Stopped");
 		else
 			VCMP->SendClientMessage(playerId, SVRMSG, "Error");
+	}
+#endif
+	if (command == "_npc_skin_request")
+	{
+		int32_t skinId=(int32_t)strtol(text.c_str(), NULL, 10);
+		vcmpError e= VCMP->SetPlayerSkin(playerId, skinId);
+		if (e)
+		{
+			printf("Invalid Skin ID %d\n", skinId);
+		}
 	}
 	return 1;
 }
@@ -195,9 +206,9 @@ extern "C" unsigned int VcmpPluginInit(PluginFuncs* pluginFuncs, PluginCallbacks
 	pluginCalls->OnServerInitialise = OnServerInitialise2;
 	pluginCalls->OnPluginCommand = OnPluginCommand2;
 	pluginCalls->OnPlayerUpdate = OnPlayerUpdate2;
-#ifndef COMMANDS_OUTSIDE
+
 	pluginCalls->OnPlayerCommand = OnPlayerCommand2;
-#endif
+
 	pluginCalls->OnPlayerConnect = OnPlayerConnect2;
 	pluginCalls->OnPlayerDisconnect = OnPlayerDisconnect2;
 	return 1;
