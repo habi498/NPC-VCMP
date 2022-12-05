@@ -56,29 +56,37 @@ The tclap libary has been made use and hence the the application can be run with
 ```
 USAGE:
 
-   npcclient  [-] [-h <IP address>] [-p <port>] [-z <password>] -m <scriptfile> -n <name>
-   
+   npcclient  [-] [-h <string>] [-l <string>] [-m <string>] [-p <integer>]
+              [-w <string> ...] [-z <string>] -n <string>
+
+
 Where:
 
-   -h <IP address>,  --hostname <IP address>
+   -h <string>,  --hostname <string>
      IP address of host
 
-   -p <port>,  --port <port>
+   -p <integer>,  --port <integer>
      Port to connect to
 
-   -n <name>,  --name <name>
+   -n <string>,  --name <string>
      (required) Name of the NPC
 
-   -m <scriptfile>,  --scriptfile <scriptfile>
-     (required) Squirrel Script file to be used
+   -m <string>,  --scriptfile <string>
+     Squirrel Script file to be used
 
-   -z <password>,  --password <password>
+   -z <string>,  --password <string>
      Password of the server to connect
+
+   -l <string>,  --location <string>
+     The location and skin to spawn eg. "x__ y__ z__ s__"
+
+   -w <string>,  --params <string>  (accepted multiple times)
+     The params to be passed to script
 
    --,  --ignore_rest
      Ignores the rest of the labeled arguments following this flag.
 
-   VCMP-Non Player Characters
+   VCMP-Non Player Characters v1.5
 ```
 
 ## Version Changes November 2022  
@@ -94,7 +102,7 @@ Where:
 --Added boolean parameter for crouching in SendOnFootSyncData.  
 --Windows builds were made.  
 
-Version 1.3 Changes (15.11.2022)
+**Version 1.3** Changes (15.11.2022)
 Timer new implemented SetTimerEx
 Fixed npc running unwantedly due to an error while writing 4 bits through raknet.
 Fixed potential issue of not killing Timer if function not found at proper time.
@@ -102,7 +110,7 @@ Added ability for npc to shoot through sniper rifle
 Added boolean parameter for crouching in SendOnFootSyncData
 Windows builds were made.
 
-Version 1.5 (upcoming )
+**Version 1.5** ( 05.12.2022 )
 1. NPCs can be called with (l flag) -l "xPos yPos zPos aAngle sSkin wWeapon cClass" where
    Pos and Angle are floating points. The npc after connecting
    will spawn at the Pos specified with angle Angle.
