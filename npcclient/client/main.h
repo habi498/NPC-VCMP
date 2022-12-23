@@ -69,6 +69,7 @@
 int ConnectToServer(std::string hostname, int port, std::string npcname, std::string password);
 void OnServerCycle();//in Playback.cpp
 void SendNPCUpdate();//in UpdateNPC.cpp
-void SendNPCOfSyncDataLV();// in UpdateNPC.cpp
+void SendNPCOfSyncDataLV(PacketPriority prioty=HIGH_PRIORITY);// in UpdateNPC.cpp
+void SendPassengerSyncData();
 void WriteNibble(uint8_t nibble, RakNet::BitStream* bsOut);
 #endif

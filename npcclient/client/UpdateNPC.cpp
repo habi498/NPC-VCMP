@@ -137,7 +137,7 @@ void SendNPCSyncData(INCAR_SYNC_DATA* m_pInSyncData, PacketPriority mPriority=HI
 	npc->StoreInCarFullSyncData(m_pInSyncData);
 }
 
-void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData)
+void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData, PacketPriority priority=HIGH_PRIORITY)
 {
 	RakNet::BitStream bsOut;
 	if(!m_pOfSyncData->IsPlayerUpdateAiming)
@@ -240,7 +240,7 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData)
 		bsOut.Write((uint8_t)0x03);
 	#endif
 	}
-	peer->Send(&bsOut, HIGH_PRIORITY, UNRELIABLE_SEQUENCED, 0, systemAddress, false);	
+	peer->Send(&bsOut, priority, UNRELIABLE_SEQUENCED, 0, systemAddress, false);	
 	npc->StoreOnFootFullSyncData(m_pOfSyncData);//v1.4
 }
 
@@ -325,7 +325,7 @@ void SendNPCUpdate()
 	//Send the packet
 	peer->Send(&bsOut, HIGH_PRIORITY, UNRELIABLE_SEQUENCED, 0, systemAddress, false);
 }	
-void SendNPCOfSyncDataLV() //with existing values, send a packet. Normally to update health or angle
+void SendNPCOfSyncDataLV(PacketPriority prioty) //with existing values, send a packet. Normally to update health or angle
 {
 	ONFOOT_SYNC_DATA* m_pOfSyncData;
 	m_pOfSyncData = npc->GetONFOOT_SYNC_DATA();
@@ -336,5 +336,38 @@ void SendNPCOfSyncDataLV() //with existing values, send a packet. Normally to up
 	m_pOfSyncData->dwKeys = npc->GetKeys();
 	m_pOfSyncData->fAngle = npc->m_fAngle;
 	m_pOfSyncData->vecPos = npc->m_vecPos;
-	SendNPCSyncData(m_pOfSyncData);
+	SendNPCSyncData(m_pOfSyncData, prioty);
+}
+
+void SendPassengerSyncData()
+{
+	if (npc->m_wVehicleId != 0 && npc->m_byteSeatId != -1)
+	{
+		RakNet::BitStream bsOut;
+		bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_PLAYERUPDATE_PASSENGER);
+		bsOut.Write(iNPC->anticheatID);
+		bsOut.Write((uint8_t)(npc->m_wVehicleId % 256));
+		uint8_t byte = ( npc->m_wVehicleId / 256 ) << 6;
+		uint8_t health = npc->m_byteHealth;
+		byte += health / 4;
+		bsOut.Write(byte);
+		
+		if (npc->m_byteArmour)
+		{
+			uint8_t byte2 = (health % 4)*4 << 4; 
+			byte2 += 32;
+			uint8_t armour = npc->m_byteArmour;
+			byte2 += armour / 8;
+			bsOut.Write(byte2);
+			WriteNibble((armour%8)*2, &bsOut);
+			WriteNibble(npc->m_byteSeatId * 4, &bsOut);
+		}
+		else
+		{
+			uint8_t byte2 = (health % 4)*4 << 4;
+			byte2 += npc->m_byteSeatId * 4;
+			bsOut.Write(byte2);
+		}
+		peer->Send(&bsOut, HIGH_PRIORITY, UNRELIABLE_SEQUENCED, 0, systemAddress, false);
+	}
 }

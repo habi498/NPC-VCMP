@@ -27,8 +27,8 @@ extern RakNet::RakPeerInterface* peer;
 extern RakNet::SystemAddress systemAddress;
 uint8_t GetSlotId(uint8_t byteWeapon);
 //05-Nov 22
-void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData);
-void SendNPCOfSyncData();
+void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData, PacketPriority priority=HIGH_PRIORITY);
+//void SendNPCOfSyncData();
 SQInteger fn_SendOnFootSyncData(HSQUIRRELVM v)
 {
     if (!npc) {
@@ -354,7 +354,27 @@ SQInteger fn_WhereIsPlayer(HSQUIRRELVM v)
     return 0;
 }
 
-
+SQInteger fn_SendPassengerSyncData(HSQUIRRELVM v)
+{
+    if(!npc)
+        return 0;
+    if (npc->m_wVehicleId != 0 &&
+        npc->m_byteSeatId != -1)
+    {
+        SendPassengerSyncData();
+        sq_pushbool(v, SQTrue);
+    }
+    else
+        sq_pushbool(v, SQFalse);
+    return 1;
+}
+SQInteger fn_SetPSLimit(HSQUIRRELVM v)
+{
+    SQInteger n;//Set -1 for disabling auto syncing
+    sq_getinteger(v, 2, &n);
+    iNPC->PSLimit = n;
+    return 0;
+}
 
 void RegisterNPCFunctions3()
 {
@@ -368,4 +388,6 @@ void RegisterNPCFunctions3()
     register_global_func(v, ::fn_SendDeathInfo, "SendDeathInfo", 4, "tiii");
     register_global_func(v, ::fn_FaceNPCToPlayer, "FaceNPCToPlayer", 2, "ti");
     register_global_func(v, ::fn_WhereIsPlayer, "WhereIsPlayer", 2, "ti");
+    register_global_func(v, ::fn_SendPassengerSyncData, "SendPassengerSyncData", 1, "t");
+    register_global_func(v, ::fn_SetPSLimit, "SetPSLimit", 2, "t");
 }

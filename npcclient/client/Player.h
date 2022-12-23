@@ -42,9 +42,10 @@ private:
 	//PASSENGER_SYNC_DATA		m_psSync;
 	//AIM_SYNC_DATA			m_aimSync;
 public:
-	uint16_t m_VehicleID;
-	//uint8_t m_byteCurWeap;
-	//uint16_t m_wAmmo;
+	uint16_t m_wVehicleId;
+	uint8_t m_byteSeatId;
+	uint8_t m_byteSkinId;
+	uint8_t m_byteTeamId;
 	// Weapon data
 	WORD					m_wSlotAmmo[9];
 	BYTE					m_byteSlotWeapon[9];

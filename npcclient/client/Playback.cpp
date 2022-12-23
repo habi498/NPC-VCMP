@@ -22,17 +22,25 @@ extern NPC* iNPC;
 extern CPlayer* npc;
 uint8_t ReadDatablock2();
 #define CYCLE_SLEEP 30//30 ms sleep between cycles. 
-void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData);
+void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData, PacketPriority priority=HIGH_PRIORITY);
 void SendNPCSyncData(INCAR_SYNC_DATA* m_pInSyncData, PacketPriority mPriority=HIGH_PRIORITY);
 float ConvertUINT16_TtoFloat(uint16_t compressedFloat, float base)
 {
     float value=((float)compressedFloat / 32767.5f - 1.0f)*base;
     return value;
 }
+void HandlePassengerSync();//in NPCClient.cpp
+void CheckPassengerSync()
+{
+    if (iNPC && iNPC->Initialized()
+        && iNPC->PSOnServerCycle)
+        HandlePassengerSync();
+}
 void ProcessTimersAndSleep(uint8_t time)
 {
     DWORD dw_Now = GetTickCount();
     ProcessTimers(dw_Now);
+    CheckPassengerSync();
     DWORD dw_After = GetTickCount();
     if (dw_After - dw_Now >= time)
         return;
@@ -105,7 +113,7 @@ uint8_t ReadDatablock2()
             mPlayback.Abort(); return 0;
         }
         #ifdef PLAYBACK_OVERRIDE_VEHICLEID
-            m_pIcDatablock.m_pIcSyncData.VehicleID = npc->m_VehicleID;
+            m_pIcDatablock.m_pIcSyncData.VehicleID = npc->m_wVehicleId;
         #endif
         SendNPCSyncData(&m_pIcDatablock.m_pIcSyncData);
         //npc->StoreInCarFullSyncData(&m_pIcDatablock.m_pIcSyncData);

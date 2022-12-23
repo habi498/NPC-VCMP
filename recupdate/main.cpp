@@ -84,7 +84,25 @@ bool ConvertRecFile( string ifile, string ofile )
     }else cout << "Recording type is " << rectype <<endl;
 	if( rectype == PLAYER_RECORDING_TYPE_DRIVER )
 	{
-		cout << "Nothing to do for PLAYER_RECORDING_TYPE_DRIVER recordings" <<endl;
+		//cout << "Nothing to do for PLAYER_RECORDING_TYPE_DRIVER recordings" <<endl;
+		size_t count = fwrite(&newidentifier, sizeof(newidentifier), 1, oFile);
+		if (count != 1)return 0;
+		count = fwrite(&rectype, sizeof(rectype), 1, oFile);
+		if (count != 1)return 0;
+		do
+		{
+			INCAR_DATABLOCK m_pIcDatablock;
+			count=fread(&m_pIcDatablock, sizeof(m_pIcDatablock), 1, pFile);
+			if (count != 1)
+			{
+				if (feof(pFile))return true; //end of file reached.
+				return false;
+			}
+			
+			size_t t = fwrite((void*)&m_pIcDatablock, sizeof(m_pIcDatablock), 1, oFile);
+			if(t!=1)return 0;
+		}while(true);
+		
 	}else 
 	{
 		size_t count = fwrite(&newidentifier, sizeof(newidentifier), 1, oFile);

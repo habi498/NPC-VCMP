@@ -174,7 +174,7 @@ SQInteger fn_GetPlayerVehicleID(HSQUIRRELVM v)
     if (m_pPlayerPool->GetSlotState(playerId))
     {
         CPlayer* player = m_pPlayerPool->GetAt(playerId);
-        uint16_t vehicleId = player->m_VehicleID;
+        uint16_t vehicleId = player->m_wVehicleId;
         sq_pushinteger(v, vehicleId);
         return 1;
     }
@@ -344,8 +344,34 @@ SQInteger fn_KillTimer(HSQUIRRELVM v)
     KillTimer(TimerID);
     return 0;//return nothing
 }
-
-
+SQInteger fn_GetPlayerSkin(HSQUIRRELVM v)
+{
+    SQInteger playerId;
+    sq_getinteger(v, 2, &playerId);
+    if (m_pPlayerPool->GetSlotState(playerId))
+    {
+        CPlayer* player = m_pPlayerPool->GetAt(playerId);
+        uint8_t skin = player->m_byteSkinId;
+        sq_pushinteger(v, skin);
+        return 1;
+    }
+    sq_pushinteger(v, -1);
+    return 1;
+}
+SQInteger fn_GetPlayerTeam(HSQUIRRELVM v)
+{
+    SQInteger playerId;
+    sq_getinteger(v, 2, &playerId);
+    if (m_pPlayerPool->GetSlotState(playerId))
+    {
+        CPlayer* player = m_pPlayerPool->GetAt(playerId);
+        uint8_t team = player->m_byteTeamId;
+        sq_pushinteger(v, team);
+        return 1;
+    }
+    sq_pushinteger(v, -1);
+    return 1;
+}
 
 void RegisterNPCFunctions2()
 {
@@ -370,5 +396,6 @@ void RegisterNPCFunctions2()
 	register_global_func(v, ::fn_KillTimer, "KillTimer", 2, "ti");
 	
     register_global_func(v, ::fn_SetTimerEx, "SetTimerEx", 0, "");
-
+    register_global_func(v, ::fn_GetPlayerSkin, "GetPlayerSkin", 2, "ti");
+    register_global_func(v, ::fn_GetPlayerTeam, "GetPlayerTeam", 2, "ti");
 }

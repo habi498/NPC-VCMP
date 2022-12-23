@@ -33,6 +33,8 @@ enum GameMessages
 	ID_GAME_MESSAGE_VEHICLE_EXIT = 0xa4,
 	ID_GAME_MESSAGE_REQUEST_CLASS = 0xa5,
 	ID_GAME_MESSAGE_REQUEST_SPAWN = 0xa6, //client
+	ID_GAME_MESSAGE_ENTER_VEHICLE_REQUEST =0xab, //client->server 
+	ID_GAME_MESSAGE_VEHICLE_PUT_ACCEPTED =0xac, //client->server needs more info on this one
 	ID_GAME_MESSAGE_JOIN = 0xaf,
 	ID_GAME_MESSAGE_CLASS_GRANTED=0xb2,
 	ID_GAME_MESSAGE_SET_HEALTH = 0xb4,
@@ -51,9 +53,10 @@ enum GameMessages
 	ID_GAME_MESSAGE_PLAYER_TEXT = 0xcd,
 	ID_GAME_MESSAGE_VEHICLE_STREAM_IN = 0xea,
 	//not done much investigation on vehicle stream in
-	//0xec is also send along with 0xea
+	//0xec is also sometimes send along with 0xea
 	ID_GAME_MESSAGE_VEHICLE_STREAM_OUT = 0xeb, // no doubt. but multiple times server may send
-	ID_GAME_MESSAGE_NPC_VEHICLE_EXIT = 0xf8,
+	ID_GAME_MESSAGE_VEHICLE_LOST_OWNERSHIP = 0xf8,
+	ID_GAME_MESSAGE_VEHICLE_GAIN_OWNERSHIP = 0xf9,
 	//another message 0xf9 is also send by server on exiting vehicle, 
 	//which appears to be same as 0xf8. 
 

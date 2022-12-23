@@ -72,7 +72,6 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 	{
 		for (packet = peer->Receive(); packet; peer->DeallocatePacket(packet), packet = peer->Receive())
 		{
-			//printf("packet with data[0] = %d received\n", packet->data[0]);
 			switch (packet->data[0])
 			{
 			case ID_CONNECTION_REQUEST_ACCEPTED:
@@ -125,7 +124,50 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
 				uint8_t bytePlayerId;
 				bsIn.Read(bytePlayerId);
-				uint8_t byteIDrem; uint8_t byteIDquotient;
+				uint16_t wVehicleId;
+				uint8_t byte;
+				bsIn.Read(byte);
+				wVehicleId = byte;
+				uint8_t byte1;
+				bsIn.Read(byte1);
+				wVehicleId += 256 * (byte1 >> 6);
+
+				uint8_t bytePlayerHealth;
+				bytePlayerHealth = (byte1 & 63) * 4;
+
+				uint8_t byte2;
+				bsIn.Read(byte2);
+				bytePlayerHealth += byte2 >> 6;
+
+				uint8_t bytePlayerArmour;
+				uint8_t byteSeatId;
+				if (byte2 & 32)//then armour is present
+				{
+					bytePlayerArmour = (byte2 & 31) * 8;
+					uint8_t byte3;
+					bsIn.Read(byte3);
+					bytePlayerArmour += byte3 >> 5;
+					byteSeatId = (byte3>>2)& 3;
+				}
+				else
+				{
+					bytePlayerArmour = 0;
+					byteSeatId = (byte2 >> 2) & 3;
+				}
+				CPlayer* player = m_pPlayerPool->GetAt(bytePlayerId);
+				if (player)
+				{
+					player->m_wVehicleId = wVehicleId;
+					player->m_byteSeatId = byteSeatId;
+					player->m_byteHealth = bytePlayerHealth;
+					player->m_byteArmour = bytePlayerArmour;
+					player->SetState(PLAYER_STATE_PASSENGER);
+					/*printf("player %d, vid %d, seat %d, health %d, armour %d\n",
+						bytePlayerId, wVehicleId, byteSeatId, bytePlayerHealth,
+						bytePlayerArmour);*/
+				}
+				call_OnPlayerUpdate(bytePlayerId, vcmpPlayerUpdatePassenger);
+				/*uint8_t byteIDrem; uint8_t byteIDquotient;
 				bsIn.Read(byteIDrem);//R-- 
 				ReadNibble(&byteIDquotient,&bsIn);//Q-- Quotient
 				uint16_t wVehicleID;
@@ -133,9 +175,10 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				CPlayer* player = m_pPlayerPool->GetAt(bytePlayerId);
 				if (player)
 				{
-					player->m_VehicleID = wVehicleID;
+					player->m_wVehicleId = wVehicleID;
 					player->SetState(PLAYER_STATE_PASSENGER);
 				}
+				*/
 			}
 			break;
 			case ID_GAME_MESSAGE_PLAYERUPDATE_DRIVER:
@@ -146,7 +189,33 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				ReceivePlayerSyncData(&bsIn, &m_IcSyncData, &bytePlayerId);
 				CPlayer* player = m_pPlayerPool->GetAt(bytePlayerId);
 				if (player)
+				{
 					player->StoreInCarFullSyncData(&m_IcSyncData);
+					if (bytePlayerId != iNPC->GetID() && m_IcSyncData.VehicleID == npc->m_wVehicleId)
+					{
+						//This is the vehicle in which npc is sitting as a passenger.
+						//Update position of npc locally (i.e. do not send to server, it comes from server )
+						npc->m_vecPos = m_IcSyncData.vecPos;
+						iNPC->UpdateStreamedVehiclePosition(m_IcSyncData.VehicleID, m_IcSyncData.vecPos.X,
+							m_IcSyncData.vecPos.Y, m_IcSyncData.vecPos.Z);
+						if (iNPC->PSLimit != DISABLE_AUTO_PASSENGER_SYNC)
+						{
+							if (iNPC->PSCounter >= iNPC->PSLimit)
+							{
+								SendPassengerSyncData();
+								iNPC->PSCounter = 0;
+							}
+							else iNPC->PSCounter++;
+							
+							if (iNPC->PSOnServerCycle)
+							{
+								//Now no more server-cycle based passenger syncing
+								//The driver will take care of syncing, as the same will be based on driver's update packets
+								iNPC->PSOnServerCycle = false;
+							}
+						}
+					}
+				}
 				call_OnPlayerUpdate(bytePlayerId, vcmpPlayerUpdateDriver);
 			}
 			break;
@@ -166,102 +235,6 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 						call_OnPlayerUpdate(bytePlayerId, vcmpPlayerUpdateNormal);
 					else
 						call_OnPlayerUpdate(bytePlayerId, vcmpPlayerUpdateAiming);
-					/*int top = sq_gettop(v); //saves the stack size before the call
-					sq_pushroottable(v); //pushes the global table
-					sq_pushstring(v, _SC("OnPlayerUpdate"), -1);
-					if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
-						sq_pushroottable(v); //push the '.dw'
-						sq_pushinteger(v, bytePlayerId);
-						uint8_t updateType = packet->data[0] == ID_GAME_MESSAGE_ONFOOT_UPDATE ? vcmpPlayerUpdateNormal :
-							vcmpPlayerUpdateAiming;
-						sq_pushinteger(v, updateType);
-						sq_newclass(v, false);
-						
-						sq_pushstring(v, _SC("Keys"), -1);
-						sq_pushinteger(v, m_OfSyncData.dwKeys);
-						sq_newslot(v, -3, SQTrue);
-
-						sq_pushstring(v, _SC("PosX"), -1);
-						sq_pushfloat(v, m_OfSyncData.vecPos.X);
-						sq_newslot(v, -3, SQTrue);
-
-						sq_pushstring(v, _SC("PosY"), -1);
-						sq_pushfloat(v, m_OfSyncData.vecPos.Y);
-						sq_newslot(v, -3, SQTrue);
-
-						sq_pushstring(v, _SC("PosZ"), -1);
-						sq_pushfloat(v, m_OfSyncData.vecPos.Z);
-						sq_newslot(v, -3, SQTrue);
-
-						sq_pushstring(v, _SC("Angle"), -1);
-						sq_pushfloat(v, m_OfSyncData.fAngle);
-						sq_newslot(v, -3, SQTrue);
-
-						sq_pushstring(v, _SC("Health"), -1);
-						sq_pushinteger(v, m_OfSyncData.byteHealth);
-						sq_newslot(v, -3, SQTrue);
-
-						sq_pushstring(v, _SC("Armour"), -1);
-						sq_pushinteger(v, m_OfSyncData.byteArmour);
-						sq_newslot(v, -3, SQTrue);
-
-						sq_pushstring(v, _SC("Weapon"), -1);
-						sq_pushinteger(v, m_OfSyncData.byteCurrentWeapon);
-						sq_newslot(v, -3, SQTrue);
-
-						sq_pushstring(v, _SC("IsCrouching"), -1);
-						sq_pushbool(v, m_OfSyncData.IsCrouching);
-						sq_newslot(v, -3, SQTrue);
-
-						sq_pushstring(v, _SC("SpeedX"), -1);
-						sq_pushfloat(v, m_OfSyncData.vecSpeed.X);
-						sq_newslot(v, -3, SQTrue);
-
-						sq_pushstring(v, _SC("SpeedY"), -1);
-						sq_pushfloat(v, m_OfSyncData.vecSpeed.Y);
-						sq_newslot(v, -3, SQTrue);
-
-						sq_pushstring(v, _SC("SpeedZ"), -1);
-						sq_pushfloat(v, m_OfSyncData.vecSpeed.Z);
-						sq_newslot(v, -3, SQTrue);
-
-						sq_pushstring(v, _SC("AimDirX"), -1);
-						sq_pushfloat(v, m_OfSyncData.vecAimDir.X);
-						sq_newslot(v, -3, SQTrue);
-
-						sq_pushstring(v, _SC("AimDirY"), -1);
-						sq_pushfloat(v, m_OfSyncData.vecAimDir.Y);
-						sq_newslot(v, -3, SQTrue);
-
-						sq_pushstring(v, _SC("AimDirZ"), -1);
-						sq_pushfloat(v, m_OfSyncData.vecAimDir.Z);
-						sq_newslot(v, -3, SQTrue);
-
-						sq_pushstring(v, _SC("AimPosX"), -1);
-						sq_pushfloat(v, m_OfSyncData.vecAimPos.X);
-						sq_newslot(v, -3, SQTrue);
-
-						sq_pushstring(v, _SC("AimPosY"), -1);
-						sq_pushfloat(v, m_OfSyncData.vecAimPos.Y);
-						sq_newslot(v, -3, SQTrue);
-
-						sq_pushstring(v, _SC("AimPosZ"), -1);
-						sq_pushfloat(v, m_OfSyncData.vecAimPos.Z);
-						sq_newslot(v, -3, SQTrue);
-
-						sq_pushstring(v, _SC("IsReloading"), -1);
-						sq_pushbool(v, m_OfSyncData.bIsReloading);
-						sq_newslot(v, -3, SQTrue);
-
-						sq_pushstring(v, _SC("Ammo"), -1);
-						sq_pushinteger(v, m_OfSyncData.wAmmo);
-						sq_newslot(v, -3, SQTrue);
-
-						sq_call(v, 4, 0, 1); //calls the function 
-					}
-					sq_settop(v, top); //restores the original stack size */
-					
-
 				}
 			}
 			break;
@@ -272,13 +245,13 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				call_OnNPCDisconnect(0);
 				m_pPlayerPool->Delete(iNPC->GetID());
 				StopSquirrel();
-				printf("Disconnected\n");
+				printf("Disconnect Notification\n");
 				exit(0);
 			case ID_CONNECTION_LOST:
 				call_OnNPCDisconnect(0);
 				m_pPlayerPool->Delete(iNPC->GetID());
 				StopSquirrel();
-				printf("Disconnected\n");
+				printf("Connection Lost\n");
 				exit(0);
 			case ID_GAME_MESSAGE_JOIN:
 			{
@@ -301,7 +274,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					{
 						exit(1);
 					}
-					delete name;
+					free(name);
 				}
 				else {
 					exit(1);
@@ -516,12 +489,29 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 						player->SetState(PLAYER_STATE_ENTER_VEHICLE_DRIVER);
 					else
 						player->SetState(PLAYER_STATE_ENTER_VEHICLE_PASSENGER);
-					player->m_VehicleID = vehicleid;
+					player->m_wVehicleId = vehicleid;
+					player->m_byteSeatId = seatid;
 				}
-				if (iNPC && iNPC->Initialized()  && playerid == iNPC->GetID())
+				RakNet::BitStream bsOut;
+				bsOut.Write((RakNet::MessageID)0xac);
+				peer->Send(&bsOut, HIGH_PRIORITY, RELIABLE, 0, packet->systemAddress, false);
+
+				if (iNPC && iNPC->Initialized() )
 				{
-					//npc->m_VehicleID = vehicleid;
-					call_OnNPCEnterVehicle(vehicleid, seatid);
+					if(seatid==0)
+						iNPC->SetVehicleDriver(vehicleid, playerid);
+					if (playerid == iNPC->GetID())
+					{
+						if (seatid > 0) //to check if passenger
+						{
+							iNPC->PSCounter = 0;
+							iNPC->PSOnServerCycle = true;
+						}
+						//Update NPC's position locally
+						iNPC->GetVehiclePosition(vehicleid,
+							npc->m_vecPos.X, npc->m_vecPos.Y, npc->m_vecPos.Z);
+						call_OnNPCEnterVehicle(vehicleid, seatid);
+					}
 				}
 			}
 			break;
@@ -536,19 +526,32 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				if (player)
 				{
 					player->SetState(PLAYER_STATE_EXIT_VEHICLE);
-					player->m_VehicleID = 0;
+					if (iNPC->GetVehicleDriver(player->m_wVehicleId) == bytePlayerId)
+					{
+						//player was driver of a vehicle
+						iNPC->RemoveVehicleDriver(player->m_wVehicleId);
+					}
+					player->m_wVehicleId = 0;
+					player->m_byteSeatId = -1;
 				}
 			}
 			break;
-			case ID_GAME_MESSAGE_NPC_VEHICLE_EXIT:
+			case ID_GAME_MESSAGE_VEHICLE_LOST_OWNERSHIP:
 			{
 				RakNet::BitStream bsIn(packet->data, packet->length, false);
 				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
 				uint16_t vehicleid;
 				bsIn.Read(vehicleid);
-				if (vehicleid == npc->m_VehicleID)
+				if (vehicleid == npc->m_wVehicleId)
 				{
-					npc->m_VehicleID = 0;//not clear. server sending many 0xf8/0xf9 messages
+					npc->m_wVehicleId = 0;
+					if (iNPC && iNPC->Initialized())
+					{
+						if(iNPC->PSOnServerCycle)
+							iNPC->PSOnServerCycle = false;
+						if (iNPC->GetVehicleDriver(vehicleid) == iNPC->GetID())
+							iNPC->RemoveVehicleDriver(vehicleid);
+					}
 					call_OnNPCExitVehicle();
 				}
 			}
@@ -558,10 +561,49 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				RakNet::BitStream bsIn(packet->data, packet->length, false);
 				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
 				bsIn.IgnoreBytes(3);
-				uint8_t playerid;
-				bsIn.ReadAlignedBytes(&playerid, 1);
-				iNPC->AddStreamedPlayer(playerid);
-				call_OnPlayerStreamIn(playerid);
+				uint8_t bytePlayerId;
+				bsIn.ReadAlignedBytes(&bytePlayerId, 1);
+				uint8_t byteTeamId;
+				bsIn.Read(byteTeamId);
+				uint8_t byteSkinId;
+				bsIn.Read(byteSkinId);
+				bsIn.IgnoreBytes(1);
+				float x, y, z;
+				bsIn.Read(z); bsIn.Read(y); bsIn.Read(x);
+				bsIn.IgnoreBytes(4);//4 for angle 
+				uint16_t wVehicleID;
+				bsIn.Read(wVehicleID);
+				uint8_t byteSeatID = -1;
+				if (wVehicleID)
+				{
+					bsIn.Read(byteSeatID);
+				}
+				CPlayer* player = m_pPlayerPool->GetAt(bytePlayerId);
+				if (player)
+				{
+					player->m_wVehicleId = wVehicleID;
+					player->m_byteSeatId = byteSeatID;
+					player->m_byteSkinId = byteSkinId;
+					player->m_byteTeamId = byteTeamId;
+					player->UpdatePosition(x, y, z);
+					if (player->GetState() != PLAYER_STATE_WASTED)
+					{
+						if (wVehicleID)
+						{
+							if (byteSeatID == 0)
+								player->SetState(PLAYER_STATE_DRIVER);
+							else
+								player->SetState(PLAYER_STATE_PASSENGER);
+						}
+						else player->SetState(PLAYER_STATE_ONFOOT);
+					}
+				}
+				if (wVehicleID && byteSeatID==0 && iNPC->Initialized() )
+				{
+					iNPC->SetVehicleDriver(wVehicleID, bytePlayerId);
+				}
+				iNPC->AddStreamedPlayer(bytePlayerId);
+				call_OnPlayerStreamIn(bytePlayerId);
 				
 			}
 			break;
@@ -584,7 +626,11 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				bsIn.ReadAlignedBytes(vehdata, 2);
 				uint16_t vehicleid;
 				vehicleid = vehdata[0] * 256 + vehdata[1];
-				iNPC->AddStreamedVehicle(vehicleid);
+				float x, y, z; int16_t model;
+				bsIn.IgnoreBytes(2);//00 08? 00 01?
+				bsIn.Read(model);//guessing model is 2 bytes.
+				bsIn.Read(z); bsIn.Read(y); bsIn.Read(x);
+				iNPC->AddStreamedVehicle(vehicleid, x, y, z, model);
 				call_OnVehicleStreamIn(vehicleid);
 			}
 			break;
@@ -599,7 +645,53 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				iNPC->DestreamVehicle(vehicleid);
 				call_OnVehicleStreamOut(vehicleid);
 			}
-			break; 
+			break;
+			case ID_GAME_MESSAGE_SET_TEAM:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint8_t bytePlayerId, byteTeamId;
+				bsIn.Read(bytePlayerId);
+				bsIn.Read(byteTeamId);
+				CPlayer* player = m_pPlayerPool->GetAt(bytePlayerId);
+				if (player)
+				{
+					player->m_byteTeamId = byteTeamId;
+				}
+			}
+			break;
+			case ID_GAME_MESSAGE_SET_SKIN:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint8_t bytePlayerId, byteSkinId;
+				bsIn.Read(bytePlayerId);
+				bsIn.Read(byteSkinId);
+				CPlayer* player = m_pPlayerPool->GetAt(bytePlayerId);
+				if (player)
+				{
+					player->m_byteSkinId = byteSkinId;
+				}
+			}
+			break;
+			case ID_GAME_MESSAGE_SET_COLOUR:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint8_t bytePlayerId;
+				uint8_t byteRed, byteGreen, byteBlue;
+				bsIn.Read(bytePlayerId);
+				bsIn.IgnoreBytes(1);//00?
+				bsIn.Read(byteRed);
+				bsIn.Read(byteGreen);
+				bsIn.Read(byteBlue);
+				CPlayer* player = m_pPlayerPool->GetAt(bytePlayerId);
+				if (player)
+				{
+					//player->m_byteSkinId = byteSkinId;
+				}
+			}
+			break;
 			case ID_GAME_MESSAGE_DISCONNECT:
 			{
 				RakNet::BitStream bsIn(packet->data, packet->length, false);
@@ -650,7 +742,15 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					bsIn.Read(npc->m_vecPos.Y);
 					bsIn.Read(npc->m_vecPos.X);
 					if (iNPC->IsSpawned())
+					{
+						if (npc->m_wVehicleId)
+						{
+							//Server ejected npc from vehicle
+							npc->m_wVehicleId = 0;
+							npc->m_byteSeatId = -1;
+						}
 						SendNPCOfSyncDataLV();
+					}
 				}
 			}
 			break;
@@ -666,7 +766,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				/* The setting of angle by server when npc is
 				spawning is used as a 'go' for sending
 				spawn datas. Below it happens*/
-				if (iNPC->IsSpawned())
+				if (iNPC->IsSpawned() && !npc->m_wVehicleId)
 					SendNPCOfSyncDataLV();
 			}
 			break;
@@ -680,8 +780,13 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				uint8_t newhealth;
 				bsIn.Read(newhealth);
 				npc->m_byteHealth = newhealth;
-				if(!iNPC->IsSyncPaused())
-					SendNPCOfSyncDataLV();
+				if (!iNPC->IsSyncPaused())
+				{
+					if (!npc->m_wVehicleId)
+						SendNPCOfSyncDataLV();
+					else if (npc->m_byteSeatId > 0)
+						SendPassengerSyncData();
+				}
 			}
 			break;
 			case ID_GAME_MESSAGE_SET_ARMOUR:
@@ -695,7 +800,12 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				bsIn.Read(newarmour);
 				npc->m_byteArmour = newarmour;
 				if (!iNPC->IsSyncPaused())
-					SendNPCOfSyncDataLV();
+				{
+					if (!npc->m_wVehicleId)
+						SendNPCOfSyncDataLV();
+					else if (npc->m_byteSeatId > 0)
+						SendPassengerSyncData();
+				}
 			}
 			break;
 			case ID_GAME_MESSAGE_SET_PLAYER_WEAPON_SLOT:
@@ -756,7 +866,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					if (npc->GetCurrentWeapon() != weapon)
 					{
 						npc->SetCurrentWeapon(weapon);
-						if (iNPC->IsSpawned())
+						if (iNPC->IsSpawned() && !npc->m_wVehicleId)
 							SendNPCOfSyncDataLV();
 					}
 				}
@@ -1058,4 +1168,32 @@ uint8_t GetSlotId(uint8_t byteWeapon)
 		break;
 	}
 	return byteWeaponSlot;
+}
+/*This function sends passenger sync packets to server if the driver player is not streamed in or there is no driver.
+It also stores the time in ms when it last send the packets.*/
+void HandlePassengerSync()
+{
+	if (iNPC && iNPC->Initialized()
+		&& iNPC->PSLimit != DISABLE_AUTO_PASSENGER_SYNC)
+	{
+		if (npc->m_wVehicleId && npc->m_byteSeatId > 0)
+		{
+			//npc is sitting as passenger 
+			//Does the vehicle have driver?
+			if (
+				(iNPC->GetVehicleDriver(npc->m_wVehicleId) != 255
+					&& !iNPC->IsPlayerStreamedIn(iNPC->GetVehicleDriver(npc->m_wVehicleId))
+					) ||
+				iNPC->GetVehicleDriver(npc->m_wVehicleId) == 255)
+			{
+				//The driver is not streamed in yet or there is no driver.
+				DWORD now = GetTickCount();
+				if (now - iNPC->PSLastSyncedTick > 350)
+				{
+					SendPassengerSyncData();
+					iNPC->PSLastSyncedTick = now;
+				}
+			}
+		}
+	}
 }

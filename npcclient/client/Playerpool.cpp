@@ -57,14 +57,22 @@ BOOL CPlayerPool::New(BYTE bytePlayerID, PCHAR szPlayerName)
 }
 BOOL CPlayerPool::Delete(BYTE bytePlayerID)
 {
-	if (!GetSlotState(bytePlayerID) || !m_pPlayers[bytePlayerID])
+	try 
 	{
-		return FALSE; // Player already deleted or not used.
-	}
-	m_bPlayerSlotState[bytePlayerID] = FALSE;
-	delete m_pPlayers[bytePlayerID];
-	m_pPlayers[bytePlayerID] = NULL;
-	m_iPlayerCount--;
+		if (!GetSlotState(bytePlayerID) || !m_pPlayers[bytePlayerID])
+		{
+			return FALSE; // Player already deleted or not used.
+		}
+		m_bPlayerSlotState[bytePlayerID] = FALSE;
+		delete m_pPlayers[bytePlayerID];
+		m_pPlayers[bytePlayerID] = NULL;
+		m_iPlayerCount--;
 
-	return TRUE;
+		return TRUE;
+	}
+	catch (...)
+	{
+		printf("Error when deleting m_pPlayers[%i]\n", bytePlayerID);
+		return FALSE;
+	}
 }

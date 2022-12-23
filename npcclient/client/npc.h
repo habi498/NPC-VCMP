@@ -22,7 +22,48 @@
 #define NPC_SHOOTING_ENABLED
 #define SPAWN_LOCK 4000  //amount in ms not to respond to server setting pos
 #define NOT_DEFINED 255
-
+#define DISABLE_AUTO_PASSENGER_SYNC -1
+class Vehicle
+{
+	float x, y, z;
+	uint16_t model;
+	bool streamedIn;
+	uint8_t driverId;
+public:
+	Vehicle(float x, float y, float z, uint16_t model, bool streamedIn = true)
+	{
+		this->x = x; this->y = y; this->z = z;
+		this->model = model;
+		this->streamedIn = streamedIn;
+		this->driverId = 255;
+	}
+	Vehicle()
+	{
+		x = 0.0, y = 0.0, z = 0.0, model = 0;
+		streamedIn = false;
+		driverId = 255;
+	}
+	void UpdatePosition(float x, float y, float z)
+	{
+		this->x = x; this->y = y; this->z = z;
+	}
+	void GetPosition(float& x, float& y, float& z)
+	{
+		x = this->x; y = this->y; z = this->z;
+	}
+	void SetDriver(uint8_t driverId)
+	{
+		this->driverId = driverId;
+	}
+	void RemoveDriver() { this->driverId = 255; }
+	void Destream() { streamedIn = false; }
+	void StreamedIn() { streamedIn = true; }
+	bool IsStreamedIn() { return streamedIn;}
+	uint8_t GetDriver() { return driverId; }
+	~Vehicle()
+	{
+	}
+};
 //used to store internal data
 class NPC
 {
@@ -30,7 +71,7 @@ private:
 	unsigned char ID;
 	bool isSpawned = false;
 	bool initialized = false;//true implies ID is set
-	std::map<uint16_t,bool>strmdvhcls;
+	std::map<uint16_t,Vehicle>strmdvhcls;
 	bool strmdplrs[MAX_PLAYERS];
 	bool bLockOnSync = false;//prevent server setting position
 	DWORD dw_SpawnedTick = 0;//dword to store tickcount of first spawn
@@ -45,6 +86,11 @@ public:
 	uint8_t SpawnWeapon = 255;
 	uint8_t SpawnClass = 0;
 	uint8_t ClassSelectionCounter = 0;
+	uint16_t PSLimit = 2;//sync passenger packets per 2 In Car Sync Packets of driver
+	uint16_t PSCounter = 0;//PS for Passenger Sync
+	bool PSOnServerCycle = false;//Automatic Passenger Syncing when
+	//vehicle has no driver or driver not streamed in
+	DWORD PSLastSyncedTick = 0;
 public:
 	NPC()
 	{
@@ -53,19 +99,73 @@ public:
 	}
 	~NPC() {};
 	uint32_t anticheatID;//Every time server sets health, armour position or anything of npc, this count is increased by one.
-	void AddStreamedVehicle(uint16_t vehicle)
+	void AddStreamedVehicle(uint16_t vehicleId, float x, float y, float z, int16_t model)
 	{
-		if (strmdvhcls.find(vehicle) == strmdvhcls.end())
-			strmdvhcls.insert({ vehicle, true });//the true is dummy
+		if (strmdvhcls.find(vehicleId) == strmdvhcls.end())
+		{
+			strmdvhcls.insert({ vehicleId, Vehicle(x,y,z,model) });
+		}
+		else
+		{
+			strmdvhcls[vehicleId].UpdatePosition(x, y, z);
+			strmdvhcls[vehicleId].StreamedIn();
+		}
+	}
+	void UpdateStreamedVehiclePosition(uint16_t vehicleId, float x, float y, float z)
+	{
+		if (strmdvhcls.find(vehicleId) != strmdvhcls.end())
+		{
+			strmdvhcls[vehicleId].UpdatePosition(x, y, z);
+		}
+	}
+	void GetVehiclePosition(uint16_t vehicleId, float &x, float &y, float &z)
+	{
+		if (strmdvhcls.find(vehicleId) != strmdvhcls.end())
+		{
+			strmdvhcls[vehicleId].GetPosition(x, y, z);
+		}
+		else
+		{
+			x = 0; y = 0; z = 0;
+		}
+	}
+	void SetVehicleDriver(uint16_t vehicleId, uint8_t driverId)
+	{
+		if (strmdvhcls.find(vehicleId) != strmdvhcls.end())
+		{
+			strmdvhcls[vehicleId].SetDriver(driverId);
+		}
+		else
+		{
+			//Create an instance with streamedIn=false;
+			strmdvhcls.insert({ vehicleId, Vehicle(0.0,0.0,0.0,0,false) });
+			strmdvhcls[vehicleId].SetDriver(driverId);
+		}
+	}
+	void RemoveVehicleDriver(uint16_t vehicleId)
+	{
+		if (strmdvhcls.find(vehicleId) != strmdvhcls.end())
+		{
+			strmdvhcls[vehicleId].RemoveDriver();
+		}
+	}
+	uint8_t GetVehicleDriver(uint16_t vehicleId)
+	{
+		if (strmdvhcls.find(vehicleId) != strmdvhcls.end())
+		{
+			return strmdvhcls[vehicleId].GetDriver();
+		}
+		return 255;
 	}
 	void DestreamVehicle(uint16_t vehicle)
 	{
 		if (strmdvhcls.find(vehicle) != strmdvhcls.end())
-			strmdvhcls.erase(vehicle);
+			strmdvhcls[vehicle].Destream();
 	}
 	bool IsVehicleStreamedIn(uint16_t vehicle)
 	{
-		if (strmdvhcls.find(vehicle) != strmdvhcls.end())
+		if (strmdvhcls.find(vehicle) != strmdvhcls.end()
+			&& strmdvhcls[vehicle].IsStreamedIn())
 			return true;
 		return false;
 	}

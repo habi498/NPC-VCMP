@@ -22,7 +22,10 @@
 CPlayer::CPlayer()
 {
 	m_bytePlayerID = INVALID_PLAYER_ID;
-	m_VehicleID = 0;
+	m_wVehicleId = 0;
+	m_byteSeatId = -1;
+	m_byteSkinId = 0;
+	m_byteTeamId = 0;
 	m_byteState = PLAYER_STATE_NONE;
 	m_dwLastKeys = 0;
 
@@ -69,7 +72,7 @@ void CPlayer::UpdatePosition(float x, float y, float z)
 }
 void CPlayer::StoreOnFootFullSyncData(ONFOOT_SYNC_DATA* pofSync)
 {
-	m_VehicleID = 0;
+	m_wVehicleId = 0;
 	memcpy(&m_ofSync, pofSync, sizeof(ONFOOT_SYNC_DATA));
 	UpdatePosition(pofSync->vecPos.X, pofSync->vecPos.Y, pofSync->vecPos.Z);
 	m_fAngle = pofSync->fAngle;
@@ -157,7 +160,7 @@ void CPlayer::StoreOnFootFullSyncData(ONFOOT_SYNC_DATA* pofSync)
 
 void CPlayer::StoreInCarFullSyncData(INCAR_SYNC_DATA* picSync)
 {
-	m_VehicleID = picSync->VehicleID;
+	m_wVehicleId = picSync->VehicleID;
 	memcpy(&m_icSync, picSync, sizeof(INCAR_SYNC_DATA));
 
 	UpdatePosition(m_icSync.vecPos.X, m_icSync.vecPos.Y, m_icSync.vecPos.Z);
