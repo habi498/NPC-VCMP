@@ -122,4 +122,6 @@ Windows builds were made.
 without script.
 wiki available at https://npc-for-vcmp.sourceforge.io/wikiw/index.php
 
-
+**Version 1.5 patch 1** (23.Dec.2022)
+1. Added Support for npc as passenger.
+2. Support for getting Team and Skin of players.
