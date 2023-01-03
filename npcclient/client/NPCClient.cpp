@@ -18,7 +18,9 @@
 HSQUIRRELVM v; NPC* iNPC = new NPC();
 RakNet::RakPeerInterface* peer;
 RakNet::SystemAddress systemAddress;
-CPlayerPool* m_pPlayerPool;
+CPlayerPool* m_pPlayerPool = NULL;
+CEvents* m_pEvents;
+CFunctions* m_pFunctions;
 CPlayer* npc;
 #define CAR_HEALTH_MAX 1000
 void ReceivePlayerSyncData(RakNet::BitStream* bsIn, INCAR_SYNC_DATA* m_pIcSyncDataOut, uint8_t* bytePlayerIdOut);
@@ -26,6 +28,9 @@ void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncD
 VECTOR ConvertFromUINT16_T(uint16_t w_ComponentX, uint16_t w_ComponentY, uint16_t w_ComponentZ, float base);
 float ConvertFromUINT16_T(uint16_t compressedFloat, float base);
 uint8_t GetSlotId(uint8_t byteWeapon); 
+extern bool bConsoleInputEnabled;
+extern void CheckForConsoleInput();
+extern uint8_t ProcessPlaybacks();
 unsigned short calculate(unsigned char h, unsigned char t, unsigned char r)
 {
 	return h * 32 + t * 2 + (r >> 3);
@@ -60,11 +65,15 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 	RakNet::SocketDescriptor sd;
 	peer->Startup(1, &sd, 1);
 	
-	printf("Starting the client.\n");
+	printf("Connecting to %s: %d. ", hostname.c_str(), port);
 	peer->Connect(hostname.c_str(), port, password.c_str(), password.length() + 1);
 	
 	if (!m_pPlayerPool)
 		m_pPlayerPool = new CPlayerPool();
+	if (!m_pEvents)
+		m_pEvents = new CEvents();
+	if (!m_pFunctions)
+		m_pFunctions = new CFunctions();
 #ifndef WIN32
 	std::setvbuf(stdout, NULL, _IONBF, 0);
 #endif
@@ -76,6 +85,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 			{
 			case ID_CONNECTION_REQUEST_ACCEPTED:
 			{
+				printf("Connected\n");
 				ConnectAsVCMPClient(peer, npcname.c_str(), (uint8_t)npcname.length(), packet->systemAddress);
 				systemAddress = packet->systemAddress;
 			}
@@ -162,23 +172,8 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					player->m_byteHealth = bytePlayerHealth;
 					player->m_byteArmour = bytePlayerArmour;
 					player->SetState(PLAYER_STATE_PASSENGER);
-					/*printf("player %d, vid %d, seat %d, health %d, armour %d\n",
-						bytePlayerId, wVehicleId, byteSeatId, bytePlayerHealth,
-						bytePlayerArmour);*/
+					m_pEvents->OnPlayerUpdate(bytePlayerId, vcmpPlayerUpdatePassenger);
 				}
-				call_OnPlayerUpdate(bytePlayerId, vcmpPlayerUpdatePassenger);
-				/*uint8_t byteIDrem; uint8_t byteIDquotient;
-				bsIn.Read(byteIDrem);//R-- 
-				ReadNibble(&byteIDquotient,&bsIn);//Q-- Quotient
-				uint16_t wVehicleID;
-				wVehicleID = byteIDrem + (byteIDquotient >> 2);
-				CPlayer* player = m_pPlayerPool->GetAt(bytePlayerId);
-				if (player)
-				{
-					player->m_wVehicleId = wVehicleID;
-					player->SetState(PLAYER_STATE_PASSENGER);
-				}
-				*/
 			}
 			break;
 			case ID_GAME_MESSAGE_PLAYERUPDATE_DRIVER:
@@ -216,7 +211,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 						}
 					}
 				}
-				call_OnPlayerUpdate(bytePlayerId, vcmpPlayerUpdateDriver);
+				m_pEvents->OnPlayerUpdate(bytePlayerId, vcmpPlayerUpdateDriver);
 			}
 			break;
 			case ID_GAME_MESSAGE_ONFOOT_UPDATE_AIM:
@@ -232,9 +227,9 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				{
 					player->StoreOnFootFullSyncData(&m_OfSyncData); 
 					if (packet->data[0] == ID_GAME_MESSAGE_ONFOOT_UPDATE)
-						call_OnPlayerUpdate(bytePlayerId, vcmpPlayerUpdateNormal);
+						m_pEvents->OnPlayerUpdate(bytePlayerId, vcmpPlayerUpdateNormal);
 					else
-						call_OnPlayerUpdate(bytePlayerId, vcmpPlayerUpdateAiming);
+						m_pEvents->OnPlayerUpdate(bytePlayerId, vcmpPlayerUpdateAiming);
 				}
 			}
 			break;
@@ -242,13 +237,13 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				printf("The server is full.\n");
 				break;
 			case ID_DISCONNECTION_NOTIFICATION:
-				call_OnNPCDisconnect(0);
+				m_pEvents->OnNPCDisconnect(0);
 				m_pPlayerPool->Delete(iNPC->GetID());
 				StopSquirrel();
 				printf("Disconnect Notification\n");
 				exit(0);
 			case ID_CONNECTION_LOST:
-				call_OnNPCDisconnect(0);
+				m_pEvents->OnNPCDisconnect(0);
 				m_pPlayerPool->Delete(iNPC->GetID());
 				StopSquirrel();
 				printf("Connection Lost\n");
@@ -279,15 +274,29 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				else {
 					exit(1);
 				}
-				call_OnNPCConnect(iNPC->GetID());
+				m_pEvents->OnNPCConnect(iNPC->GetID());
 				RakNet::BitStream bsOut, bsOut2;
+				#ifdef _REL004
+				bsOut.Write((RakNet::MessageID)0xb8);
+				#else 
 				bsOut.Write((RakNet::MessageID)0xb9);
-				bsOut.Write0(); bsOut.Write0(); bsOut.Write0();
+				#endif			
+				uint8_t byteZero = 0;
+				bsOut.Write(byteZero);
+				bsOut.Write(byteZero);
+				bsOut.Write(byteZero);
+				
 				peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 0, packet->systemAddress, false);
+				#ifndef _REL004
 				bsOut2.Write((RakNet::MessageID)0xbd);
-				bsOut2.Write0(); bsOut2.Write0(); bsOut2.Write0();
-				bsOut2.Write1(); bsOut2.Write1();
+				bsOut2.Write((uint8_t)0);
+				bsOut2.Write((uint8_t)0);
+				bsOut2.Write((uint8_t)0);
+
+				bsOut2.Write((uint8_t)1);
+				bsOut2.Write((uint8_t)1);
 				peer->Send(&bsOut2, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 0, packet->systemAddress, false);
+				#endif
 				//Not tested thouroughly
 				{
 					RakNet::BitStream bsOut3;
@@ -321,7 +330,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					{
 						bsIn.ReadAlignedBytes((unsigned char*)message, len);
 						message[len] = '\0';
-						call_OnClientMessage(r, g, b, (char*)message, len);
+						m_pEvents->OnClientMessage(r, g, b, (char*)message, len);
 						free(message);
 					}
 					free(x);
@@ -349,8 +358,12 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				//bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
 				if (iNPC && iNPC->Initialized() && iNPC->IsSpawned() == false)
 				{
+					printf("npcspawnclass is %d and classSelectionCounter is %d\n",
+						iNPC->SpawnClass,
+						iNPC->ClassSelectionCounter);
 					if ((iNPC->SpawnClass - iNPC->ClassSelectionCounter++)==0)
 					{
+						printf("Sending spawn packet\n");
 						RakNet::BitStream bsOut;
 						bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_REQUEST_SPAWN);
 						peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, packet->systemAddress, false);
@@ -394,7 +407,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					{
 						char buffer[100];
 						sprintf(buffer, "_npc_skin_request %d", iNPC->SpecialSkin);
-						SendCommandToServer(buffer);
+						m_pFunctions->SendCommandToServer(buffer);
 						iNPC->SpecialSkin = 255;//turn off the feature
 					}
 					if (iNPC->SpawnWeapon != NOT_DEFINED )
@@ -402,7 +415,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 						npc->SetCurrentWeapon(iNPC->SpawnWeapon);
 						iNPC->SpawnWeapon = 255;//turn off the feature.
 					}
-					call_OnNPCSpawn();
+					m_pEvents->OnNPCSpawn();
 				}
 			}
 			break;
@@ -416,7 +429,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				CPlayer* player = m_pPlayerPool->GetAt(playerid);
 				if (player)
 					player->SetState(PLAYER_STATE_WASTED);
-				call_OnPlayerDeath(playerid);
+				m_pEvents->OnPlayerDeath(playerid);
 			}
 			break;
 			case ID_GAME_MESSAGE_PLAYER_SPAWN:
@@ -456,7 +469,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 						text[i] = (unsigned char)calculate((rem % 8), (temp >> 4), temp % 16);
 						rem = temp;
 					}
-					call_OnPlayerText(playerid, (char*)text, length);
+					m_pEvents->OnPlayerText(playerid, (char*)text, length);
 				}
 			}
 			break;
@@ -493,7 +506,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					player->m_byteSeatId = seatid;
 				}
 				RakNet::BitStream bsOut;
-				bsOut.Write((RakNet::MessageID)0xac);
+				bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_VEHICLE_PUT_ACCEPTED);
 				peer->Send(&bsOut, HIGH_PRIORITY, RELIABLE, 0, packet->systemAddress, false);
 
 				if (iNPC && iNPC->Initialized() )
@@ -510,7 +523,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 						//Update NPC's position locally
 						iNPC->GetVehiclePosition(vehicleid,
 							npc->m_vecPos.X, npc->m_vecPos.Y, npc->m_vecPos.Z);
-						call_OnNPCEnterVehicle(vehicleid, seatid);
+						m_pEvents->OnNPCEnterVehicle(vehicleid, seatid);
 					}
 				}
 			}
@@ -552,7 +565,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 						if (iNPC->GetVehicleDriver(vehicleid) == iNPC->GetID())
 							iNPC->RemoveVehicleDriver(vehicleid);
 					}
-					call_OnNPCExitVehicle();
+					m_pEvents->OnNPCExitVehicle();
 				}
 			}
 			break;
@@ -603,7 +616,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					iNPC->SetVehicleDriver(wVehicleID, bytePlayerId);
 				}
 				iNPC->AddStreamedPlayer(bytePlayerId);
-				call_OnPlayerStreamIn(bytePlayerId);
+				m_pEvents->OnPlayerStreamIn(bytePlayerId);
 				
 			}
 			break;
@@ -615,7 +628,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				uint8_t playerid;
 				bsIn.ReadAlignedBytes(&playerid, 1);
 				iNPC->RemoveStreamedPlayer(playerid);
-				call_OnPlayerStreamOut(playerid);
+				m_pEvents->OnPlayerStreamOut(playerid);
 			}
 			break; 
 			case ID_GAME_MESSAGE_VEHICLE_STREAM_IN:
@@ -631,7 +644,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				bsIn.Read(model);//guessing model is 2 bytes.
 				bsIn.Read(z); bsIn.Read(y); bsIn.Read(x);
 				iNPC->AddStreamedVehicle(vehicleid, x, y, z, model);
-				call_OnVehicleStreamIn(vehicleid);
+				m_pEvents->OnVehicleStreamIn(vehicleid);
 			}
 			break;
 			case ID_GAME_MESSAGE_VEHICLE_STREAM_OUT:
@@ -643,7 +656,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				uint16_t vehicleid;
 				vehicleid = vehdata[0] * 256 + vehdata[1];
 				iNPC->DestreamVehicle(vehicleid);
-				call_OnVehicleStreamOut(vehicleid);
+				m_pEvents->OnVehicleStreamOut(vehicleid);
 			}
 			break;
 			case ID_GAME_MESSAGE_SET_TEAM:
@@ -703,7 +716,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				bsIn.ReadAlignedBytes(&reason, 1);
 				if (iNPC && iNPC->Initialized() && playerid == iNPC->GetID())
 				{
-					call_OnNPCDisconnect(reason);
+					m_pEvents->OnNPCDisconnect(reason);
 					m_pPlayerPool->Delete(playerid);
 					StopSquirrel();
 					exit(0);
@@ -890,12 +903,12 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				bsIn.Read(dz); bsIn.Read(dy); bsIn.Read(dx);
 				
 				if( iNPC->GetID() != playerid )
-					call_OnSniperRifleFired(playerid, weapon, x, y, z, dx, dy, dz);
+					m_pEvents->OnSniperRifleFired(playerid, weapon, x, y, z, dx, dy, dz);
 			}
 			break;
 			}
 		}
-		OnServerCycle();
+		OnCycle();
 	}
 	RakNet::RakPeerInterface::DestroyInstance(peer);
 	return 0;
@@ -914,6 +927,34 @@ void DecodeIDandKeys(uint8_t nibble, uint8_t byte, uint16_t wKeys, INCAR_SYNC_DA
 	wVehId |= ( byte << 2 );
 	m_pIcSyncData->VehicleID = wVehId;
 }
+#ifdef _REL004
+void ReceivePlayerSyncData(RakNet::BitStream* bsIn, INCAR_SYNC_DATA* m_pIcSyncDataOut, uint8_t* bytePlayerIdOut)
+{
+	bsIn->IgnoreBytes(1);
+	bsIn->ReadAlignedBytes(bytePlayerIdOut, 1);
+	bsIn->Read(m_pIcSyncDataOut->byteCurrentWeapon);
+	bsIn->Read(m_pIcSyncDataOut->bytePlayerArmour);
+	bsIn->Read(m_pIcSyncDataOut->bytePlayerHealth);
+	bsIn->Read(m_pIcSyncDataOut->wAmmo);
+	bsIn->Read(m_pIcSyncDataOut->VehicleID);
+	uint16_t wKeys;
+	bsIn->Read(wKeys);
+	m_pIcSyncDataOut->dwKeys = wKeys;
+	bsIn->IgnoreBytes(2);//00 c8
+	bsIn->Read(m_pIcSyncDataOut->Turrety);
+	bsIn->Read(m_pIcSyncDataOut->Turretx);
+	bsIn->IgnoreBytes(1);//0 normally, but 1 on water
+	bsIn->Read(m_pIcSyncDataOut->fCarHealth);
+	bsIn->Read(m_pIcSyncDataOut->dDamage);
+	bsIn->Read(m_pIcSyncDataOut->quatRotation.W);
+	bsIn->Read(m_pIcSyncDataOut->quatRotation.Z);
+	bsIn->Read(m_pIcSyncDataOut->quatRotation.Y);
+	bsIn->Read(m_pIcSyncDataOut->quatRotation.X);
+	bsIn->Read(m_pIcSyncDataOut->vecMoveSpeed.Z);
+	bsIn->Read(m_pIcSyncDataOut->vecMoveSpeed.Y);
+	bsIn->Read(m_pIcSyncDataOut->vecMoveSpeed.X);
+}
+#else
 void ReceivePlayerSyncData(RakNet::BitStream* bsIn, INCAR_SYNC_DATA* m_pIcSyncDataOut, uint8_t* bytePlayerIdOut)
 {
 	bsIn->IgnoreBytes(1);
@@ -1005,6 +1046,85 @@ m_pIcSyncDataOut->quatRotation.X, m_pIcSyncDataOut->quatRotation.Y,
 m_pIcSyncDataOut->quatRotation.Z, m_pIcSyncDataOut->quatRotation.W);*/
 
 }
+#endif
+
+#ifdef _REL004
+void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncDataOut, uint8_t* bytePlayerIdOut)
+{
+
+	uint8_t byteMessageID; bool bIsAiming;
+	bsIn->Read(byteMessageID);
+	if (byteMessageID == ID_GAME_MESSAGE_ONFOOT_UPDATE)
+		bIsAiming = false;
+	else if (byteMessageID == ID_GAME_MESSAGE_ONFOOT_UPDATE_AIM)
+		bIsAiming = true;
+	else exit(1);
+	m_pOfSyncDataOut->IsPlayerUpdateAiming = bIsAiming;
+	bsIn->ReadAlignedBytes(bytePlayerIdOut, 1);
+	uint8_t byteCrouching;
+	bsIn->Read(byteCrouching);
+	if (byteCrouching == 2)
+		m_pOfSyncDataOut->IsCrouching = true;
+	else
+		m_pOfSyncDataOut->IsCrouching = false;
+	uint8_t byteWeaponId;
+	bsIn->Read(byteWeaponId);
+	m_pOfSyncDataOut->byteCurrentWeapon = byteWeaponId;
+	uint8_t byte1, byte2;
+	bsIn->Read(byte1); bsIn->Read(byte2);
+	if (bIsAiming == false)
+	{
+		bool bLookBehind;
+		if ((byte1 >> 4) == 3 || (byte1 >> 4) == 6)
+			bLookBehind = true;
+		else bLookBehind = false;
+	}
+	else
+	{
+		bool bIsReloading;
+		if ((byte1 >> 4) == 2)
+			bIsReloading = true;
+		else if ((byte1 >> 4) == 0xa)
+			bIsReloading = false;
+		else bIsReloading = false;//not necessary
+		m_pOfSyncDataOut->bIsReloading = bIsReloading;
+		//0x27 01 reloading
+		//0xa7 10 shooting
+	}
+	uint8_t byteArmour, byteHealth; uint16_t wAmmo;
+	bsIn->Read(byteArmour); bsIn->Read(byteHealth);
+	bsIn->Read(wAmmo);
+	m_pOfSyncDataOut->byteArmour = byteArmour;
+	m_pOfSyncDataOut->byteHealth = byteHealth;
+	m_pOfSyncDataOut->wAmmo = wAmmo;
+	bsIn->IgnoreBytes(2);//zero
+	uint16_t wKeys;
+	bsIn->Read(wKeys);
+	m_pOfSyncDataOut->dwKeys = wKeys;
+	float speedx, speedy, speedz;
+	bsIn->Read(speedz); bsIn->Read(speedy); bsIn->Read(speedx);
+	m_pOfSyncDataOut->vecSpeed = VECTOR(speedx, speedy, speedz);
+	float fAngle, x, y, z;
+	bsIn->Read(fAngle);
+	bsIn->Read(z); bsIn->Read(y); bsIn->Read(x);
+	m_pOfSyncDataOut->fAngle = fAngle;
+	m_pOfSyncDataOut->vecPos = VECTOR(x, y, z);
+	if (bIsAiming)
+	{
+		float aimposx, aimposy, aimposz;
+		bsIn->Read(aimposz);
+		bsIn->Read(aimposy);
+		bsIn->Read(aimposx);
+		m_pOfSyncDataOut->vecAimPos = VECTOR(aimposx, aimposy, aimposz);
+
+		float aimdirx, aimdiry, aimdirz;
+		bsIn->Read(aimdirz);
+		bsIn->Read(aimdiry);
+		bsIn->Read(aimdirx);
+		m_pOfSyncDataOut->vecAimDir = VECTOR(aimdirx, aimdiry, aimdirz);
+	}
+}
+#else
 void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncDataOut, uint8_t* bytePlayerIdOut)
 {
 	uint8_t byteMessageID; bool bIsAiming;
@@ -1103,6 +1223,7 @@ m_pOfSyncDataOut->vecAimDir.X,m_pOfSyncDataOut->vecAimDir.Y,
 m_pOfSyncDataOut->vecAimDir.Z,m_pOfSyncDataOut->vecAimPos.X, \
 m_pOfSyncDataOut->vecAimPos.Y, m_pOfSyncDataOut->vecAimPos.Z);*/
 }
+#endif
 uint8_t GetSlotId(uint8_t byteWeapon)
 {
 	uint8_t byteWeaponSlot;
@@ -1196,4 +1317,26 @@ void HandlePassengerSync()
 			}
 		}
 	}
+}
+void CheckPassengerSync()
+{
+	if (iNPC && iNPC->Initialized()
+		&& iNPC->PSOnServerCycle)
+		HandlePassengerSync();
+}
+void OnCycle()
+{
+	uint8_t byteSleepTime = ProcessPlaybacks();
+	DWORD dw_TickOne = GetTickCount();
+	ProcessTimers(dw_TickOne);
+	CheckPassengerSync();
+	if (bConsoleInputEnabled)
+		CheckForConsoleInput();
+	DWORD dw_TickTwo = GetTickCount();
+	DWORD dw_interval = dw_TickTwo - dw_TickOne;
+	if (dw_interval >= byteSleepTime)
+		Sleep(0);
+	else if (dw_interval >= 0)
+		Sleep(byteSleepTime - (dw_interval));
+	else Sleep(0);
 }

@@ -64,7 +64,43 @@ uint16_t ConvertToUINT16_T(float value, float base)
 		return s;
 	}
 }
-void SendNPCSyncData(INCAR_SYNC_DATA* m_pInSyncData, PacketPriority mPriority=HIGH_PRIORITY )
+#ifdef _REL004
+void SendNPCSyncData(INCAR_SYNC_DATA* m_pInSyncData, PacketPriority mPriority)
+{
+	RakNet::BitStream bsOut;
+	bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_PLAYERUPDATE_DRIVER);
+	bsOut.Write(iNPC->anticheatID);
+	bsOut.Write(m_pInSyncData->byteCurrentWeapon);
+	bsOut.Write(m_pInSyncData->bytePlayerArmour);
+	bsOut.Write(m_pInSyncData->bytePlayerHealth);
+	bsOut.Write(m_pInSyncData->wAmmo);
+	bsOut.Write(npc->m_wVehicleId);
+	bsOut.Write((uint16_t)m_pInSyncData->dwKeys);
+	//Mystery bytes (two). needs investigation
+	bsOut.Write((uint8_t)0);
+	bsOut.Write((uint8_t)0xc8); //some times changes to 0x42
+
+	bsOut.Write(m_pInSyncData->Turrety);
+	bsOut.Write(m_pInSyncData->Turretx);
+
+	bsOut.Write((uint8_t)0);//changes to 1 on water..
+	bsOut.Write(m_pInSyncData->fCarHealth);
+	bsOut.Write(m_pInSyncData->dDamage);
+	bsOut.Write(m_pInSyncData->quatRotation.W);
+	bsOut.Write(m_pInSyncData->quatRotation.Z);
+	bsOut.Write(m_pInSyncData->quatRotation.Y);
+	bsOut.Write(m_pInSyncData->quatRotation.X);
+	bsOut.Write(m_pInSyncData->vecMoveSpeed.Z);
+	bsOut.Write(m_pInSyncData->vecMoveSpeed.Y);
+	bsOut.Write(m_pInSyncData->vecMoveSpeed.X);
+	bsOut.Write(m_pInSyncData->vecPos.Z);
+	bsOut.Write(m_pInSyncData->vecPos.Y);
+	bsOut.Write(m_pInSyncData->vecPos.X);
+	peer->Send(&bsOut, mPriority, UNRELIABLE_SEQUENCED, 0, systemAddress, false);
+	npc->StoreInCarFullSyncData(m_pInSyncData);
+}
+#else
+void SendNPCSyncData(INCAR_SYNC_DATA* m_pInSyncData, PacketPriority mPriority )
 {
 	RakNet::BitStream bsOut;
 	bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_PLAYERUPDATE_DRIVER);
@@ -136,8 +172,65 @@ void SendNPCSyncData(INCAR_SYNC_DATA* m_pInSyncData, PacketPriority mPriority=HI
 	peer->Send(&bsOut, mPriority, UNRELIABLE_SEQUENCED, 0, systemAddress, false);
 	npc->StoreInCarFullSyncData(m_pInSyncData);
 }
-
-void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData, PacketPriority priority=HIGH_PRIORITY)
+#endif
+#ifdef _REL004
+void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData, PacketPriority priority)
+{
+	RakNet::BitStream bsOut;
+	if (!m_pOfSyncData->IsPlayerUpdateAiming)
+		bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_ONFOOT_UPDATE);
+	else
+		bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_ONFOOT_UPDATE_AIM);
+	bsOut.Write(iNPC->anticheatID);
+	uint8_t byteCrouching = 0;
+	if (m_pOfSyncData->IsCrouching)
+		byteCrouching = 2;
+	bsOut.Write(byteCrouching);
+	bsOut.Write(m_pOfSyncData->byteCurrentWeapon);
+	if (m_pOfSyncData->IsPlayerUpdateAiming)
+	{
+		if (m_pOfSyncData->bIsReloading)
+		{
+			bsOut.Write((uint8_t)0x27);
+			bsOut.Write((uint8_t)0x01);
+		}
+		else
+		{
+			bsOut.Write((uint8_t)0xa7);
+			bsOut.Write((uint8_t)0x10);//magic
+		}
+	}
+	else
+	{
+		bsOut.Write((uint8_t)0x03);//magic. 0x33 for look behind
+		bsOut.Write((uint8_t)0x01);//magic
+	}
+	bsOut.Write(m_pOfSyncData->byteArmour);
+	bsOut.Write(m_pOfSyncData->byteHealth);
+	bsOut.Write(m_pOfSyncData->wAmmo);
+	bsOut.Write((uint16_t)0);
+	bsOut.Write((uint16_t)m_pOfSyncData->dwKeys);
+	bsOut.Write(m_pOfSyncData->vecSpeed.Z);
+	bsOut.Write(m_pOfSyncData->vecSpeed.Y);
+	bsOut.Write(m_pOfSyncData->vecSpeed.X);
+	bsOut.Write(m_pOfSyncData->fAngle);
+	bsOut.Write(m_pOfSyncData->vecPos.Z);
+	bsOut.Write(m_pOfSyncData->vecPos.Y);
+	bsOut.Write(m_pOfSyncData->vecPos.X);
+	if (m_pOfSyncData->IsPlayerUpdateAiming)
+	{
+		bsOut.Write(m_pOfSyncData->vecAimPos.Z);
+		bsOut.Write(m_pOfSyncData->vecAimPos.Y);
+		bsOut.Write(m_pOfSyncData->vecAimPos.X);
+		bsOut.Write(m_pOfSyncData->vecAimDir.Z);
+		bsOut.Write(m_pOfSyncData->vecAimDir.Y);
+		bsOut.Write(m_pOfSyncData->vecAimDir.X);
+	}
+	peer->Send(&bsOut, priority, UNRELIABLE_SEQUENCED, 0, systemAddress, false);
+	npc->StoreOnFootFullSyncData(m_pOfSyncData);
+}
+#else
+void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData, PacketPriority priority)
 {
 	RakNet::BitStream bsOut;
 	if(!m_pOfSyncData->IsPlayerUpdateAiming)
@@ -243,14 +336,14 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData, PacketPriority priority=HI
 	peer->Send(&bsOut, priority, UNRELIABLE_SEQUENCED, 0, systemAddress, false);	
 	npc->StoreOnFootFullSyncData(m_pOfSyncData);//v1.4
 }
-
+#endif
 
 void WriteNibble(uint8_t nibble, RakNet::BitStream *bsOut)
 {
 	const uint8_t bytearray[] = { nibble };
 	bsOut->WriteBits(bytearray, 4);
 }
-
+#ifndef _REL004
 void SetActionFlags(ONFOOT_SYNC_DATA* m_pOfSyncData, uint8_t* action)
 {
 	if (m_pOfSyncData->byteCurrentWeapon)(*action) |= OF_FLAG_WEAPON;
@@ -261,6 +354,7 @@ void SetActionFlags(ONFOOT_SYNC_DATA* m_pOfSyncData, uint8_t* action)
 	if (m_pOfSyncData->IsCrouching)(*action) |= OF_FLAG_CROUCHING;
 	if (m_pOfSyncData->byteHealth <= 0)(*action) |= OF_FLAG_NOHEALTH;
 }
+#endif
 //Set Flags for Weapon and Armour of player
 void SetActionFlags(INCAR_SYNC_DATA* m_pInSyncData, uint8_t* action)
 {
@@ -292,6 +386,7 @@ void SetVehicleIDFlag(INCAR_SYNC_DATA* m_pIcSyncData, uint8_t* nibble, uint8_t* 
 	(*byte)=m_pIcSyncData->VehicleID >> 2;
 	if (m_pIcSyncData->dwKeys > 0xFFFF)(*byte) = (*byte) | (0x40);
 }
+/* old version
 void SendNPCUpdate()
 {
 	RakNet::BitStream bsOut;
@@ -325,6 +420,7 @@ void SendNPCUpdate()
 	//Send the packet
 	peer->Send(&bsOut, HIGH_PRIORITY, UNRELIABLE_SEQUENCED, 0, systemAddress, false);
 }	
+*/
 void SendNPCOfSyncDataLV(PacketPriority prioty) //with existing values, send a packet. Normally to update health or angle
 {
 	ONFOOT_SYNC_DATA* m_pOfSyncData;
@@ -338,7 +434,7 @@ void SendNPCOfSyncDataLV(PacketPriority prioty) //with existing values, send a p
 	m_pOfSyncData->vecPos = npc->m_vecPos;
 	SendNPCSyncData(m_pOfSyncData, prioty);
 }
-
+#ifndef _REL004
 void SendPassengerSyncData()
 {
 	if (npc->m_wVehicleId != 0 && npc->m_byteSeatId != -1)
@@ -371,3 +467,19 @@ void SendPassengerSyncData()
 		peer->Send(&bsOut, HIGH_PRIORITY, UNRELIABLE_SEQUENCED, 0, systemAddress, false);
 	}
 }
+#else
+void SendPassengerSyncData()
+{
+	if (npc->m_wVehicleId != 0 && npc->m_byteSeatId != -1)
+	{
+		RakNet::BitStream bsOut;
+		bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_PLAYERUPDATE_PASSENGER);
+		bsOut.Write(iNPC->anticheatID);
+		bsOut.Write(npc->m_byteSeatId);
+		bsOut.Write(npc->m_byteArmour);
+		bsOut.Write(npc->m_byteHealth);
+		bsOut.Write(npc->m_wVehicleId);
+		peer->Send(&bsOut, HIGH_PRIORITY, UNRELIABLE_SEQUENCED, 0, systemAddress, false);
+	}
+}
+#endif

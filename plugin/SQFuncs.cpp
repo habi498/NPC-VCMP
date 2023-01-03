@@ -14,6 +14,11 @@
 	You should have received a copy of the GNU General Public License
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+enum Version
+{
+	REL004 = 67000,
+	REL006 = 67400
+};
 #include <stdlib.h>
 #include <stdio.h>
 #include "SQFuncs.h"
@@ -24,8 +29,8 @@ extern HSQAPI sq;
 #ifdef WIN32
 INT SW_STATUS = 0;
 #endif
-bool CallNPCClient(const char* szName, const char* szScript, const char* host,
-	const char* loc = "", std::vector<const char*>params = {})
+bool CallNPCClient(const char* szName, const char* szScript, bool bConsoleInputEnabled=false,
+	const char* host="127.0.0.1", const char* loc = "", std::vector<const char*>params = {})
 {
 	CHAR szCmd[1024]; int iPort;
 	ServerSettings s;
@@ -56,9 +61,22 @@ bool CallNPCClient(const char* szName, const char* szScript, const char* host,
 		strcat(szCmd, params[i]);
 		strcat(szCmd, "\"");
 	}
+	if (bConsoleInputEnabled)
+		strcat(szCmd, " -c");
 	//printf("%s\n", szCmd);
 #ifdef WIN32
-	ShellExecute(0, "open", "npcclient.exe", szCmd, NULL, SW_STATUS);
+	if(bConsoleInputEnabled)
+		SW_STATUS = SW_SHOW;
+	uint32_t ver=VCMP->GetServerVersion();
+	if(ver==REL004)
+		ShellExecute(0, "open", "npcclient_r004.exe", szCmd, NULL, SW_STATUS);
+	else if(ver==REL006)
+		ShellExecute(0, "open", "npcclient.exe", szCmd, NULL, SW_STATUS);
+	else {
+		printf("Error server version: %d. ", ver);
+		printf("Using REL006 = %d\n", REL006);
+		ShellExecute(0, "open", "npcclient.exe", szCmd, NULL, SW_STATUS);
+	}
 #else
 	char szDir[MAX_PATH];
 	getcwd(szDir, MAX_PATH);
@@ -77,21 +95,33 @@ bool CallNPCClient(const char* szName, const char* szScript, const char* host,
 _SQUIRRELDEF(SQ_ConnectNPC) {
     SQInteger iArgCount = sq->gettop(v);
 	const SQChar* szName=NULL, *szScript=NULL, *host=NULL;
+	SQBool bConsoleInput;
 	sq->getstring(v, 2, &szName);
 	if (iArgCount > 2)
 	{
 		sq->getstring(v, 3, &szScript);
 		if (iArgCount > 3)
 		{
-			sq->getstring(v, 4, &host);
-		}else host = "127.0.0.1";
+			sq->getbool(v, 4, &bConsoleInput);
+			if (iArgCount > 4)
+				sq->getstring(v, 5, &host);
+			else host = "127.0.0.1";
+		}
+		else
+		{
+			host = "127.0.0.1";
+			bConsoleInput = 0;
+		}
 	}
 	else
 	{	//Script not specified
 		szScript = "";//start without script
 		host = "127.0.0.1";
+		bConsoleInput = 0;
 	}
-	CallNPCClient(szName, szScript, host);
+	if (strlen(host) == 0)
+		host = "127.0.0.1";
+	CallNPCClient(szName, szScript, bConsoleInput, host);
 	sq->pushbool(v, SQTrue);
 	return 1;
 }
@@ -100,7 +130,8 @@ _SQUIRRELDEF(SQ_ConnectNPCEx) {
 	const SQChar* szName = NULL, * szScript = NULL, * host = NULL;
 	sq->getstring(v, 2, &szName);
 	float x, y, z, angle; SQInteger skinId, weaponId, classId;
-	uint8_t flag = 0;
+	SQBool bConsoleInput;
+	uint16_t flag = 0;
 	const SQChar* szLoc = NULL;
 	std::vector<const char*> params = {};
 	if (iArgCount > 4) //means pos (x,y,z) specified
@@ -131,23 +162,28 @@ _SQUIRRELDEF(SQ_ConnectNPCEx) {
 							flag |= 32;
 							if (iArgCount > 10)
 							{
-								sq->getstring(v, 11, &host);
+								sq->getbool(v, 11, &bConsoleInput);
 								flag |= 64;
-								if (iArgCount > 11)
+								if(iArgCount > 11)
 								{
-									for (int i = 12; i <= iArgCount; i++)
-									{
-										if (sq->gettype(v, i) != OT_STRING)
-										{
-											printf("Error: Paramter %d is not string\n", i - 1);//1 for root table
-											sq->throwerror(v, "");//throwerror is not displaying anything
-											return 0;
-										}
-										const SQChar* szParam;
-										sq->getstring(v, i, &szParam);
-										params.push_back(szParam);
-									}
+									sq->getstring(v, 12, &host);
 									flag |= 128;
+									if (iArgCount > 12)
+									{
+										for (int i = 13; i <= iArgCount; i++)
+										{
+											if (sq->gettype(v, i) != OT_STRING)
+											{
+												printf("Error: Paramter %d is not string\n", i - 1);//1 for root table
+												sq->throwerror(v, "");//throwerror is not displaying anything
+												return 0;
+											}
+											const SQChar* szParam;
+											sq->getstring(v, i, &szParam);
+											params.push_back(szParam);
+										}
+										flag |= 256;
+									}
 								}
 							}
 						}
@@ -159,7 +195,9 @@ _SQUIRRELDEF(SQ_ConnectNPCEx) {
 	char szArgs[512]; 
 	if (!(flag & 32))
 		szScript = "";
-	if (!(flag & 64)||strlen(host)==0)
+	if (!(flag & 64))
+		bConsoleInput = 0;
+	if (!(flag & 128)||strlen(host)==0)
 		host = "127.0.0.1";
 	if(flag & 16)
 		sprintf(szArgs, "x%f y%f z%f a%f s%d w%d c%d", x, y, z, angle, (int)skinId, (int)weaponId, (int)classId);
@@ -171,10 +209,10 @@ _SQUIRRELDEF(SQ_ConnectNPCEx) {
 		sprintf(szArgs, "x%f y%f z%f a%f", x, y, z, angle);
 	else 
 		sprintf(szArgs, "x%f y%f z%f", x, y, z);
-	if(flag & 128)
-		CallNPCClient(szName, szScript, host, szArgs, params);
+	if(flag & 256)
+		CallNPCClient(szName, szScript, bConsoleInput, host, szArgs, params);
 	else 
-		CallNPCClient(szName, szScript, host, szArgs);
+		CallNPCClient(szName, szScript, bConsoleInput, host, szArgs);
 	
 	sq->pushbool(v, SQTrue);
 	return 1;
@@ -251,8 +289,8 @@ SQInteger SQ_HideWindow(HSQUIRRELVM v)
 }
 #endif
 void RegisterFuncs(HSQUIRRELVM v) {
-	RegisterSquirrelFunc(v, SQ_ConnectNPC, "ConnectNPC", -1, "sss");
-	RegisterSquirrelFunc(v, SQ_ConnectNPCEx, "ConnectNPCEx", -4, "sf|if|if|if|iiiiss");
+	RegisterSquirrelFunc(v, SQ_ConnectNPC, "ConnectNPC", -1, "ssbs");
+	RegisterSquirrelFunc(v, SQ_ConnectNPCEx, "ConnectNPCEx", -4, "sf|if|if|if|iiiisbs");
 	RegisterSquirrelFunc(v, SQ_IsPlayerNPC, "IsPlayerNPC", 1, "i");
 	RegisterSquirrelFunc(v, SQ_StartRecordingPlayerData, "StartRecordingPlayerData", 3, "iis");
 	RegisterSquirrelFunc(v, SQ_StopRecordingPlayerData, "StopRecordingPlayerData", 1, "i");

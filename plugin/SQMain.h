@@ -17,7 +17,6 @@
 	#define MAX_PATH 250
 	#define stricmp strcasecmp
 #endif
-
 #include "plugin.h"
 #include "SQImports.h"
 #include "ConsoleUtils.h"

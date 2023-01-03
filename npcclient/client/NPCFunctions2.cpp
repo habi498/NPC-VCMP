@@ -18,6 +18,7 @@
 extern HSQUIRRELVM v;
 extern CPlayerPool* m_pPlayerPool;
 extern NPC* iNPC;
+extern CPlayer* npc;
 uint8_t GetSlotId(uint8_t byteWeapon);
 SQInteger fn_GetPlayerPosZ(HSQUIRRELVM v)
 {
@@ -372,7 +373,37 @@ SQInteger fn_GetPlayerTeam(HSQUIRRELVM v)
     sq_pushinteger(v, -1);
     return 1;
 }
-
+SQInteger fn_GetClosestPlayer(HSQUIRRELVM v)
+{
+    SQBool bCheckTeam;
+    if (sq_gettop(v) == 2)
+    {
+        sq_getbool(v, 2, &bCheckTeam);
+    }
+    else bCheckTeam = false;
+    float fMinDis = 1000, dis;
+    uint8_t closesplrid = 255;
+    for (int i = 0; i < MAX_PLAYERS; i++)
+    {
+        if (i == iNPC->GetID())continue;
+        CPlayer* plr = m_pPlayerPool->GetAt(i);
+        
+        if (plr && iNPC->IsPlayerStreamedIn(i))
+        {
+            if (bCheckTeam &&
+                plr->m_byteTeamId == npc->m_byteTeamId)
+                continue;//same team
+            dis = (plr->m_vecPos - npc->m_vecPos).GetMagnitude();
+            if (dis < fMinDis)
+            {
+                closesplrid = i;
+                fMinDis = dis;
+            }
+        }
+    }
+   sq_pushinteger(v, closesplrid);
+   return 1;
+}
 void RegisterNPCFunctions2()
 {
 	register_global_func(v, ::fn_IsPlayerConnected, "IsPlayerConnected", 2, "ti");
@@ -398,4 +429,6 @@ void RegisterNPCFunctions2()
     register_global_func(v, ::fn_SetTimerEx, "SetTimerEx", 0, "");
     register_global_func(v, ::fn_GetPlayerSkin, "GetPlayerSkin", 2, "ti");
     register_global_func(v, ::fn_GetPlayerTeam, "GetPlayerTeam", 2, "ti");
+
+    register_global_func(v, ::fn_GetClosestPlayer, "GetClosestPlayer", -1, "tb");
 }

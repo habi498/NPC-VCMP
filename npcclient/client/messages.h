@@ -31,12 +31,9 @@ enum GameMessages
 	ID_GAME_MESSAGE_SET_COLOUR = 0xa0,
 	ID_GAME_MESSAGE_VEHICLE_ENTER = 0xa2,
 	ID_GAME_MESSAGE_VEHICLE_EXIT = 0xa4,
-	ID_GAME_MESSAGE_REQUEST_CLASS = 0xa5,
-	ID_GAME_MESSAGE_REQUEST_SPAWN = 0xa6, //client
-	ID_GAME_MESSAGE_ENTER_VEHICLE_REQUEST =0xab, //client->server 
-	ID_GAME_MESSAGE_VEHICLE_PUT_ACCEPTED =0xac, //client->server needs more info on this one
+
 	ID_GAME_MESSAGE_JOIN = 0xaf,
-	ID_GAME_MESSAGE_CLASS_GRANTED=0xb2,
+	ID_GAME_MESSAGE_CLASS_GRANTED=0xc3,
 	ID_GAME_MESSAGE_SET_HEALTH = 0xb4,
 	ID_GAME_MESSAGE_SET_ARMOUR = 0xb5,
 	ID_GAME_MESSAGE_SPAWN_GRANTED = 0xb6,
@@ -51,23 +48,60 @@ enum GameMessages
 	ID_GAME_MESSAGE_SNIPER_RIFLE_FIRED = 0xc7, 
 	ID_GAME_MESSAGE_CLIENT_MESSAGE = 0xcb,
 	ID_GAME_MESSAGE_PLAYER_TEXT = 0xcd,
+#ifndef _REL004
 	ID_GAME_MESSAGE_VEHICLE_STREAM_IN = 0xea,
 	//not done much investigation on vehicle stream in
 	//0xec is also sometimes send along with 0xea
 	ID_GAME_MESSAGE_VEHICLE_STREAM_OUT = 0xeb, // no doubt. but multiple times server may send
 	ID_GAME_MESSAGE_VEHICLE_LOST_OWNERSHIP = 0xf8,
 	ID_GAME_MESSAGE_VEHICLE_GAIN_OWNERSHIP = 0xf9,
+#else
+	ID_GAME_MESSAGE_VEHICLE_STREAM_IN = 0xe9,
+	ID_GAME_MESSAGE_VEHICLE_STREAM_OUT = 0xea,
+	ID_GAME_MESSAGE_VEHICLE_LOST_OWNERSHIP = 0xf7,
+	ID_GAME_MESSAGE_VEHICLE_GAIN_OWNERSHIP = 0xf8,
+#endif
+	
+	
 	//another message 0xf9 is also send by server on exiting vehicle, 
 	//which appears to be same as 0xf8. 
 
 	ID_SERVER_MESSAGE_CLIENT_CONNECT = 0x98, //client->server
+	ID_GAME_MESSAGE_BEGIN_TYPING=0x9b,//from rel004
+	ID_GAME_MESSAGE_END_TYPING=0x9c,//from rel004
+
+	
+#ifndef _REL004
 	ID_GAME_MESSAGE_CHAT = 0xa2, //client
-	ID_GAME_MESSAGE_COMMAND=0xa4,//client
+	ID_GAME_MESSAGE_ENTER_VEHICLE_REQUEST = 0xab, //client->server 
+	ID_GAME_MESSAGE_VEHICLE_PUT_ACCEPTED = 0xac, //client->server needs more info on this one
+
+	ID_GAME_MESSAGE_COMMAND = 0xa4,//client
+	ID_GAME_MESSAGE_REQUEST_CLASS = 0xa5,
+	ID_GAME_MESSAGE_REQUEST_SPAWN = 0xa6, //client
 	ID_GAME_MESSAGE_SPAWN = 0xa7, //client
 	ID_GAME_MESSAGE_DEATH_INFO = 0xa8, //client
 	ID_GAME_MESSAGE_PLAYER_SHOT_BODYPART = 0xa9, //client->server
 
 	ID_GAME_MESSAGE_SNIPERFIRE = 0xae, //client
 	ID_GAME_MESSAGE_PROJECTILEFIRE = 0xaf,//client
+#else 
+	ID_GAME_MESSAGE_CHAT = 0xa1,
+	ID_GAME_MESSAGE_ENTER_VEHICLE_REQUEST = 0xaa, //client->server 
+	ID_GAME_MESSAGE_VEHICLE_PUT_ACCEPTED = 0xab, //client->server needs more info on this one
+
+	ID_GAME_MESSAGE_COMMAND = 0xa3,//client
+	ID_GAME_MESSAGE_REQUEST_CLASS = 0xa4,
+	ID_GAME_MESSAGE_REQUEST_SPAWN = 0xa5, //client
+	ID_GAME_MESSAGE_SPAWN = 0xa6, //client
+	ID_GAME_MESSAGE_DEATH_INFO = 0xa7, //client
+	ID_GAME_MESSAGE_PLAYER_SHOT_BODYPART = 0xa8, //client->server
+
+	ID_GAME_MESSAGE_SNIPERFIRE = 0xad, //client
+	ID_GAME_MESSAGE_PROJECTILEFIRE = 0xae,//client
+#endif
+	
+	
+	
 
 };

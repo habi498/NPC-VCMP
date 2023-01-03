@@ -22,13 +22,12 @@ extern CPlayerPool* m_pPlayerPool;
 extern HSQUIRRELVM v;
 extern NPC* iNPC;
 extern CPlayerPool* m_pPlayerPool;
+extern CFunctions* m_pFunctions;
 extern CPlayer* npc;
 extern RakNet::RakPeerInterface* peer;
 extern RakNet::SystemAddress systemAddress;
 uint8_t GetSlotId(uint8_t byteWeapon);
-//05-Nov 22
-void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData, PacketPriority priority=HIGH_PRIORITY);
-//void SendNPCOfSyncData();
+
 SQInteger fn_SendOnFootSyncData(HSQUIRRELVM v)
 {
     if (!npc) {
@@ -84,43 +83,10 @@ SQInteger fn_SendOnFootSyncData(HSQUIRRELVM v)
     //IsReloading
     SQBool bIsReloading;
     sq_getbool(v, 21, &bIsReloading);
-
-    ONFOOT_SYNC_DATA m_pOfSyncData;
-    m_pOfSyncData.byteArmour = (uint8_t)byteArmour;
-    m_pOfSyncData.byteCurrentWeapon = (uint8_t)byteCurrentWeapon;
-    m_pOfSyncData.byteHealth = (uint8_t)byteHealth;
-    m_pOfSyncData.dwKeys = (uint32_t)dwKeys;
-    m_pOfSyncData.fAngle = fAngle;
-    if ((dwKeys & 512) == 512)
-        m_pOfSyncData.IsPlayerUpdateAiming = true;
-    else if ((dwKeys & 1) == 1 && byteCurrentWeapon > 11)
-        m_pOfSyncData.IsPlayerUpdateAiming = true;
-    else 
-        m_pOfSyncData.IsPlayerUpdateAiming = false;
-    m_pOfSyncData.IsCrouching = bIsCrouching != 0 ? true : false;
-    m_pOfSyncData.vecAimDir.X = p;
-    m_pOfSyncData.vecAimDir.Y = q;
-    m_pOfSyncData.vecAimDir.Z = r;
-
-    m_pOfSyncData.vecAimPos.X = s;
-    m_pOfSyncData.vecAimPos.Y = t;
-    m_pOfSyncData.vecAimPos.Z = u;
-
-    m_pOfSyncData.vecPos.X = x;
-    m_pOfSyncData.vecPos.Y = y;
-    m_pOfSyncData.vecPos.Z = z;
-
-    m_pOfSyncData.vecSpeed.X = vx;
-    m_pOfSyncData.vecSpeed.Y = vy;
-    m_pOfSyncData.vecSpeed.Z = vz;
-
-    m_pOfSyncData.wAmmo = static_cast<uint16_t>(wAmmo);
-    m_pOfSyncData.bIsReloading = static_cast<bool>(bIsReloading);
-	//if bIsReloading is provided then set off the fire key
-    if (bIsReloading && ( (dwKeys & 512) == 512))
-        dwKeys = dwKeys & (~(1 << 9));//2^9 = 512. Set 9th bit from right off.
-    m_pOfSyncData.dwKeys = (uint32_t)dwKeys;
-    SendNPCSyncData(&m_pOfSyncData);
+    m_pFunctions->SendOnFootSyncData(dwKeys, x, y, z,
+        fAngle, byteHealth, byteArmour, byteCurrentWeapon,
+        wAmmo, vx, vy, vz, s, t, u, p, q, r, bIsCrouching, bIsReloading);
+    
     return 0;//0 because we are returning nothing!
 }
 SQInteger fn_FireSniperRifle(HSQUIRRELVM v)
@@ -137,17 +103,8 @@ SQInteger fn_FireSniperRifle(HSQUIRRELVM v)
     sq_getfloat(v, 6, &dx);
     sq_getfloat(v, 7, &dy);
     sq_getfloat(v, 8, &dz);
-    RakNet::BitStream bsOut;
-    bsOut.Write((RakNet::MessageID)(ID_GAME_MESSAGE_SNIPERFIRE));
-    bsOut.Write((char)weapon);
-    bsOut.Write(z);// z first
-    bsOut.Write(y);
-    bsOut.Write(x);
-    bsOut.Write(dz);
-    bsOut.Write(dy);
-    bsOut.Write(dx);
-    peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE, 0, systemAddress, false);
-    return 0;
+    m_pFunctions->FireSniperRifle((char)weapon, x, y, z, dx, dy, dz);
+   return 0;
 }
 SQInteger fn_SendShotInfo(HSQUIRRELVM v)
 {
@@ -156,26 +113,7 @@ SQInteger fn_SendShotInfo(HSQUIRRELVM v)
     SQInteger bodypart, animation;
     sq_getinteger(v, 2, &bodypart);
     sq_getinteger(v, 3, &animation);
-    RakNet::BitStream bsOut;
-    bsOut.Write((RakNet::MessageID)(ID_GAME_MESSAGE_PLAYER_SHOT_BODYPART));
-    char nbp; //new body part
-    switch (bodypart)
-    {
-    case 6: nbp = 2; break;
-    case 1: nbp = 1; break;
-    case 2: nbp = 3; break;
-    case 3: nbp = 4; break;
-    case 4: nbp = 7; break;
-    case 5: nbp = 8; break;
-    case 0: nbp = (uint8_t)255; break;
-    default: nbp = bodypart; break;
-    }
-    bsOut.Write(nbp);
-    bsOut.Write((char)animation);
-    peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE, 0, systemAddress, false);
-    npc->m_byteArmour = 0;
-    npc->m_byteHealth = 0;
-    npc->SetKeys(0);
+    m_pFunctions->SendShotInfo(bodypart, animation);
     return 0;
 }
 SQInteger fn_GetLocalValue(HSQUIRRELVM v)
@@ -270,15 +208,7 @@ SQInteger fn_SendDeathInfo(HSQUIRRELVM v)
     sq_getinteger(v, 2, &weapon);
     sq_getinteger(v, 3, &killerid);
     sq_getinteger(v, 4, &bodypart);
-    RakNet::BitStream bsOut;
-    bsOut.Write((RakNet::MessageID)(ID_GAME_MESSAGE_DEATH_INFO));
-    bsOut.Write((char)weapon);
-    bsOut.Write((char)killerid);
-    bsOut.Write((char)bodypart);
-    peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE, 0, systemAddress, false);
-    npc->SetState(PLAYER_STATE_WASTED);
-    iNPC->SetSpawnStatus( false );
-    iNPC->ClassSelectionCounter = 0;
+    m_pFunctions->SendDeathInfo(weapon, killerid, bodypart);
     return 0;
 }
 SQInteger fn_FaceNPCToPlayer(HSQUIRRELVM v)

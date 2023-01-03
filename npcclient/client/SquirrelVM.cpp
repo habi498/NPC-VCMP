@@ -17,6 +17,9 @@
 #include "main.h"
 extern HSQUIRRELVM v;
 extern NPC* iNPC;
+bool bSquirrelVMRunning = false;
+extern bool bConsoleInputEnabled;
+void stop_consoleinput();
 void printfunc(HSQUIRRELVM vm, const SQChar* s, ...)
 {
     va_list arglist;
@@ -242,6 +245,25 @@ void call_OnSniperRifleFired(uint8_t bytePlayerID, uint8_t byteWeaponId, float x
     }
     sq_settop(v, top); //restores the original stack size
 }
+void call_OnConsoleInput(char* input)
+{
+    if (!bSquirrelVMRunning)return;
+    int top = sq_gettop(v); //saves the stack size before the call
+    sq_pushroottable(v); //pushes the global table
+    sq_pushstring(v, _SC("OnConsoleInput"), -1);
+    if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
+        sq_pushroottable(v); //push the 'this'
+        sq_pushstring(v, input, -1);
+        sq_call(v, 2, 0, 1); //calls the function 
+    }
+    else
+    {
+        SQRESULT a=sq_compilebuffer(v, input, strlen(input), "STDIN", true);
+        sq_pushroottable(v);
+        sq_call(v, 1, 0, 1);
+    }
+    sq_settop(v, top); //restores the original stack size
+}
 bool StartSquirrel(std::string file, std::string location, std::vector<std::string> params)
 {
     v = sq_open(1024); // creates a VM with initial stack size 1024 
@@ -263,6 +285,7 @@ bool StartSquirrel(std::string file, std::string location, std::vector<std::stri
         return 0;
     if (!SQ_SUCCEEDED(sqstd_dofile(v, _SC(UNIT3), 0, 1)))
         return 0;
+    bSquirrelVMRunning = true;
     if (location.length() > 0)
     {
         char* loc = (char*)malloc(sizeof(char) * location.length());
@@ -334,5 +357,10 @@ int StopSquirrel()
     call_OnNPCScriptUnload();
     sq_pop(v, 1); //pops the root table
     sq_close(v);
+    bSquirrelVMRunning = false;
+#ifndef WIN32
+    if (bConsoleInputEnabled)
+        stop_consoleinput();
+#endif
     return 0;
 }

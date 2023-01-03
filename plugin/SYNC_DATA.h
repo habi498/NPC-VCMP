@@ -20,7 +20,7 @@ in one of the files must be made on the other too
 */
 #include <stdint.h>
 #ifdef _WIN32
-	#include <windows.h>
+#include <windows.h>
 #endif
 #pragma pack(1)
 typedef struct _VECTOR
@@ -28,6 +28,53 @@ typedef struct _VECTOR
 	float X;
 	float Y;
 	float Z;
+	_VECTOR()
+	{
+		this->X = 0.0, this->Y = 0.0, this->Z = 0.0;
+	}
+	_VECTOR(float x, float y, float z)
+	{
+		this->X = x;
+		this->Y = y;
+		this->Z = z;
+	}
+	_VECTOR operator+(const _VECTOR& vector)
+	{
+		_VECTOR result;
+		result.X = this->X + vector.X;
+		result.Y = this->Y + vector.Y;
+		result.Z = this->Z + vector.Z;
+		return result;
+	}
+	_VECTOR operator+=(const _VECTOR& vector)
+	{
+		this->X += vector.X;
+		this->Y += vector.Y;
+		this->Z += vector.Z;
+		return *this;
+	}
+	_VECTOR operator-(const _VECTOR& vector)
+	{
+		_VECTOR result;
+		result.X = this->X - vector.X;
+		result.Y = this->Y - vector.Y;
+		result.Z = this->Z - vector.Z;
+		return result;
+	}
+	_VECTOR operator-=(const _VECTOR& vector)
+	{
+		this->X -= vector.X;
+		this->Y -= vector.Y;
+		this->Z -= vector.Z;
+		return *this;
+	}
+
+	float GetMagnitude()
+	{
+		return (float)sqrt(
+			pow(this->X, 2) + pow(this->Y, 2) + pow(this->Z, 2)
+		);
+	}
 }VECTOR;
 
 #pragma pack(1)
@@ -75,7 +122,7 @@ typedef struct _INCAR_SYNC_DATA
 	float Turretx;
 	float Turrety;
 } INCAR_SYNC_DATA;
-//65 byte
+
 /*Used to save to .rec file*/
 #pragma pack(1)
 typedef struct _ONFOOT_DATABLOCK

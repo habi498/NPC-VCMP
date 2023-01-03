@@ -18,5 +18,14 @@
 #define NPC32LIB_H
 #ifdef _WIN32
 #endif
-uint32_t ConnectAsVCMPClient(RakNet::RakPeerInterface* peer, const char* npcname, uint8_t len, RakNet::SystemAddress systemAddress);
+enum Version
+{
+    REL004 = 67000,
+    REL006 = 67400
+};
+#ifdef _REL004
+uint32_t ConnectAsVCMPClient(RakNet::RakPeerInterface* peer, const char* npcname, uint8_t len, RakNet::SystemAddress systemAddress, uint32_t ver=REL004);
+#else
+uint32_t ConnectAsVCMPClient(RakNet::RakPeerInterface* peer, const char* npcname, uint8_t len, RakNet::SystemAddress systemAddress, uint32_t ver = REL006);
+#endif
 #endif

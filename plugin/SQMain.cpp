@@ -142,8 +142,9 @@ void OnSquirrelScriptLoad() {
 	// See if we have any imports from Squirrel
 	size_t size;
 	int32_t sqId      = VCMP->FindPlugin(const_cast<char*>("SQHost2"));
+	
 	const void ** sqExports = VCMP->GetPluginExports(sqId, &size);
-
+	
 	// We do!
 	if (sqExports != NULL && size > 0) {
 		// Cast to a SquirrelImports structure

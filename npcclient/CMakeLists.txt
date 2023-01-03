@@ -121,7 +121,11 @@ add_executable (npcclient
 "Raknet/VitaIncludes.cpp"
 "Raknet/WSAStartupSingleton.cpp"
 "Raknet/_FindFirst.cpp"
- "client/NPCFunctions3.cpp" "client/ClientFunctions.cpp" "client/ClientFunctions.h")
+"client/NPCFunctions3.cpp"
+"client/ClientFunctions.cpp" 
+"client/ConsoleInput.cpp"
+"client/EventHandler.cpp" 
+"client/Plugins.cpp")
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	set(OUTPUT_BITNESS 64)
 else()
@@ -130,6 +134,11 @@ endif()
 if(FORCE_32)
 	set_target_properties(npcclient PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
 	set(OUTPUT_BITNESS 32)
+endif()
+if(REL004)
+	message(STATUS "You are building for rel004")
+    add_definitions(-D_REL004)
+	set_target_properties(npcclient PROPERTIES OUTPUT_NAME "npcclient_r004") 
 endif()
 target_include_directories(npcclient PRIVATE "${PROJECT_SOURCE_DIR}/npcclient")
 
@@ -143,10 +152,16 @@ else(WIN32)
         target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/libsquirrel_static.a")
         target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/libsqstdlib_static.a")
         target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/libnpc_static.a")
-    else()
+		target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/libreadline.a")
+		  target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/libhistory.a")
+target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/libtinfo.a") 
+else()
         target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x64/libsquirrel_static.a")
         target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x64/libsqstdlib_static.a")
         target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x64/libnpc_static.a")
+	     target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x64/libreadline.a")
+		  target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x64/libhistory.a")
+target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x64/libncurses.a")
     endif()
     set(CMAKE_CXX_FLAGS "-pthread")
     add_definitions(-DLINUX)
@@ -156,7 +171,8 @@ else(WIN32)
     else()
         set_target_properties(npcclient PROPERTIES OUTPUT_NAME "npcclient64")
     endif()
-
+	
+	
 endif()
 
 if(MSVC)

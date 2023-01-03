@@ -13,4 +13,9 @@ else()
 	#For Linux build both 32 bit and 64 bit
 	add_subdirectory("npcclient")
 endif()
+if(REL004)
+message(STATUS "Skipping plugin for REL004, since rel004 servers can use npc rel 006 plugin")
+
+else()
 add_subdirectory ("plugin")
+endif()

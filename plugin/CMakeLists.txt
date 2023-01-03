@@ -13,6 +13,7 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 else()
 	set(OUTPUT_BITNESS 32)
 endif()
+
 if(FORCE_32)
 	set_target_properties(npc04 PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
 	set(OUTPUT_BITNESS 32)

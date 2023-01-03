@@ -20,7 +20,10 @@
 #include "main.h"
 using namespace TCLAP;
 using namespace std;
+void start_consoleinput();
+CPlugins* m_pPlugins;
 #define NPC_DIR "npcscripts"
+#define NPC_PLUGINS_DIR "npcscripts/plugins"
 #ifdef LINUX
 #include <time.h>
  long getTick() {
@@ -46,7 +49,7 @@ int main(int argc, char **argv) {
     // because exceptions will be thrown for problems.
     try {
         // Define the command line object.
-        CmdLine cmd("VCMP-Non Player Characters v1.5.1", ' ', "0.1b",false);
+        CmdLine cmd("VCMP-Non Player Characters v1.5.2", ' ', "0.1b",false);
 
         // Define a value argument and add it to the command line.
         ValueArg<string> hostnameArg("h", "hostname", "IP address of host", false, "127.0.0.1",
@@ -59,6 +62,8 @@ int main(int argc, char **argv) {
             "string");
         ValueArg<string> passwdArg("z", "password", "Password of the server to connect", false, "",
             "string");
+        ValueArg<string> pluginArg("q", "plugins", "List of plugins to be loaded", false, "",
+            "string");
         cmd.add(hostnameArg);
         cmd.add(portArg);
         cmd.add(npcnameArg);
@@ -70,11 +75,15 @@ int main(int argc, char **argv) {
             "string");
         cmd.add(LocationArg);
         cmd.add(scriptArg);
+        cmd.add(pluginArg);
+        SwitchArg consoleInputSwitch("c", "consoleinput", "Use Console Input", cmd, false);
+
         // Parse the args.
         cmd.parse(argc, argv);
         // Get the value parsed by each arg.
         string hostname = hostnameArg.getValue();
         int port = portArg.getValue();
+        
         std::string npcname = npcnameArg.getValue();
         std::string npcscript = fileArg.getValue();
         std::string password = passwdArg.getValue();
@@ -88,6 +97,17 @@ int main(int argc, char **argv) {
         if (success)
         {
              //SetConsoleCtrlHandler(console_ctrl_handler, TRUE);
+            bool bUseConsoleInput = consoleInputSwitch.getValue();
+            if (bUseConsoleInput)
+                start_consoleinput();
+            m_pPlugins = new CPlugins();
+            if (pluginArg.getValue().length() > 0)
+            {
+                printf("port is %d\n", port); 
+                m_pPlugins->LoadPlugins(NPC_PLUGINS_DIR, pluginArg.getValue());
+                printf("port is %d\n", port);
+            }
+            
             ConnectToServer(hostname, port, npcname, password);
         }
         else {

@@ -20,10 +20,11 @@
 extern HSQUIRRELVM v;
 extern NPC* iNPC;
 extern CPlayer* npc;
+extern CFunctions* m_pFunctions;
 extern RakNet::RakPeerInterface* peer;
 extern RakNet::SystemAddress systemAddress;
-#define CHAT_MESSAGE_ORDERING_CHANNEL 3
-#define NPC_RECFILE_IDENTIFIER 1001 //From Nov 2022 onwards
+
+
 Playback mPlayback;
 SQInteger register_global_func(HSQUIRRELVM v, SQFUNCTION f, const char* fname, SQInteger nparamscheck, const SQChar* typemask)
 {
@@ -73,11 +74,12 @@ SQInteger fn_StartRecordingPlayback(HSQUIRRELVM v)
     int identifier;
     size_t m=fread(&identifier, sizeof(int), 1, mPlayback.pFile);
     if (m != 1)return 0;
-    if (identifier != NPC_RECFILE_IDENTIFIER)
+    if (identifier != NPC_RECFILE_IDENTIFIER_V3)
     {
-        if (identifier == 1000)
+        if (identifier == NPC_RECFILE_IDENTIFIER_V1||
+            identifier== NPC_RECFILE_IDENTIFIER_V2)
         {
-            printf("This rec file cannot be played by this version of program.\n");
+            printf("This rec file cannot be played by this version of program. Use program recupdate.exe to convert playback recordings automatically.\n");
             return 0;
         }
         //NOT NPC Recording
@@ -119,7 +121,7 @@ SQInteger fn_SetMyFacingAngle(HSQUIRRELVM v)
     SQFloat angle;
     sq_getfloat(v, 2, &angle);
     npc->m_fAngle = angle;
-    SendNPCUpdate();
+    SendNPCOfSyncDataLV();
     return 0;//0 because we are returning nothing
 }
 
@@ -173,7 +175,7 @@ SQInteger fn_SetMyPos(HSQUIRRELVM v)
     sq_getfloat(v, 4, &z);
 
     npc->m_vecPos.X = x; npc->m_vecPos.Y = y; npc->m_vecPos.Z = z;
-    SendNPCUpdate();
+    SendNPCOfSyncDataLV();
     return 0;//0 because we are returning nothing!
 }
 SQInteger fn_GetMyPosX(HSQUIRRELVM v)
@@ -226,12 +228,7 @@ SQInteger fn_SendChat(HSQUIRRELVM v)
 {
     const SQChar* message;
     sq_getstring(v, 2, &message);
-    RakNet::BitStream bsOut;
-    bsOut.Write((RakNet::MessageID)(ID_GAME_MESSAGE_CHAT));
-    uint16_t len = (uint16_t)strlen(message);
-    bsOut.Write(len);
-    bsOut.Write(message, len);
-    peer->Send(&bsOut, HIGH_PRIORITY, RELIABLE_SEQUENCED, CHAT_MESSAGE_ORDERING_CHANNEL, systemAddress, false);
+    m_pFunctions->SendChatMessage(message);
     return 0;
 }
 
@@ -239,7 +236,7 @@ SQInteger fn_SendCommand(HSQUIRRELVM v)
 {
     const SQChar* message;
     sq_getstring(v, 2, &message);
-    SendCommandToServer(message);
+    m_pFunctions->SendCommandToServer(message);
     return 0;
 }
 SQInteger fn_GetTickCount(HSQUIRRELVM v)
@@ -290,8 +287,9 @@ void RegisterConsts() {
     RegisterSquirrelConst(v, "KEY_ONFOOT_PREVWEP", 4);
     RegisterSquirrelConst(v, "KEY_ONFOOT_NEXTWEP", 2);
     RegisterSquirrelConst(v, "KEY_ONFOOT_AIM", 1);
+#ifndef _REL004
     RegisterSquirrelConst(v, "KEY_ONFOOT_LOOKBHND", 65536);
-
+#endif
     RegisterSquirrelConst(v, "KEY_INCAR_LEFT", 8192);
     RegisterSquirrelConst(v, "KEY_INCAR_RIGHT", 4096);
     RegisterSquirrelConst(v, "KEY_INCAR_BACKWARD", 2176);

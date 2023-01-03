@@ -33,6 +33,7 @@
 #include <sys/times.h>
 #include <byteswap.h>
 #define _byteswap_ushort(x) __bswap_16 (x)
+
 #endif
 
 #include "system.h"
@@ -46,6 +47,8 @@
 #include "npc32.h"
 #include "CTimer.h"
 #include "ClientFunctions.h"
+#include "EventHandler.h"
+#include "Plugins.h"
 #define ZeroVEC(V){V.X=0;V.Y=0;V.Z=0;}
 #define MulVEC(V,f){V.X*=f;V.Y*=f;V.Z*=f;}
 #define PI 3.1415926
@@ -66,10 +69,16 @@
 #define IC_TFLAG_SPEED 0x01
 #define IC_TFLAG_CARHEALTH 0x04
 #define IC_TFLAG_DAMAGE 0x02
+#define CHAT_MESSAGE_ORDERING_CHANNEL 3
+#define NPC_RECFILE_IDENTIFIER_V1 1000
+#define NPC_RECFILE_IDENTIFIER_V2 1001
+#define NPC_RECFILE_IDENTIFIER_V3 1002 //From Nov 2022 onwards
 int ConnectToServer(std::string hostname, int port, std::string npcname, std::string password);
-void OnServerCycle();//in Playback.cpp
-void SendNPCUpdate();//in UpdateNPC.cpp
+void OnCycle();//in Playback.cpp
+//void SendNPCUpdate();//in UpdateNPC.cpp
+void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData, PacketPriority priority = HIGH_PRIORITY);
 void SendNPCOfSyncDataLV(PacketPriority prioty=HIGH_PRIORITY);// in UpdateNPC.cpp
 void SendPassengerSyncData();
+void SendNPCSyncData(INCAR_SYNC_DATA* m_pInSyncData, PacketPriority mPriority = HIGH_PRIORITY);
 void WriteNibble(uint8_t nibble, RakNet::BitStream* bsOut);
 #endif
