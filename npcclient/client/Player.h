@@ -39,13 +39,14 @@ private:
 	uint8_t m_byteState;
 	ONFOOT_SYNC_DATA		m_ofSync;
 	INCAR_SYNC_DATA			m_icSync;
-	//PASSENGER_SYNC_DATA		m_psSync;
-	//AIM_SYNC_DATA			m_aimSync;
+	bool m_bIsStreamedIn;
 public:
 	uint16_t m_wVehicleId;
 	uint8_t m_byteSeatId;
 	uint8_t m_byteSkinId;
 	uint8_t m_byteTeamId;
+	bool IsStreamedIn() { return m_bIsStreamedIn; }
+	void SetStreamedIn(bool streamedIn) { m_bIsStreamedIn = streamedIn; }
 	// Weapon data
 	WORD					m_wSlotAmmo[9];
 	BYTE					m_byteSlotWeapon[9];

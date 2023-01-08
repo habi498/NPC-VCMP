@@ -279,16 +279,15 @@ bool StartSquirrel(std::string file, std::string location, std::vector<std::stri
     sqstd_register_mathlib(v);//Register Math library
     sqstd_register_stringlib(v);//Register String library
     sqstd_register_bloblib(v);//Register the BLOB library
-    if (!SQ_SUCCEEDED(sqstd_dofile(v, _SC(UNIT1), 0, 1)))
-        return 0;
-    if (!SQ_SUCCEEDED(sqstd_dofile(v, _SC(UNIT2), 0, 1)))
-        return 0;
-    if (!SQ_SUCCEEDED(sqstd_dofile(v, _SC(UNIT3), 0, 1)))
+    register_vectorlib(v);
+    register_quaternionlib(v);
+   
+    if (!SQ_SUCCEEDED(sqstd_dofile(v, _SC(UNIT), 0, 1)))
         return 0;
     bSquirrelVMRunning = true;
     if (location.length() > 0)
     {
-        char* loc = (char*)malloc(sizeof(char) * location.length());
+        char* loc = (char*)malloc(sizeof(char) * location.length()+1);
         if (loc)
         {
             strcpy(loc, location.c_str());

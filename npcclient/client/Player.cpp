@@ -28,6 +28,7 @@ CPlayer::CPlayer()
 	m_byteTeamId = 0;
 	m_byteState = PLAYER_STATE_NONE;
 	m_dwLastKeys = 0;
+	m_bIsStreamedIn = false;
 
 	m_vecPos.X = 0.0f;
 	m_vecPos.Y = 0.0f;

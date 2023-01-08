@@ -23,6 +23,9 @@ file with same name in project npcclient.
 #ifdef _WIN32
 	#include <windows.h>
 #endif
+#ifndef WIN32
+	typedef unsigned int DWORD;
+#endif
 #pragma pack(1)
 typedef struct _VECTOR
 {
@@ -41,7 +44,7 @@ typedef struct _QUATERNION
 }QUATERNION;
 
 #pragma pack(1)
-typedef struct _ONFOOT_SYNC_DATA
+typedef struct _ONFOOT_SYNC_DATA_V1
 {
 	uint32_t dwKeys;
 	VECTOR vecPos;
@@ -56,10 +59,26 @@ typedef struct _ONFOOT_SYNC_DATA
 	VECTOR vecAimPos;
 	//bool bIsReloading; //1 byte
 	//uint16_t wAmmo; // 2 byte
-} ONFOOT_SYNC_DATA;
+} ONFOOT_SYNC_DATA_V1;
 //61+ 4 =65 datablock
 //65+8=73 size taken by header+first datablock
-
+#pragma pack(1)
+typedef struct _ONFOOT_SYNC_DATA_V2
+{
+	uint32_t dwKeys;
+	VECTOR vecPos;
+	float fAngle;
+	uint8_t byteHealth;
+	uint8_t byteArmour;
+	uint8_t byteCurrentWeapon;
+	bool IsCrouching;
+	VECTOR vecSpeed;
+	bool IsAiming;
+	VECTOR vecAimDir;
+	VECTOR vecAimPos;
+	bool bIsReloading; //1 byte
+	uint16_t wAmmo; // 2 byte
+} ONFOOT_SYNC_DATA_V2;
 #pragma pack(1)
 typedef struct _INCAR_SYNC_DATA
 {
@@ -79,11 +98,17 @@ typedef struct _INCAR_SYNC_DATA
 
 /*Used to save to .rec file*/
 #pragma pack(1)
-typedef struct _ONFOOT_DATABLOCK
+typedef struct _ONFOOT_DATABLOCK_V1
 {
 	DWORD time;
-	ONFOOT_SYNC_DATA  m_pOfSyncData;
-} ONFOOT_DATABLOCK;
+	ONFOOT_SYNC_DATA_V1  m_pOfSyncData;
+} ONFOOT_DATABLOCK_V1;
+#pragma pack(1)
+typedef struct _ONFOOT_DATABLOCK_V2
+{
+	DWORD time;
+	ONFOOT_SYNC_DATA_V2  m_pOfSyncData;
+} ONFOOT_DATABLOCK_V2;
 
 #pragma pack(1)
 typedef struct _INCAR_DATABLOCK

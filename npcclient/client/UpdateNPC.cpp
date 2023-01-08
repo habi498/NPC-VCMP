@@ -20,6 +20,7 @@ extern RakNet::RakPeerInterface* peer;
 extern RakNet::SystemAddress systemAddress;
 extern NPC* iNPC;
 extern CPlayer* npc;
+extern CVehiclePool* m_pVehiclePool;
 void SetActionFlags(ONFOOT_SYNC_DATA* m_pOfSyncData, uint8_t* action);
 void SetActionFlags(INCAR_SYNC_DATA* m_InSyncData, uint8_t* action);
 void SetTypeFlags(INCAR_SYNC_DATA* m_InSyncData, uint8_t* type);
@@ -118,7 +119,8 @@ void SendNPCSyncData(INCAR_SYNC_DATA* m_pInSyncData, PacketPriority mPriority )
 	{
 		bsOut.Write(m_pInSyncData->byteCurrentWeapon);
 		if (m_pInSyncData->byteCurrentWeapon > 11)
-			bsOut.Write((uint16_t)npc->GetSlotAmmo(npc->GetCurrentWeapon()));
+			bsOut.Write((WORD)m_pInSyncData->wAmmo);
+			//bsOut.Write((uint16_t)npc->GetSlotAmmo(GetSlotId(npc->GetCurrentWeapon())));
 	}
 	if (action & IC_FLAG_ARMOUR)
 		bsOut.Write(m_pInSyncData->bytePlayerArmour);
@@ -386,41 +388,28 @@ void SetVehicleIDFlag(INCAR_SYNC_DATA* m_pIcSyncData, uint8_t* nibble, uint8_t* 
 	(*byte)=m_pIcSyncData->VehicleID >> 2;
 	if (m_pIcSyncData->dwKeys > 0xFFFF)(*byte) = (*byte) | (0x40);
 }
-/* old version
-void SendNPCUpdate()
+
+void SendNPCIcSyncDataLV(PacketPriority priority)
 {
-	RakNet::BitStream bsOut;
-	bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_ONFOOT_UPDATE);
-	bsOut.Write(iNPC->anticheatID);
-	uint8_t action = 0;
-	if (npc->GetCurrentWeapon() != 0)action += 0x40;
-	if (npc->m_byteArmour != 0)action += 0x04;
-	bsOut.Write(action);
-	bsOut.Write(npc->m_vecPos.X);
-	bsOut.Write(npc->m_vecPos.Y);
-	bsOut.Write(npc->m_vecPos.Z);
-	float _angle = npc->m_fAngle;
-	uint16_t angle= ConvertToUINT16_T(_angle, 2 * (float)PI);
-	bsOut.Write(angle);
-	if ((action & 64) == 64)
+	INCAR_SYNC_DATA* pIcSyncData = npc->GetINCAR_SYNC_DATA();
+	pIcSyncData->byteCurrentWeapon = npc->GetCurrentWeapon();
+	pIcSyncData->bytePlayerArmour = npc->m_byteArmour;
+	pIcSyncData->bytePlayerHealth = npc->m_byteHealth;
+	pIcSyncData->dwKeys = npc->GetKeys();
+	pIcSyncData->VehicleID = npc->m_wVehicleId;
+	CVehicle* vehicle = m_pVehiclePool->GetAt(npc->m_wVehicleId);
+	if (vehicle)
 	{
-		//NPC posses weapon
-		bsOut.Write(npc->GetCurrentWeapon());
-		if (npc->GetCurrentWeapon() > 11)
-			bsOut.Write((uint16_t)npc->GetSlotAmmo(GetSlotId(npc->GetCurrentWeapon())));//Let ammo be 1
+		pIcSyncData->vecPos = vehicle->GetPosition();
+		pIcSyncData->vecMoveSpeed = vehicle->GetSpeed();
+		pIcSyncData->dDamage = vehicle->GetDamage();
+		pIcSyncData->fCarHealth = vehicle->GetHealth();
+		pIcSyncData->quatRotation = vehicle->GetRotation();
+		pIcSyncData->Turretx = vehicle->GetTurretx();
+		pIcSyncData->Turrety = vehicle->GetTurrety();
 	}
-	bsOut.Write(npc->m_byteHealth);
-	if ((action & 4) == 4)
-	{
-		//NPC posses armour
-		bsOut.Write(npc->m_byteArmour);
-	}
-	//Write the mystery byte
-	bsOut.Write((uint8_t)0x03);
-	//Send the packet
-	peer->Send(&bsOut, HIGH_PRIORITY, UNRELIABLE_SEQUENCED, 0, systemAddress, false);
-}	
-*/
+	SendNPCSyncData(pIcSyncData,priority);
+}
 void SendNPCOfSyncDataLV(PacketPriority prioty) //with existing values, send a packet. Normally to update health or angle
 {
 	ONFOOT_SYNC_DATA* m_pOfSyncData;

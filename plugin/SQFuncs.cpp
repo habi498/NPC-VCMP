@@ -30,16 +30,16 @@ extern HSQAPI sq;
 INT SW_STATUS = 0;
 #endif
 bool CallNPCClient(const char* szName, const char* szScript, bool bConsoleInputEnabled=false,
-	const char* host="127.0.0.1", const char* loc = "", std::vector<const char*>params = {})
+	const char* host="127.0.0.1", const char* plugins = "",const char* loc = "",  std::vector<const char*>params = {})
 {
 	CHAR szCmd[1024]; int iPort;
 	ServerSettings s;
 	VCMP->GetServerSettings(&s);
-	iPort = s.port;
+	iPort = s.port;//snprintf(szCmd,sizeof(szCmd),)
 	if (strlen(szScript) > 0)
-		sprintf(szCmd, "-h %s -p %d -n \"%s\" -m \"%s\"", host, iPort, szName, szScript);
+		snprintf(szCmd,sizeof(szCmd), "-h %s -p %d -n \"%s\" -m \"%s\"", host, iPort, szName, szScript);
 	else
-		sprintf(szCmd, "-h %s -p %d -n \"%s\"", host, iPort, szName);
+		snprintf(szCmd, sizeof(szCmd),"-h %s -p %d -n \"%s\"", host, iPort, szName);
 	char szPassword[255];
 	VCMP->GetServerPassword(szPassword, sizeof(szPassword));
 	if (szPassword && szPassword[0] != '\0')
@@ -54,6 +54,12 @@ bool CallNPCClient(const char* szName, const char* szScript, bool bConsoleInputE
 		strcat(szCmd, loc);
 		strcat(szCmd, "\"");
 	}
+	if (strlen(plugins) > 0)
+	{
+		strcat(szCmd, " -q \"");
+		strcat(szCmd, plugins);
+		strcat(szCmd, "\"");
+	}
 	//MultiArg tclap
 	for (size_t i = 0; i < params.size(); i++)
 	{
@@ -63,11 +69,11 @@ bool CallNPCClient(const char* szName, const char* szScript, bool bConsoleInputE
 	}
 	if (bConsoleInputEnabled)
 		strcat(szCmd, " -c");
-	//printf("%s\n", szCmd);
+	uint32_t ver = VCMP->GetServerVersion();
 #ifdef WIN32
 	if(bConsoleInputEnabled)
 		SW_STATUS = SW_SHOW;
-	uint32_t ver=VCMP->GetServerVersion();
+	
 	if(ver==REL004)
 		ShellExecute(0, "open", "npcclient_r004.exe", szCmd, NULL, SW_STATUS);
 	else if(ver==REL006)
@@ -80,13 +86,22 @@ bool CallNPCClient(const char* szName, const char* szScript, bool bConsoleInputE
 #else
 	char szDir[MAX_PATH];
 	getcwd(szDir, MAX_PATH);
-	char szCmd2[256];
+	char szCmd2[1024];
 	char szBin[256];
 	if (sizeof(long) == 4)
-		sprintf(szBin, "npcclient%s", "32");
+	{
+		if (ver == REL004)
+			sprintf(szBin, "npcclient%s", "32_r004");
+		else
+			sprintf(szBin, "npcclient%s", "32");
+	}
 	else if (sizeof(long) == 8)
-		sprintf(szBin, "npcclient%s", "64");
-
+	{
+		if(ver == REL004)
+			sprintf(szBin, "npcclient%s", "64_r004");
+		else
+			sprintf(szBin, "npcclient%s", "64");
+	}
 	sprintf(szCmd2, "%s/%s %s &",  szDir, szBin, szCmd);
 	system(szCmd2);
 #endif
@@ -95,7 +110,7 @@ bool CallNPCClient(const char* szName, const char* szScript, bool bConsoleInputE
 _SQUIRRELDEF(SQ_ConnectNPC) {
     SQInteger iArgCount = sq->gettop(v);
 	const SQChar* szName=NULL, *szScript=NULL, *host=NULL;
-	SQBool bConsoleInput;
+	SQBool bConsoleInput; const SQChar* szPlugins = NULL;
 	sq->getstring(v, 2, &szName);
 	if (iArgCount > 2)
 	{
@@ -104,11 +119,23 @@ _SQUIRRELDEF(SQ_ConnectNPC) {
 		{
 			sq->getbool(v, 4, &bConsoleInput);
 			if (iArgCount > 4)
+			{
 				sq->getstring(v, 5, &host);
-			else host = "127.0.0.1";
+				if (iArgCount > 5)
+				{
+					sq->getstring(v, 6, &szPlugins);
+				}
+				else szPlugins = "";
+			}
+			else 
+			{
+				szPlugins = ""; 
+				host = "127.0.0.1"; 
+			}
 		}
 		else
 		{
+			szPlugins = ""; 
 			host = "127.0.0.1";
 			bConsoleInput = 0;
 		}
@@ -116,18 +143,20 @@ _SQUIRRELDEF(SQ_ConnectNPC) {
 	else
 	{	//Script not specified
 		szScript = "";//start without script
+		szPlugins = "";
 		host = "127.0.0.1";
 		bConsoleInput = 0;
 	}
 	if (strlen(host) == 0)
 		host = "127.0.0.1";
-	CallNPCClient(szName, szScript, bConsoleInput, host);
+	CallNPCClient(szName, szScript, bConsoleInput, host, szPlugins);
 	sq->pushbool(v, SQTrue);
 	return 1;
 }
 _SQUIRRELDEF(SQ_ConnectNPCEx) {
 	SQInteger iArgCount = sq->gettop(v);
-	const SQChar* szName = NULL, * szScript = NULL, * host = NULL;
+	const SQChar* szName = NULL, * szScript = NULL, * host = NULL,
+		* szPlugins = NULL;
 	sq->getstring(v, 2, &szName);
 	float x, y, z, angle; SQInteger skinId, weaponId, classId;
 	SQBool bConsoleInput;
@@ -170,19 +199,24 @@ _SQUIRRELDEF(SQ_ConnectNPCEx) {
 									flag |= 128;
 									if (iArgCount > 12)
 									{
-										for (int i = 13; i <= iArgCount; i++)
-										{
-											if (sq->gettype(v, i) != OT_STRING)
-											{
-												printf("Error: Paramter %d is not string\n", i - 1);//1 for root table
-												sq->throwerror(v, "");//throwerror is not displaying anything
-												return 0;
-											}
-											const SQChar* szParam;
-											sq->getstring(v, i, &szParam);
-											params.push_back(szParam);
-										}
+										sq->getstring(v, 13, &szPlugins);
 										flag |= 256;
+										if (iArgCount > 13)
+										{
+											for (int i = 14; i <= iArgCount; i++)
+											{
+												if (sq->gettype(v, i) != OT_STRING)
+												{
+													printf("Error: Paramter %d is not string\n", i - 1);//1 for root table
+													sq->throwerror(v, "");//throwerror is not displaying anything
+													return 0;
+												}
+												const SQChar* szParam;
+												sq->getstring(v, i, &szParam);
+												params.push_back(szParam);
+											}
+											flag |= 512;
+										}
 									}
 								}
 							}
@@ -193,6 +227,8 @@ _SQUIRRELDEF(SQ_ConnectNPCEx) {
 		}
 	}
 	char szArgs[512]; 
+	if (!(flag & 256))
+		szPlugins = "";
 	if (!(flag & 32))
 		szScript = "";
 	if (!(flag & 64))
@@ -209,10 +245,10 @@ _SQUIRRELDEF(SQ_ConnectNPCEx) {
 		sprintf(szArgs, "x%f y%f z%f a%f", x, y, z, angle);
 	else 
 		sprintf(szArgs, "x%f y%f z%f", x, y, z);
-	if(flag & 256)
-		CallNPCClient(szName, szScript, bConsoleInput, host, szArgs, params);
+	if(flag & 512)
+		CallNPCClient(szName, szScript, bConsoleInput, host, szPlugins, szArgs, params);
 	else 
-		CallNPCClient(szName, szScript, bConsoleInput, host, szArgs);
+		CallNPCClient(szName, szScript, bConsoleInput, host, szPlugins, szArgs );
 	
 	sq->pushbool(v, SQTrue);
 	return 1;
@@ -252,7 +288,7 @@ SQInteger RegisterSquirrelFunc(HSQUIRRELVM v, SQFUNCTION f, const SQChar* fname,
 	sq->pushroottable(v);
 	sq->pushstring(v, fname, -1);
 	sq->newclosure(v, f, 0); /* create a new function */
-
+	
 	if (ucParams != 0) {
 		if (ucParams < 0)ucParams--;
 		else ucParams++; /* This is to compensate for the root table */
@@ -289,8 +325,8 @@ SQInteger SQ_HideWindow(HSQUIRRELVM v)
 }
 #endif
 void RegisterFuncs(HSQUIRRELVM v) {
-	RegisterSquirrelFunc(v, SQ_ConnectNPC, "ConnectNPC", -1, "ssbs");
-	RegisterSquirrelFunc(v, SQ_ConnectNPCEx, "ConnectNPCEx", -4, "sf|if|if|if|iiiisbs");
+	RegisterSquirrelFunc(v, SQ_ConnectNPC, "ConnectNPC", -1, "ssbss");
+	RegisterSquirrelFunc(v, SQ_ConnectNPCEx, "ConnectNPCEx", -4, "sf|if|if|if|iiiisbss");
 	RegisterSquirrelFunc(v, SQ_IsPlayerNPC, "IsPlayerNPC", 1, "i");
 	RegisterSquirrelFunc(v, SQ_StartRecordingPlayerData, "StartRecordingPlayerData", 3, "iis");
 	RegisterSquirrelFunc(v, SQ_StopRecordingPlayerData, "StopRecordingPlayerData", 1, "i");

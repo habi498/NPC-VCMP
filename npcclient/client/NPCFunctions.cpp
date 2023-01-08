@@ -21,9 +21,10 @@ extern HSQUIRRELVM v;
 extern NPC* iNPC;
 extern CPlayer* npc;
 extern CFunctions* m_pFunctions;
+extern CVehiclePool* m_pVehiclePool;
 extern RakNet::RakPeerInterface* peer;
 extern RakNet::SystemAddress systemAddress;
-
+extern CPlayerPool* m_pPlayerPool;
 
 Playback mPlayback;
 SQInteger register_global_func(HSQUIRRELVM v, SQFUNCTION f, const char* fname, SQInteger nparamscheck, const SQChar* typemask)
@@ -44,16 +45,22 @@ SQInteger fn_IsPlayerStreamedIn(HSQUIRRELVM v)
 {
     SQInteger playerid;
     sq_getinteger(v, 2, &playerid);
-    bool result=iNPC->IsPlayerStreamedIn(playerid);
-    sq_pushbool(v, result);
+    CPlayer* player = m_pPlayerPool->GetAt(playerid);
+    if (player && player->IsStreamedIn())
+        sq_pushbool(v, SQTrue);
+    else 
+        sq_pushbool(v, SQFalse);
     return 1;//return 1 because value is returned
 }
 SQInteger fn_IsVehicleStreamedIn(HSQUIRRELVM v)
 {
     SQInteger vhclid;
     sq_getinteger(v, 2, &vhclid);
-    bool result = iNPC->IsVehicleStreamedIn(vhclid);
-    sq_pushbool(v, result);
+    CVehicle* vehicle = m_pVehiclePool->GetAt(vhclid);
+    if (vehicle)
+        sq_pushbool(v, SQTrue);
+    else 
+        sq_pushbool(v, SQFalse);
     return 1;//return 1 because value is returned
 }
 SQInteger fn_StartRecordingPlayback(HSQUIRRELVM v)
@@ -164,7 +171,7 @@ SQInteger fn_GetMyFacingAngle(HSQUIRRELVM v)
     sq_pushfloat(v, angle);
     return 1;//1 because we are returning angle
 }
-SQInteger fn_SetMyPos(HSQUIRRELVM v)
+SQInteger fn_SetMyPos2(HSQUIRRELVM v)
 {
     if (!npc) {
         return 0;
@@ -177,6 +184,23 @@ SQInteger fn_SetMyPos(HSQUIRRELVM v)
     npc->m_vecPos.X = x; npc->m_vecPos.Y = y; npc->m_vecPos.Z = z;
     SendNPCOfSyncDataLV();
     return 0;//0 because we are returning nothing!
+}
+SQInteger fn_SetMyPos(HSQUIRRELVM v)
+{
+    if (!npc) {
+        return 0;
+    }
+    //vx
+    VECTOR pos;
+    if (SQ_SUCCEEDED(sq_getvector(v, 2, &pos)))
+    {
+        npc->m_vecPos = pos;
+        SendNPCOfSyncDataLV();
+        sq_pushbool(v, SQTrue);
+        return 1;
+    }
+    else 
+        return 0;//0 because we are returning nothing!
 }
 SQInteger fn_GetMyPosX(HSQUIRRELVM v)
 {
@@ -204,6 +228,16 @@ SQInteger fn_GetMyPosZ(HSQUIRRELVM v)
     sq_pushfloat(v, val);
     return 1;
 }
+SQInteger fn_GetMyPos(HSQUIRRELVM v)
+{
+    if (npc)
+    {
+        VECTOR pos = npc->m_vecPos;
+        sq_pushvector(v, pos);
+        return 1;
+    }
+    else return 0;
+}
 SQInteger fn_GetDistanceFromMeToPoint(HSQUIRRELVM v)
 {
     SQFloat x, y, z;
@@ -218,8 +252,30 @@ SQInteger fn_GetDistanceFromMeToPoint(HSQUIRRELVM v)
     py = npc->m_vecPos.Y;
     pz = npc->m_vecPos.Z;
     float distance;
+
+    double d = pow(px - x, 2) + pow(py - y, 2) + pow(pz - z, 2);
+    distance = (float)sqrt(d);
+    sq_pushfloat(v, distance);
+    return 1;
+}
+SQInteger fn_GetDistanceFromMeToPoint2(HSQUIRRELVM v)
+{
+    //tx
+    VECTOR point;
+    if (!SQ_SUCCEEDED(sq_getvector(v, 2, &point)))
+    {
+        sq_pushfloat(v, 0.0); return 1;
+    }
+    float px, py, pz;//NPC's position co-ordinates
+    if (!npc) {
+        sq_pushfloat(v, 0.0); return 1;
+    }
+    px = npc->m_vecPos.X;
+    py = npc->m_vecPos.Y;
+    pz = npc->m_vecPos.Z;
+    float distance;
     
-    double d= pow(px - x,  2) + pow(py - y, 2) + pow(pz - z, 2);
+    double d= pow(px - point.X,  2) + pow(py - point.Y, 2) + pow(pz - point.Z, 2);
     distance = (float)sqrt(d);
     sq_pushfloat(v, distance);
     return 1;
@@ -246,6 +302,7 @@ SQInteger fn_GetTickCount(HSQUIRRELVM v)
     sq_pushinteger(v, t_);
     return 1;
 }
+
 void RegisterNPCFunctions()
 {
     register_global_func(v, ::fn_StartRecordingPlayback,"StartRecordingPlayback",3,"tis");
@@ -253,7 +310,7 @@ void RegisterNPCFunctions()
     register_global_func(v, ::fn_IsVehicleStreamedIn,"IsVehicleStreamedIn",2,"ti");
     register_global_func(v, ::fn_SetMyFacingAngle,"SetMyFacingAngle",2,"tf|i");
     register_global_func(v, ::fn_GetMyFacingAngle,"GetMyFacingAngle",1,"t");
-    register_global_func(v, ::fn_SetMyPos,"SetMyPos2",4,"tf|if|if|i");
+    register_global_func(v, ::fn_SetMyPos2,"SetMyPos2",4,"tf|if|if|i");
     register_global_func(v, ::fn_GetMyPosX,"GetMyPosX",1,"t");
     register_global_func(v, ::fn_GetMyPosY,"GetMyPosY",1,"t");
     register_global_func(v, ::fn_GetMyPosZ,"GetMyPosZ",1,"t");
@@ -264,7 +321,10 @@ void RegisterNPCFunctions()
     register_global_func(v, ::fn_SendCommand, "SendCommand", 2, "ts");
     register_global_func(v, ::fn_SendChat,"SendChat",2,"ts");
     register_global_func(v, ::fn_GetTickCount,"GetTickCount",1,"t");
-}
+    register_global_func(v, ::fn_GetMyPos,"GetMyPos",1,"t");
+    register_global_func(v, ::fn_SetMyPos,"SetMyPos",2,"tx");
+    register_global_func(v, ::fn_GetDistanceFromMeToPoint2,"GetDistanceFromMeToPoint",2,"tx");
+    }
 SQInteger RegisterSquirrelConst(HSQUIRRELVM v, const SQChar* cname, SQInteger cvalue) {
     sq_pushconsttable(v);
     sq_pushstring(v, cname, -1);
@@ -274,6 +334,26 @@ SQInteger RegisterSquirrelConst(HSQUIRRELVM v, const SQChar* cname, SQInteger cv
     return 0;
 }
 void RegisterConsts() {
+    RegisterSquirrelConst(v, "PLAYER_RECORDING_TYPE_ONFOOT", 1);
+    RegisterSquirrelConst(v, "PLAYER_RECORDING_TYPE_DRIVER", 2);
+
+    RegisterSquirrelConst(v, "MAX_PLAYERS", 100);
+    RegisterSquirrelConst(v, "MAX_PLAYER_NAME", 24);
+    RegisterSquirrelConst(v, "MAX_VEHICLES", 1000);
+    RegisterSquirrelConst(v, "INVALID_PLAYER_ID", 0xFF);
+    RegisterSquirrelConst(v, "INVALID_VEHICLE_ID", 0);
+
+    RegisterSquirrelConst(v, "PLAYER_STATE_NONE", PLAYER_STATE_NONE);
+    RegisterSquirrelConst(v, "PLAYER_STATE_ONFOOT", PLAYER_STATE_ONFOOT);
+    RegisterSquirrelConst(v, "PLAYER_STATE_AIM", PLAYER_STATE_AIM);
+    RegisterSquirrelConst(v, "PLAYER_STATE_DRIVER", PLAYER_STATE_DRIVER);
+    RegisterSquirrelConst(v, "PLAYER_STATE_PASSENGER", PLAYER_STATE_PASSENGER);
+    RegisterSquirrelConst(v, "PLAYER_STATE_ENTER_VEHICLE_DRIVER", PLAYER_STATE_ENTER_VEHICLE_DRIVER);
+    RegisterSquirrelConst(v, "PLAYER_STATE_ENTER_VEHICLE_PASSENGER", PLAYER_STATE_ENTER_VEHICLE_PASSENGER);
+    RegisterSquirrelConst(v, "PLAYER_STATE_EXIT_VEHICLE", PLAYER_STATE_EXIT_VEHICLE);
+    RegisterSquirrelConst(v, "PLAYER_STATE_WASTED", PLAYER_STATE_WASTED);
+    RegisterSquirrelConst(v, "PLAYER_STATE_SPAWNED", PLAYER_STATE_SPAWNED);
+    
     /*Credits: Gudio  https://forum.vc-mp.org/?topic=215*/
     RegisterSquirrelConst(v, "KEY_ONFOOT_FORWARD", 32768);
     RegisterSquirrelConst(v, "KEY_ONFOOT_BACKWARD", 16384);
@@ -323,10 +403,5 @@ void RegisterConsts() {
     RegisterSquirrelConst(v, "BODYPART_RIGHTARM", 3);
     RegisterSquirrelConst(v, "BODYPART_LEFTLEG", 4 );
     RegisterSquirrelConst(v, "BODYPART_RIGHTLEG", 5 );
-    RegisterSquirrelConst(v, "BODYPART_HEAD", 6 );
-
-
-
-
-    
+    RegisterSquirrelConst(v, "BODYPART_HEAD", 6 );    
 }

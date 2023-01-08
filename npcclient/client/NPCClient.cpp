@@ -15,12 +15,15 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 #include "main.h"
-HSQUIRRELVM v; NPC* iNPC = new NPC();
+HSQUIRRELVM v; 
+NPC* iNPC = new NPC();
+
 RakNet::RakPeerInterface* peer;
 RakNet::SystemAddress systemAddress;
 CPlayerPool* m_pPlayerPool = NULL;
 CEvents* m_pEvents;
-CFunctions* m_pFunctions;
+CVehiclePool* m_pVehiclePool = NULL;
+extern CFunctions* m_pFunctions;
 CPlayer* npc;
 #define CAR_HEALTH_MAX 1000
 void ReceivePlayerSyncData(RakNet::BitStream* bsIn, INCAR_SYNC_DATA* m_pIcSyncDataOut, uint8_t* bytePlayerIdOut);
@@ -30,7 +33,7 @@ float ConvertFromUINT16_T(uint16_t compressedFloat, float base);
 uint8_t GetSlotId(uint8_t byteWeapon); 
 extern bool bConsoleInputEnabled;
 extern void CheckForConsoleInput();
-extern uint8_t ProcessPlaybacks();
+extern DWORD ProcessPlaybacks();
 unsigned short calculate(unsigned char h, unsigned char t, unsigned char r)
 {
 	return h * 32 + t * 2 + (r >> 3);
@@ -72,8 +75,9 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 		m_pPlayerPool = new CPlayerPool();
 	if (!m_pEvents)
 		m_pEvents = new CEvents();
-	if (!m_pFunctions)
-		m_pFunctions = new CFunctions();
+	if (!m_pVehiclePool)
+		m_pVehiclePool = new CVehiclePool();
+	
 #ifndef WIN32
 	std::setvbuf(stdout, NULL, _IONBF, 0);
 #endif
@@ -81,6 +85,9 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 	{
 		for (packet = peer->Receive(); packet; peer->DeallocatePacket(packet), packet = peer->Receive())
 		{
+			#ifdef DEBUG
+				printf("%d ", packet->data[0]);
+			#endif		
 			switch (packet->data[0])
 			{
 			case ID_CONNECTION_REQUEST_ACCEPTED:
@@ -186,13 +193,14 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				if (player)
 				{
 					player->StoreInCarFullSyncData(&m_IcSyncData);
+					CVehicle* vehicle = m_pVehiclePool->GetAt(m_IcSyncData.VehicleID);
+					if(vehicle)
+						vehicle->CopyFromIcSyncData(bytePlayerId, &m_IcSyncData);
 					if (bytePlayerId != iNPC->GetID() && m_IcSyncData.VehicleID == npc->m_wVehicleId)
 					{
 						//This is the vehicle in which npc is sitting as a passenger.
 						//Update position of npc locally (i.e. do not send to server, it comes from server )
 						npc->m_vecPos = m_IcSyncData.vecPos;
-						iNPC->UpdateStreamedVehiclePosition(m_IcSyncData.VehicleID, m_IcSyncData.vecPos.X,
-							m_IcSyncData.vecPos.Y, m_IcSyncData.vecPos.Z);
 						if (iNPC->PSLimit != DISABLE_AUTO_PASSENGER_SYNC)
 						{
 							if (iNPC->PSCounter >= iNPC->PSLimit)
@@ -358,12 +366,8 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				//bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
 				if (iNPC && iNPC->Initialized() && iNPC->IsSpawned() == false)
 				{
-					printf("npcspawnclass is %d and classSelectionCounter is %d\n",
-						iNPC->SpawnClass,
-						iNPC->ClassSelectionCounter);
 					if ((iNPC->SpawnClass - iNPC->ClassSelectionCounter++)==0)
 					{
-						printf("Sending spawn packet\n");
 						RakNet::BitStream bsOut;
 						bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_REQUEST_SPAWN);
 						peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, packet->systemAddress, false);
@@ -508,21 +512,30 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				RakNet::BitStream bsOut;
 				bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_VEHICLE_PUT_ACCEPTED);
 				peer->Send(&bsOut, HIGH_PRIORITY, RELIABLE, 0, packet->systemAddress, false);
-
-				if (iNPC && iNPC->Initialized() )
+				CVehicle* vehicle= m_pVehiclePool->GetAt(vehicleid);
+				if (vehicle)
 				{
 					if(seatid==0)
-						iNPC->SetVehicleDriver(vehicleid, playerid);
+						vehicle->SetDriver(playerid);
+				}
+				if (iNPC && iNPC->Initialized() )
+				{
 					if (playerid == iNPC->GetID())
 					{
 						if (seatid > 0) //to check if passenger
 						{
 							iNPC->PSCounter = 0;
 							iNPC->PSOnServerCycle = true;
+							//Update NPC's position locally
+							if(vehicle)
+								npc->m_vecPos = vehicle->GetPosition();
 						}
-						//Update NPC's position locally
-						iNPC->GetVehiclePosition(vehicleid,
-							npc->m_vecPos.X, npc->m_vecPos.Y, npc->m_vecPos.Z);
+						else if (seatid == 0)
+						{
+							//npc entering vehicle as driver.
+							//send one 0x95 packet.(updateDriver)
+							SendNPCIcSyncDataLV();
+						}
 						m_pEvents->OnNPCEnterVehicle(vehicleid, seatid);
 					}
 				}
@@ -535,18 +548,26 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				bsIn.IgnoreBytes(3);
 				uint8_t bytePlayerId;
 				bsIn.Read(bytePlayerId);
+
 				CPlayer* player = m_pPlayerPool->GetAt(bytePlayerId);
 				if (player)
 				{
 					player->SetState(PLAYER_STATE_EXIT_VEHICLE);
-					if (iNPC->GetVehicleDriver(player->m_wVehicleId) == bytePlayerId)
+					/*if (iNPC->GetVehicleDriver(player->m_wVehicleId) == bytePlayerId)
 					{
 						//player was driver of a vehicle
-						iNPC->RemoveVehicleDriver(player->m_wVehicleId);
-					}
+						//iNPC->RemoveVehicleDriver(player->m_wVehicleId);
+					}*/
 					player->m_wVehicleId = 0;
 					player->m_byteSeatId = -1;
+					CVehicle* vehicle = m_pVehiclePool->GetAt(player->m_wVehicleId);
+					if (vehicle)
+					{
+						if (vehicle->GetDriver() == bytePlayerId)
+							vehicle->RemoveDriver();
+					}
 				}
+				
 			}
 			break;
 			case ID_GAME_MESSAGE_VEHICLE_LOST_OWNERSHIP:
@@ -558,12 +579,16 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				if (vehicleid == npc->m_wVehicleId)
 				{
 					npc->m_wVehicleId = 0;
+					CVehicle* vehicle = m_pVehiclePool->GetAt(vehicleid);
+					if (vehicle)
+					{
+						if (vehicle->GetDriver() == iNPC->GetID())
+							vehicle->RemoveDriver();
+					}
 					if (iNPC && iNPC->Initialized())
 					{
 						if(iNPC->PSOnServerCycle)
 							iNPC->PSOnServerCycle = false;
-						if (iNPC->GetVehicleDriver(vehicleid) == iNPC->GetID())
-							iNPC->RemoveVehicleDriver(vehicleid);
 					}
 					m_pEvents->OnNPCExitVehicle();
 				}
@@ -610,12 +635,16 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 						}
 						else player->SetState(PLAYER_STATE_ONFOOT);
 					}
+					player->SetStreamedIn(true);
 				}
-				if (wVehicleID && byteSeatID==0 && iNPC->Initialized() )
+				if (wVehicleID && byteSeatID==0 )
 				{
-					iNPC->SetVehicleDriver(wVehicleID, bytePlayerId);
+					CVehicle* vehicle = m_pVehiclePool->GetAt(wVehicleID);
+					if (vehicle)
+					{
+						vehicle->SetDriver(bytePlayerId);
+					}
 				}
-				iNPC->AddStreamedPlayer(bytePlayerId);
 				m_pEvents->OnPlayerStreamIn(bytePlayerId);
 				
 			}
@@ -627,7 +656,9 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				bsIn.IgnoreBytes(3);
 				uint8_t playerid;
 				bsIn.ReadAlignedBytes(&playerid, 1);
-				iNPC->RemoveStreamedPlayer(playerid);
+				CPlayer* player = m_pPlayerPool->GetAt(playerid);
+				if (player)
+					player->SetStreamedIn(false);
 				m_pEvents->OnPlayerStreamOut(playerid);
 			}
 			break; 
@@ -643,7 +674,23 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				bsIn.IgnoreBytes(2);//00 08? 00 01?
 				bsIn.Read(model);//guessing model is 2 bytes.
 				bsIn.Read(z); bsIn.Read(y); bsIn.Read(x);
-				iNPC->AddStreamedVehicle(vehicleid, x, y, z, model);
+				QUATERNION quatRotation;
+				bsIn.Read(quatRotation.W);
+				bsIn.Read(quatRotation.Z);
+				bsIn.Read(quatRotation.Y);
+				bsIn.Read(quatRotation.X);
+				bsIn.IgnoreBytes(2);//01 ff
+				float fCarHealth;
+				uint32_t dwDamage;
+				bsIn.Read(fCarHealth); bsIn.Read(dwDamage);
+				if (!m_pVehiclePool->GetSlotState(vehicleid))
+				{
+					m_pVehiclePool->New(vehicleid, VECTOR(x, y, z), model, quatRotation, fCarHealth, dwDamage);
+				}
+				/*if (iNPC && iNPC->Initialized())
+				{
+					iNPC->AddStreamedVehicle(vehicleid, VECTOR(x, y, z), model, quatRotation, fCarHealth, dwDamage);
+				}*/
 				m_pEvents->OnVehicleStreamIn(vehicleid);
 			}
 			break;
@@ -655,7 +702,14 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				bsIn.ReadAlignedBytes(vehdata, 2);
 				uint16_t vehicleid;
 				vehicleid = vehdata[0] * 256 + vehdata[1];
-				iNPC->DestreamVehicle(vehicleid);
+				if (m_pVehiclePool->GetSlotState(vehicleid))
+				{
+					m_pVehiclePool->Delete(vehicleid);
+				}
+				/*if (iNPC && iNPC->Initialized())
+				{
+					iNPC->DestreamVehicle(vehicleid);
+				}*/
 				m_pEvents->OnVehicleStreamOut(vehicleid);
 			}
 			break;
@@ -1301,18 +1355,22 @@ void HandlePassengerSync()
 		{
 			//npc is sitting as passenger 
 			//Does the vehicle have driver?
-			if (
-				(iNPC->GetVehicleDriver(npc->m_wVehicleId) != 255
-					&& !iNPC->IsPlayerStreamedIn(iNPC->GetVehicleDriver(npc->m_wVehicleId))
-					) ||
-				iNPC->GetVehicleDriver(npc->m_wVehicleId) == 255)
+			CVehicle* vehicle = m_pVehiclePool->GetAt(npc->m_wVehicleId);
+			if(vehicle)
 			{
-				//The driver is not streamed in yet or there is no driver.
-				DWORD now = GetTickCount();
-				if (now - iNPC->PSLastSyncedTick > 350)
+				CPlayer* driver = m_pPlayerPool->GetAt(vehicle->GetDriver());
+				if (
+					(driver && !driver->IsStreamedIn()
+						) ||
+					!driver)
 				{
-					SendPassengerSyncData();
-					iNPC->PSLastSyncedTick = now;
+					//The driver is not streamed in yet or there is no driver.
+					DWORD now = GetTickCount();
+					if (now - iNPC->PSLastSyncedTick > 350)
+					{
+						SendPassengerSyncData();
+						iNPC->PSLastSyncedTick = now;
+					}
 				}
 			}
 		}
@@ -1326,7 +1384,7 @@ void CheckPassengerSync()
 }
 void OnCycle()
 {
-	uint8_t byteSleepTime = ProcessPlaybacks();
+	DWORD dwSleepTime = ProcessPlaybacks();
 	DWORD dw_TickOne = GetTickCount();
 	ProcessTimers(dw_TickOne);
 	CheckPassengerSync();
@@ -1334,9 +1392,11 @@ void OnCycle()
 		CheckForConsoleInput();
 	DWORD dw_TickTwo = GetTickCount();
 	DWORD dw_interval = dw_TickTwo - dw_TickOne;
-	if (dw_interval >= byteSleepTime)
-		Sleep(0);
+	if (dw_interval >= dwSleepTime)
+		 Sleep(0);
 	else if (dw_interval >= 0)
-		Sleep(byteSleepTime - (dw_interval));
+	{
+		Sleep(dwSleepTime);
+	}
 	else Sleep(0);
 }

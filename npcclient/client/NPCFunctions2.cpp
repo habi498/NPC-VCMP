@@ -388,7 +388,7 @@ SQInteger fn_GetClosestPlayer(HSQUIRRELVM v)
         if (i == iNPC->GetID())continue;
         CPlayer* plr = m_pPlayerPool->GetAt(i);
         
-        if (plr && iNPC->IsPlayerStreamedIn(i))
+        if (plr && plr->IsStreamedIn())
         {
             if (bCheckTeam &&
                 plr->m_byteTeamId == npc->m_byteTeamId)
@@ -403,6 +403,61 @@ SQInteger fn_GetClosestPlayer(HSQUIRRELVM v)
     }
    sq_pushinteger(v, closesplrid);
    return 1;
+}
+
+SQInteger fn_GetPlayerPos(HSQUIRRELVM v)
+{
+    SQInteger bytePlayerId;
+    sq_getinteger(v, 2, &bytePlayerId);
+    if (m_pPlayerPool->GetSlotState(bytePlayerId))
+    {
+        CPlayer* player = m_pPlayerPool->GetAt(bytePlayerId);
+        VECTOR pos = player->m_vecPos;
+        sq_pushvector(v, pos);
+        return 1;
+    }
+    else return 0;
+}
+SQInteger fn_IsPlayerInRangeOfPoint(HSQUIRRELVM v)
+{
+    //tif|ix
+    SQFloat range; SQInteger temp;
+    if (sq_gettype(v, 3) == OT_INTEGER)
+    {
+        sq_getinteger(v, 3, &temp);
+        range = (SQFloat)temp;
+    }
+    else if (sq_gettype(v, 3) == OT_FLOAT)
+    {
+        sq_getfloat(v, 3, &range);
+    }
+    else return 0;
+    SQInteger bytePlayerId;
+    sq_getinteger(v, 2, &bytePlayerId);
+
+    VECTOR point;
+    if (!SQ_SUCCEEDED(sq_getvector(v, 4, &point)))
+    {
+        return sq_throwerror(v, "Parameter 3 should be Vector");
+    }
+    CPlayer* player = m_pPlayerPool->GetAt(bytePlayerId);
+    if (player)
+    {
+        VECTOR pos = player->m_vecPos;
+        VECTOR diff = pos - point;
+        if (diff.GetMagnitude() <= range)
+        {
+            sq_pushbool(v, SQTrue);
+            return 1;
+        }
+        else
+        {
+            sq_pushbool(v, SQFalse);
+            return 1;
+        }
+    }
+    else return 0;
+
 }
 void RegisterNPCFunctions2()
 {
@@ -431,4 +486,7 @@ void RegisterNPCFunctions2()
     register_global_func(v, ::fn_GetPlayerTeam, "GetPlayerTeam", 2, "ti");
 
     register_global_func(v, ::fn_GetClosestPlayer, "GetClosestPlayer", -1, "tb");
+    register_global_func(v, ::fn_GetPlayerPos, "GetPlayerPos", 2, "ti");
+    register_global_func(v, ::fn_IsPlayerInRangeOfPoint, "IsPlayerInRangeOfPoint", 4, "tif|ix");
+
 }

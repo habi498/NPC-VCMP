@@ -29,6 +29,7 @@ enum GameMessages
 	ID_GAME_MESSAGE_SET_SKIN = 0x9e,
 	ID_GAME_MESSAGE_SET_TEAM=0x9f,// two bytes. pid, team
 	ID_GAME_MESSAGE_SET_COLOUR = 0xa0,
+#
 	ID_GAME_MESSAGE_VEHICLE_ENTER = 0xa2,
 	ID_GAME_MESSAGE_VEHICLE_EXIT = 0xa4,
 
@@ -91,7 +92,7 @@ enum GameMessages
 	ID_GAME_MESSAGE_VEHICLE_PUT_ACCEPTED = 0xab, //client->server needs more info on this one
 
 	ID_GAME_MESSAGE_COMMAND = 0xa3,//client
-	ID_GAME_MESSAGE_REQUEST_CLASS = 0xa4,
+	ID_GAME_MESSAGE_REQUEST_CLASS = 0xa4,//client
 	ID_GAME_MESSAGE_REQUEST_SPAWN = 0xa5, //client
 	ID_GAME_MESSAGE_SPAWN = 0xa6, //client
 	ID_GAME_MESSAGE_DEATH_INFO = 0xa7, //client

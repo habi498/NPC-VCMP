@@ -26,11 +26,13 @@
 #include "Squirrel/sqstdmath.h"
 #include "Squirrel/sqstdstring.h"
 #include "Squirrel/sqstdblob.h"
+#include "SqVector.h"
 #define PLAYER_RECORDING_TYPE_DRIVER	2
 #define PLAYER_RECORDING_TYPE_ONFOOT	1
-#define UNIT1 "npcscripts/recordings/units/vector.nut"
+/*#define UNIT1 "npcscripts/recordings/units/vector.nut"
 #define UNIT2 "npcscripts/recordings/units/Position.nut"
-#define UNIT3 "npcscripts/recordings/units/constants.nut"
+#define UNIT3 "npcscripts/recordings/units/constants.nut"*/
+#define UNIT "npcscripts/recordings/units/default.nut"
 //using namespace std;
 #ifdef _MSC_VER
 //#pragma comment (lib ,"squirrel_static.lib")

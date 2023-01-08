@@ -84,6 +84,20 @@ typedef struct _QUATERNION
 	float Y;
 	float Z;
 	float W;
+	_QUATERNION()
+	{
+		this->X = 0;
+		this->Y = 0;
+		this->Z = 0;
+		this->W = 1;
+	}
+	_QUATERNION(float x, float y, float z, float w)
+	{
+		this->X = x;
+		this->Y = y;
+		this->Z = z;
+		this->W = w;
+	}
 }QUATERNION;
 
 #pragma pack(1)

@@ -30,7 +30,7 @@ float ConvertUINT16_TtoFloat(uint16_t compressedFloat, float base)
     return value;
 }
 
-uint8_t ProcessPlaybacks()
+DWORD ProcessPlaybacks()
 {
     if (mPlayback.running == false || mPlayback.IsPaused()) {
         if (mPlayback.IsPaused())
@@ -51,7 +51,7 @@ uint8_t ProcessPlaybacks()
         return CYCLE_SLEEP;
     }
     //Playback is running
-    uint8_t byteSleepTime;
+    DWORD byteSleepTime;
     byteSleepTime = ReadAndSendDataBlock();
     if (byteSleepTime == 0)
     {

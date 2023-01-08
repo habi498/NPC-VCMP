@@ -21,6 +21,7 @@
 using namespace TCLAP;
 using namespace std;
 void start_consoleinput();
+CFunctions* m_pFunctions;
 CPlugins* m_pPlugins;
 #define NPC_DIR "npcscripts"
 #define NPC_PLUGINS_DIR "npcscripts/plugins"
@@ -43,8 +44,9 @@ long GetTickCount()
     return getTick();
 }
 #endif
+
 //static BOOL WINAPI console_ctrl_handler(DWORD dwCtrlType);
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     // Wrap everything in a try block.  Do this every time,
     // because exceptions will be thrown for problems.
     try {
@@ -100,14 +102,18 @@ int main(int argc, char **argv) {
             bool bUseConsoleInput = consoleInputSwitch.getValue();
             if (bUseConsoleInput)
                 start_consoleinput();
+            //Need to initialize CFunctions class, as CPlugins need it.
+            
+            m_pFunctions = new CFunctions();
+            if (!m_pFunctions)
+                exit(0);
             m_pPlugins = new CPlugins();
+            if (!m_pPlugins)
+                exit(0);
             if (pluginArg.getValue().length() > 0)
             {
-                printf("port is %d\n", port); 
-                m_pPlugins->LoadPlugins(NPC_PLUGINS_DIR, pluginArg.getValue());
-                printf("port is %d\n", port);
+                 m_pPlugins->LoadPlugins(NPC_PLUGINS_DIR, pluginArg.getValue());
             }
-            
             ConnectToServer(hostname, port, npcname, password);
         }
         else {

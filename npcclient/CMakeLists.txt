@@ -125,7 +125,10 @@ add_executable (npcclient
 "client/ClientFunctions.cpp" 
 "client/ConsoleInput.cpp"
 "client/EventHandler.cpp" 
-"client/Plugins.cpp")
+"client/Plugins.cpp"
+ "client/sqVector.cpp"  
+"client/VehiclePool.cpp"  
+"client/sqQuaternion.cpp")
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	set(OUTPUT_BITNESS 64)
 else()
@@ -148,6 +151,7 @@ if(WIN32)
     target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/npc_static.lib")
     target_link_libraries(npcclient wsock32 ws2_32)
 else(WIN32)
+	
     if(OUTPUT_BITNESS EQUAL 32)    
         target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/libsquirrel_static.a")
         target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/libsqstdlib_static.a")
@@ -165,11 +169,19 @@ target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x64/libncu
     endif()
     set(CMAKE_CXX_FLAGS "-pthread")
     add_definitions(-DLINUX)
-
+	target_link_libraries(npcclient ${CMAKE_DL_LIBS})
     if(FORCE_32)
-        set_target_properties(npcclient PROPERTIES OUTPUT_NAME "npcclient32")
+        if(REL004)
+            set_target_properties(npcclient PROPERTIES OUTPUT_NAME "npcclient32_r004")
+        else()
+           set_target_properties(npcclient PROPERTIES OUTPUT_NAME "npcclient32")
+        endif()
     else()
-        set_target_properties(npcclient PROPERTIES OUTPUT_NAME "npcclient64")
+        if(REL004)
+            set_target_properties(npcclient PROPERTIES OUTPUT_NAME "npcclient64_r004")
+        else()
+            set_target_properties(npcclient PROPERTIES OUTPUT_NAME "npcclient64")
+        endif()
     endif()
 	
 	

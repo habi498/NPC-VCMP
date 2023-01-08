@@ -19,6 +19,7 @@ Note: The npcclient program and npc04relxx also uses this file. So any editing
 in one of the files must be made on the other too
 */
 #include <stdint.h>
+#include <math.h>
 #ifdef _WIN32
 #include <windows.h>
 #endif

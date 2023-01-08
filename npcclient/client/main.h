@@ -26,7 +26,7 @@
 #ifdef _WIN32
 
 #else
-#define Sleep(x) { usleep(x * 1000); }
+#define Sleep(x) usleep(x * 1000)
 #include <unistd.h>
 #include <string.h>
 #include <sys/time.h>
@@ -37,13 +37,15 @@
 #endif
 
 #include "system.h"
+#include "SYNC_DATA.h"
 #include "npc.h"
 #include "sqvm.h"
 #include "Playback.h"
 #include "messages.h"
-#include "SYNC_DATA.h"
+
 #include "Player.h"
 #include "Playerpool.h"
+#include "VehiclePool.h"
 #include "npc32.h"
 #include "CTimer.h"
 #include "ClientFunctions.h"
@@ -80,5 +82,6 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData, PacketPriority priority = 
 void SendNPCOfSyncDataLV(PacketPriority prioty=HIGH_PRIORITY);// in UpdateNPC.cpp
 void SendPassengerSyncData();
 void SendNPCSyncData(INCAR_SYNC_DATA* m_pInSyncData, PacketPriority mPriority = HIGH_PRIORITY);
+void SendNPCIcSyncDataLV(PacketPriority prioty = HIGH_PRIORITY);
 void WriteNibble(uint8_t nibble, RakNet::BitStream* bsOut);
 #endif

@@ -16,63 +16,104 @@
 */
 #include <map>
 #include <iterator>
+
 #ifndef NPC_H
 #define NPC_H
 #define MAX_PLAYERS 100
+#define MAX_VEHICLES 1000
 #define NPC_SHOOTING_ENABLED
 #define SPAWN_LOCK 4000  //amount in ms not to respond to server setting pos
 #define NOT_DEFINED 255
 #define DISABLE_AUTO_PASSENGER_SYNC -1
-class Vehicle
+class CVehicle
 {
-	float x, y, z;
+	VECTOR vecPos;
 	uint16_t model;
-	bool streamedIn;
 	uint8_t driverId;
+	float fCarHealth;
+	uint32_t dwDamage;
+	QUATERNION quatRotation;
+	VECTOR vecSpeed;
+	float fTurretx; float fTurrety;
 public:
-	Vehicle(float x, float y, float z, uint16_t model, bool streamedIn = true)
+	CVehicle(VECTOR vecPos, uint16_t model, QUATERNION quatRot, float fCarHealth, uint32_t dwDamage)
 	{
-		this->x = x; this->y = y; this->z = z;
+		this->vecPos = vecPos;
 		this->model = model;
-		this->streamedIn = streamedIn;
+		//this->streamedIn = streamedIn;
 		this->driverId = 255;
+		this->fCarHealth = fCarHealth;
+		this->dwDamage = dwDamage;
+		quatRotation = quatRot;
+		vecSpeed = VECTOR(); fTurretx = 0, fTurrety = 0;
 	}
-	Vehicle()
+	CVehicle()
 	{
-		x = 0.0, y = 0.0, z = 0.0, model = 0;
-		streamedIn = false;
+		vecPos=VECTOR(), model = 0;
+		//streamedIn = false;
 		driverId = 255;
+		fCarHealth = 1000.0;
+		dwDamage = 0;
+		quatRotation = QUATERNION(0, 0, 0, 1);
+		vecSpeed = VECTOR(); fTurretx = 0, fTurrety = 0;
 	}
-	void UpdatePosition(float x, float y, float z)
+	uint16_t GetModel()
 	{
-		this->x = x; this->y = y; this->z = z;
+		return this->model;
 	}
-	void GetPosition(float& x, float& y, float& z)
+	void CopyFromIcSyncData(uint8_t bytePlayerId, INCAR_SYNC_DATA* pIcSyncData)
 	{
-		x = this->x; y = this->y; z = this->z;
+		this->driverId = bytePlayerId;
+		this->dwDamage = pIcSyncData->dDamage;
+		this->fCarHealth = pIcSyncData->fCarHealth;
+		this->fTurretx = pIcSyncData->Turretx;
+		this->fTurrety = pIcSyncData->Turrety;
+		this->vecPos = pIcSyncData->vecPos;
+		this->vecSpeed = pIcSyncData->vecMoveSpeed;
+		this->quatRotation = pIcSyncData->quatRotation;
+		//this->streamedIn = true;
 	}
+	void UpdatePosition(VECTOR vecPos)
+	{
+		this->vecPos = vecPos;
+	}
+	VECTOR GetPosition()
+	{
+		return vecPos;
+	}
+	QUATERNION GetRotation()
+	{
+		return quatRotation;
+	}
+	float GetTurretx() { return fTurretx; }
+	float GetTurrety() { return fTurrety; }
+	VECTOR GetSpeed() { return vecSpeed; }
+	float GetHealth() { return fCarHealth; }
+	uint32_t GetDamage() { return dwDamage; }
 	void SetDriver(uint8_t driverId)
 	{
 		this->driverId = driverId;
 	}
 	void RemoveDriver() { this->driverId = 255; }
-	void Destream() { streamedIn = false; }
+	/*void Destream() { streamedIn = false; }
 	void StreamedIn() { streamedIn = true; }
-	bool IsStreamedIn() { return streamedIn;}
-	uint8_t GetDriver() { return driverId; }
-	~Vehicle()
+	bool IsStreamedIn() { return streamedIn;}*/
+	uint8_t GetDriver() { return driverId; 
+	}
+	~CVehicle()
 	{
 	}
 };
+
 //used to store internal data
 class NPC
 {
 private:
 	unsigned char ID;
+
 	bool isSpawned = false;
 	bool initialized = false;//true implies ID is set
-	std::map<uint16_t,Vehicle>strmdvhcls;
-	bool strmdplrs[MAX_PLAYERS];
+	//bool strmdplrs[MAX_PLAYERS];
 	bool bLockOnSync = false;//prevent server setting position
 	DWORD dw_SpawnedTick = 0;//dword to store tickcount of first spawn
 	
@@ -94,82 +135,14 @@ public:
 public:
 	NPC()
 	{
-		for (int i = 0; i < MAX_PLAYERS; i++)
-			strmdplrs[i] = false;
+		/*for (int i = 0; i < MAX_PLAYERS; i++)
+			strmdplrs[i] = false;*/
+
 	}
 	~NPC() {};
 	uint32_t anticheatID;//Every time server sets health, armour position or anything of npc, this count is increased by one.
-	void AddStreamedVehicle(uint16_t vehicleId, float x, float y, float z, int16_t model)
-	{
-		if (strmdvhcls.find(vehicleId) == strmdvhcls.end())
-		{
-			strmdvhcls.insert({ vehicleId, Vehicle(x,y,z,model) });
-		}
-		else
-		{
-			strmdvhcls[vehicleId].UpdatePosition(x, y, z);
-			strmdvhcls[vehicleId].StreamedIn();
-		}
-	}
-	void UpdateStreamedVehiclePosition(uint16_t vehicleId, float x, float y, float z)
-	{
-		if (strmdvhcls.find(vehicleId) != strmdvhcls.end())
-		{
-			strmdvhcls[vehicleId].UpdatePosition(x, y, z);
-		}
-	}
-	void GetVehiclePosition(uint16_t vehicleId, float &x, float &y, float &z)
-	{
-		if (strmdvhcls.find(vehicleId) != strmdvhcls.end())
-		{
-			strmdvhcls[vehicleId].GetPosition(x, y, z);
-		}
-		else
-		{
-			x = 0; y = 0; z = 0;
-		}
-	}
-	void SetVehicleDriver(uint16_t vehicleId, uint8_t driverId)
-	{
-		if (strmdvhcls.find(vehicleId) != strmdvhcls.end())
-		{
-			strmdvhcls[vehicleId].SetDriver(driverId);
-		}
-		else
-		{
-			//Create an instance with streamedIn=false;
-			strmdvhcls.insert({ vehicleId, Vehicle(0.0,0.0,0.0,0,false) });
-			strmdvhcls[vehicleId].SetDriver(driverId);
-		}
-	}
-	void RemoveVehicleDriver(uint16_t vehicleId)
-	{
-		if (strmdvhcls.find(vehicleId) != strmdvhcls.end())
-		{
-			strmdvhcls[vehicleId].RemoveDriver();
-		}
-	}
-	uint8_t GetVehicleDriver(uint16_t vehicleId)
-	{
-		if (strmdvhcls.find(vehicleId) != strmdvhcls.end())
-		{
-			return strmdvhcls[vehicleId].GetDriver();
-		}
-		return 255;
-	}
-	void DestreamVehicle(uint16_t vehicle)
-	{
-		if (strmdvhcls.find(vehicle) != strmdvhcls.end())
-			strmdvhcls[vehicle].Destream();
-	}
-	bool IsVehicleStreamedIn(uint16_t vehicle)
-	{
-		if (strmdvhcls.find(vehicle) != strmdvhcls.end()
-			&& strmdvhcls[vehicle].IsStreamedIn())
-			return true;
-		return false;
-	}
-	bool IsPlayerStreamedIn(uint8_t playerid) { return this->strmdplrs[playerid]; }
+	
+	/*bool IsPlayerStreamedIn(uint8_t playerid) { return this->strmdplrs[playerid]; }
 	void AddStreamedPlayer(uint8_t playerid)
 	{
 		strmdplrs[playerid] = true;
@@ -177,10 +150,8 @@ public:
 	void RemoveStreamedPlayer(uint8_t playerid)
 	{
 		strmdplrs[playerid] = false;
-	}
-	//void SetHealth(uint8_t health) { this->health = health; }
-	//void SetArmour(uint8_t armour) { this->armour = armour; }
-
+	}*/
+	
 	unsigned char GetID() { return ID; }
 	void SetID(unsigned char id)
 	{ 
@@ -241,6 +212,10 @@ typedef enum tagNPCFIELDS
 	I_HEALTH,
 	I_ARMOUR,
 	I_CURWEP,
-	I_CURWEP_AMMO
+	I_CURWEP_AMMO,
+	F_CAR_ROTATIONX,
+	F_CAR_ROTATIONY,
+	F_CAR_ROTATIONZ,
+	F_CAR_ROTATIONW,
 }NPCFIELDS;
 #endif

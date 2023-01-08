@@ -154,9 +154,11 @@ void CEvents::OnNPCConnect(uint8_t byteId)
     PluginPool_s* pPlugin;
     for (DWORD i = 0; i < m_pPlugins->GetPluginCount(); i++)
     {
-        pPlugin = m_pPlugins->GetPlugin(i);
+        pPlugin = m_pPlugins->GetPlugin(i); printf("+");
         if (pPlugin->pPluginCalls->OnNPCConnect)
+        {
             pPlugin->pPluginCalls->OnNPCConnect(byteId);
+        }
     }
 }
 
