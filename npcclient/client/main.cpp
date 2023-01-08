@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
     // because exceptions will be thrown for problems.
     try {
         // Define the command line object.
-        CmdLine cmd("VCMP-Non Player Characters v1.5.2", ' ', "0.1b",false);
+        CmdLine cmd("VCMP-Non Player Characters v1.6", ' ', "0.1b",false);
 
         // Define a value argument and add it to the command line.
         ValueArg<string> hostnameArg("h", "hostname", "IP address of host", false, "127.0.0.1",
