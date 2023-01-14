@@ -4,7 +4,7 @@
 #define EXPORT
 #endif
 #include "plugin.h"
-
+#include "SqImports.h"
 #ifdef __cplusplus
 extern "C" {
 #endif

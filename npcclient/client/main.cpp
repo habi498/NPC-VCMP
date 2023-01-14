@@ -102,6 +102,8 @@ int main(int argc, char** argv) {
             bool bUseConsoleInput = consoleInputSwitch.getValue();
             if (bUseConsoleInput)
                 start_consoleinput();
+
+            InitSquirrelExports();
             //Need to initialize CFunctions class, as CPlugins need it.
             
             m_pFunctions = new CFunctions();

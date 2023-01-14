@@ -51,6 +51,7 @@
 #include "ClientFunctions.h"
 #include "EventHandler.h"
 #include "Plugins.h"
+#include "Exports.h"
 #define ZeroVEC(V){V.X=0;V.Y=0;V.Z=0;}
 #define MulVEC(V,f){V.X*=f;V.Y*=f;V.Z*=f;}
 #define PI 3.1415926

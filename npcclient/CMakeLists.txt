@@ -128,7 +128,7 @@ add_executable (npcclient
 "client/Plugins.cpp"
  "client/sqVector.cpp"  
 "client/VehiclePool.cpp"  
-"client/sqQuaternion.cpp")
+"client/sqQuaternion.cpp" "client/Exports.cpp")
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	set(OUTPUT_BITNESS 64)
 else()

@@ -308,9 +308,42 @@ SQInteger fn_SetTimerEx(HSQUIRRELVM v)
             /*case OT_TABLE:
             case OT_ARRAY:
             case OT_CLASS:*/
+            case OT_INSTANCE:
+                SQBool IsVector;
+                if (SQ_SUCCEEDED(sq_isvector(v, i, &IsVector)))
+                {
+                    if (IsVector)
+                    {
+                        VECTOR* vector = new VECTOR();
+                        if (SQ_SUCCEEDED(sq_getvector(v, i, vector)))
+                        {
+                            pTempParam.pData = vector;
+                            pTempParam.datatype = (SQObjectType)0x00040000;
+                            break;
+                        }
+                        else delete vector;
+                    }
+                    else
+                    {
+                        SQBool IsQuaternion;
+                        if (SQ_SUCCEEDED(sq_isquaternion(v, i, &IsQuaternion)))
+                        {
+                            if (IsQuaternion)
+                            {
+                                QUATERNION* quaternion = new QUATERNION();
+                                if (SQ_SUCCEEDED(sq_getquaternion(v, i, quaternion)))
+                                {
+                                    pTempParam.pData = quaternion;
+                                    pTempParam.datatype = (SQObjectType)0x00080000;
+                                    break;
+                                }
+                                else delete quaternion;
+                            }
+                        }
+                    }
+                }
             case OT_USERDATA:
             case OT_USERPOINTER:
-            case OT_INSTANCE:
             case OT_CLOSURE:
             case OT_NATIVECLOSURE:
             {

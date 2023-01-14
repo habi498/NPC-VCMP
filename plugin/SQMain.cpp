@@ -35,6 +35,8 @@ long GetTickCount()
 PluginFuncs* VCMP;
 HSQUIRRELVM v;
 HSQAPI sq; 
+NPCHideImports* npchideFuncs = NULL;
+bool npchideAvailable = false;
 CPlayerPool* m_pPlayerPool;
 void OnPlayerUpdate2(int32_t playerId, vcmpPlayerUpdate updateType)
 {
@@ -176,6 +178,31 @@ uint8_t OnPluginCommand2(uint32_t type, const char* text) {
 		case 0x7D6E22D8:
 			OnSquirrelScriptLoad();
 			break;
+		case 0x10001000:
+			if (strcmp(text, "NPCHideExportsReady") == 0)
+			{
+				int32_t pluginId = VCMP->FindPlugin("hide_npc"); 
+				if (pluginId != -1)
+				{
+					size_t size;
+					const void** NPCHideExports = VCMP->GetPluginExports(pluginId, &size);
+					vcmpError e = VCMP->GetLastError();
+					if (e == vcmpErrorNone)
+					{
+						if (NPCHideExports != NULL && size > 0)
+						{
+							NPCHideImports** npchideImports = (NPCHideImports**)NPCHideExports;
+							npchideFuncs = (NPCHideImports*)(*npchideImports);
+							if (npchideFuncs)
+							{
+								npchideAvailable = true;
+								//bool success=npchideFuncs->ShowMaxPlayersAs(90);
+							}
+						}
+					}
+				}
+			}
+			break;
 		default:
 			break;
 	}
@@ -200,7 +227,7 @@ extern "C" unsigned int VcmpPluginInit(PluginFuncs* pluginFuncs, PluginCallbacks
 	VCMP = pluginFuncs;
 
 	// Plugin information
-	pluginInfo->pluginVersion = 0x110;
+	pluginInfo->pluginVersion = 16000;
 	pluginInfo->apiMajorVersion = PLUGIN_API_MAJOR;
 	pluginInfo->apiMinorVersion = PLUGIN_API_MINOR;
 	strcpy(pluginInfo->name, "NPC");

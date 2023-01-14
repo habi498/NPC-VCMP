@@ -127,7 +127,18 @@ bool CTimer::_ProcessEx()
 					sq_pushstring(v, string, -1);
 					break;
 				}
-
+				case 0x00040000:
+				{
+					VECTOR* vector = (VECTOR*)pData;
+					sq_pushvector(v, *vector);
+					break;
+				}
+				case 0x00080000:
+				{
+					QUATERNION* quaternion = (QUATERNION*)pData;
+					sq_pushquaternion(v, *quaternion);
+					break;
+				}
 				/*case OT_TABLE:
 				case OT_ARRAY:
 				case OT_CLASS:*/

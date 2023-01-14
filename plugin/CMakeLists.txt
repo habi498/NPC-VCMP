@@ -6,7 +6,7 @@ add_library(npc04 MODULE
 "ConsoleUtils.cpp"
 "PlayerRecording.cpp"
 "SQConsts.cpp"
-)
+ "HideNPCImports.h")
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	set(OUTPUT_BITNESS 64)

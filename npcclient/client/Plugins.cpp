@@ -10,10 +10,8 @@
 extern CFunctions* m_pFunctions;
 extern funcError fn_GetLastError();
 extern HSQUIRRELVM v;
-void* GetSquirrelVM()
-{
-    return v;
-}
+
+
 CPlugins::CPlugins()
 {
 
@@ -147,7 +145,7 @@ BOOL CPlugins::LoadSinglePlugin(char* szPluginPath)
         pPlugin->pPluginFuncs->IsPlayerStreamedIn = m_pFunctions->IsPlayerStreamedIn;
         pPlugin->pPluginFuncs->IsPlayerSpawned = m_pFunctions->IsPlayerSpawned;
         pPlugin->pPluginFuncs->IsPlayerConnected = m_pFunctions->IsPlayerConnected;
-        pPlugin->pPluginFuncs->GetSquirrelVM = GetSquirrelVM;
+        pPlugin->pPluginFuncs->GetSquirrelExports = GetSquirrelExports;
     }
     else return FALSE;
     if (!pPlugin->Init(pPlugin->pPluginFuncs, pPlugin->pPluginCalls, pPlugin->pPluginInfo))

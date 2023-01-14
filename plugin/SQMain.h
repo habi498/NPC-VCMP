@@ -23,7 +23,7 @@
 #include "system.h"
 #include "SYNC_DATA.h"
 #include "PlayerRecording.h"
-
+#include "HideNPCImports.h"
 #ifdef __cplusplus
 extern "C" {
 #endif

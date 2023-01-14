@@ -89,7 +89,7 @@ struct PluginFuncs {
 	bool (*IsPlayerStreamedIn)(uint8_t bytePlayerId) {};
 	bool (*IsPlayerSpawned)(uint8_t bytePlayerId) {};
 	bool (*IsPlayerConnected)(uint8_t bytePlayerId) {};
-	void* (*GetSquirrelVM)() {};
+	const void** (*GetSquirrelExports)(size_t* sizeofExport) {};
 };
 
 struct PluginCallbacks {

@@ -26,6 +26,8 @@ enum Version
 #include <vector>
 extern PluginFuncs* VCMP;
 extern HSQAPI sq;
+extern NPCHideImports* npchideFuncs;
+extern bool npchideAvailable;
 #ifdef WIN32
 INT SW_STATUS = 0;
 #endif
@@ -312,6 +314,22 @@ _SQUIRRELDEF(SQ_StopRecordingPlayerData) {
 	}else sq->pushbool(v, SQFalse);
 	return 1;
 }
+_SQUIRRELDEF(SQ_SetMaxPlayersOut) {
+	if (npchideAvailable)
+	{
+		SQInteger maxplayers;
+		sq->getinteger(v, 2, &maxplayers);
+		if (npchideFuncs)
+		{
+			if (npchideFuncs->ShowMaxPlayersAs((uint16_t)maxplayers))
+				sq->pushbool(v, SQTrue);
+			else
+				sq->pushbool(v, SQFalse);
+			return 1;
+		}
+	}
+	return 0;
+}
 #ifdef WIN32
 SQInteger SQ_ShowWindow(HSQUIRRELVM v)
 {
@@ -330,6 +348,8 @@ void RegisterFuncs(HSQUIRRELVM v) {
 	RegisterSquirrelFunc(v, SQ_IsPlayerNPC, "IsPlayerNPC", 1, "i");
 	RegisterSquirrelFunc(v, SQ_StartRecordingPlayerData, "StartRecordingPlayerData", 3, "iis");
 	RegisterSquirrelFunc(v, SQ_StopRecordingPlayerData, "StopRecordingPlayerData", 1, "i");
+	RegisterSquirrelFunc(v, SQ_SetMaxPlayersOut, "SetMaxPlayersOut", 1, "i");
+
 #ifdef WIN32
 	RegisterSquirrelFunc(v, SQ_ShowWindow, "ShowNPCConsole", 0, "");
 	RegisterSquirrelFunc(v, SQ_HideWindow, "HideNPCConsole", 0, "");

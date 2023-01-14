@@ -21,9 +21,11 @@ SQRESULT register_vectorlib(HSQUIRRELVM v);
 SQRESULT sq_pushvector(HSQUIRRELVM v, VECTOR vector);
 SQRESULT sq_pushvector(HSQUIRRELVM v, SQFloat x, SQFloat y, SQFloat z);
 SQRESULT sq_getvector(HSQUIRRELVM v, SQInteger idx, VECTOR* vecOut);
+SQRESULT sq_isvector(HSQUIRRELVM v, SQInteger idx, SQBool* b);
 SQRESULT register_quaternionlib(HSQUIRRELVM v);
 SQRESULT sq_pushquaternion(HSQUIRRELVM v, QUATERNION quaternion);
 SQRESULT sq_pushquaternion(HSQUIRRELVM v, SQFloat x, SQFloat y, SQFloat z, SQFloat w);
 SQRESULT sq_getquaternion(HSQUIRRELVM v, SQInteger idx, QUATERNION* quatOut);
+SQRESULT sq_isquaternion(HSQUIRRELVM v, SQInteger idx, SQBool* b);
 
 #endif

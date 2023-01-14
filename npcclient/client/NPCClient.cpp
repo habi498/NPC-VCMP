@@ -16,6 +16,8 @@
 */
 #include "main.h"
 HSQUIRRELVM v; 
+HSQAPI sq = NULL;
+SquirrelExports* pExp;
 NPC* iNPC = new NPC();
 
 RakNet::RakPeerInterface* peer;

@@ -312,6 +312,24 @@ SQRESULT sq_pushvector(HSQUIRRELVM v, SQFloat x, SQFloat y, SQFloat z)
         return -1;
     }
 }
+SQRESULT sq_isvector(HSQUIRRELVM v, SQInteger idx, SQBool *b)
+{
+    int top = sq_gettop(v);
+    sq_pushvector(v, VECTOR(0, 0, 0));//-1-->instance of Vector class
+    if (SQ_SUCCEEDED(sq_getclass(v, -1)))// -2-->instance of Vector class, -1-->class
+    {
+        sq_remove(v, -2);// -1 class
+        sq_push(v, idx);//-2 class, -1 instance
+        //if instance at -1 is instance of class at -2. squirrel documentation is wrong here
+        *b = sq_instanceof(v);
+        sq_pop(v, 2);
+        if (*b == SQTrue || *b == SQFalse)
+            return 0;//success
+        else return -1;//error.
+    }
+    sq_settop(v, top);
+    return -1;
+}
 SQRESULT sq_pushvector(HSQUIRRELVM v, VECTOR vector)
 {
     return sq_pushvector(v, vector.X, vector.Y, vector.Z);
