@@ -128,7 +128,7 @@ add_executable (npcclient
 "client/Plugins.cpp"
  "client/sqVector.cpp"  
 "client/VehiclePool.cpp"  
-"client/sqQuaternion.cpp" "client/Exports.cpp")
+"client/sqQuaternion.cpp" "client/Exports.cpp" "client/NPCFunctions4.cpp")
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	set(OUTPUT_BITNESS 64)
 else()
@@ -144,6 +144,7 @@ if(REL004)
 	set_target_properties(npcclient PROPERTIES OUTPUT_NAME "npcclient_r004") 
 endif()
 target_include_directories(npcclient PRIVATE "${PROJECT_SOURCE_DIR}/npcclient")
+target_include_directories(npcclient PRIVATE "${PROJECT_SOURCE_DIR}/include")
 
 if(WIN32)
     target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/squirrel_static.lib")

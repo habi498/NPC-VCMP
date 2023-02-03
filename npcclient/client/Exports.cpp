@@ -157,6 +157,14 @@ void InitSQAPI()
     /*debug*/
     SQAPI(stackinfos);
     SQAPI(setdebughook);
+
+    //Added functions
+    SQAPI(pushvector);
+    SQAPI(pushquaternion);
+    SQAPI(getvector);
+    SQAPI(getquaternion);
+    SQAPI(isvector);
+    SQAPI(isquaternion);
 }
 HSQAPI* pfGetSquirrelAPI()
 {

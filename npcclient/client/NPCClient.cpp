@@ -26,7 +26,7 @@ CPlayerPool* m_pPlayerPool = NULL;
 CEvents* m_pEvents;
 CVehiclePool* m_pVehiclePool = NULL;
 extern CFunctions* m_pFunctions;
-CPlayer* npc;
+CPlayer* npc = NULL;
 #define CAR_HEALTH_MAX 1000
 void ReceivePlayerSyncData(RakNet::BitStream* bsIn, INCAR_SYNC_DATA* m_pIcSyncDataOut, uint8_t* bytePlayerIdOut);
 void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncDataOut, uint8_t* bytePlayerIdOut);
@@ -740,6 +740,10 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				if (player)
 				{
 					player->m_byteSkinId = byteSkinId;
+					if (iNPC && iNPC->Initialized() && iNPC->GetID() == bytePlayerId)
+					{
+						npc->SetCurrentWeapon(0);//
+					}
 				}
 			}
 			break;
@@ -848,13 +852,23 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				iNPC->anticheatID = anticheatid;
 				uint8_t newhealth;
 				bsIn.Read(newhealth);
+				uint8_t oldhealth = npc->m_byteHealth;
 				npc->m_byteHealth = newhealth;
 				if (!iNPC->IsSyncPaused())
 				{
 					if (!npc->m_wVehicleId)
+					{
 						SendNPCOfSyncDataLV();
+					}
 					else if (npc->m_byteSeatId > 0)
 						SendPassengerSyncData();
+				}
+				if (oldhealth > 0 && newhealth == 0)
+				{
+					m_pFunctions->SendShotInfo(bodyPart::Body, 0xd);
+					iNPC->TimeShotInfoSend = GetTickCount();
+					iNPC->WaitingToRemoveBody = true;
+					//m_pFunctions->SendDeathInfo(0, 255, bodyPart::Body);
 				}
 			}
 			break;
@@ -960,6 +974,36 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				
 				if( iNPC->GetID() != playerid )
 					m_pEvents->OnSniperRifleFired(playerid, weapon, x, y, z, dx, dy, dz);
+			}
+			break;
+			case ID_GAME_MESSAGE_SERVER_DATA_RCVD:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				RakNet::BitSize_t unreadbits= bsIn.GetNumberOfUnreadBits();
+				size_t size = unreadbits / 8;
+				uint32_t dwStreamLen;
+				bsIn.Read(dwStreamLen);
+				if (dwStreamLen + 4 > size)
+					break;
+				uint8_t* data = (uint8_t*)calloc(dwStreamLen, sizeof(unsigned char));
+				if (data )
+				{
+					if (bsIn.Read((char*)data, dwStreamLen))
+					{
+						m_pEvents->OnServerData(data, dwStreamLen);
+					}
+					free(data);
+				}
+
+				/*uint32_t len;
+				bsIn.Read(len);
+				len = bytes_swap_u32(len);*/
+
+				//(1:int, 400:float, 15:byte,"hello":string, 15:byte, "hello:string)
+				// 
+				//00 00 00 18 01 00 00 00 00 00 c8 43 0f 00 05 48 65 6c 6c 6f 
+				//0f 00 05 48 65 6c 6c 6f
 			}
 			break;
 			}
@@ -1384,6 +1428,24 @@ void CheckPassengerSync()
 		&& iNPC->PSOnServerCycle)
 		HandlePassengerSync();
 }
+void CheckRemoveDeadBody()
+{
+	if (iNPC && iNPC->Initialized()
+		&& iNPC->WaitingToRemoveBody)
+	{
+		if (npc && npc->m_byteHealth == 0)
+		{
+			DWORD t = iNPC->TimeShotInfoSend;
+			DWORD n = GetTickCount();
+			if (n - t > 2100 || n - t < 0)
+			{
+				m_pFunctions->SendDeathInfo(0, 255, bodyPart::Body);
+				iNPC->WaitingToRemoveBody = false;
+				return;
+			}
+		}
+	}
+}
 void OnCycle()
 {
 	DWORD dwSleepTime = ProcessPlaybacks();
@@ -1392,6 +1454,8 @@ void OnCycle()
 	CheckPassengerSync();
 	if (bConsoleInputEnabled)
 		CheckForConsoleInput();
+	CheckRemoveDeadBody();
+	m_pEvents->OnCycle();
 	DWORD dw_TickTwo = GetTickCount();
 	DWORD dw_interval = dw_TickTwo - dw_TickOne;
 	if (dw_interval >= dwSleepTime)
@@ -1401,4 +1465,12 @@ void OnCycle()
 		Sleep(dwSleepTime);
 	}
 	else Sleep(0);
+}
+uint32_t bytes_swap_u32(uint32_t i) { //aa bb cc dd
+	//00 00 00 aa | 00 aa bb cc | bb cc dd 00 | dd 00 00 00
+	uint32_t u = (i >> 24) |
+		((i >> 8) & 0x0000FF00) |
+		((i << 8) & 0x00FF0000) |
+		(i << 24);
+	return u;
 }

@@ -14,11 +14,7 @@
 	You should have received a copy of the GNU General Public License
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-enum Version
-{
-	REL004 = 67000,
-	REL006 = 67400
-};
+
 #include <stdlib.h>
 #include <stdio.h>
 #include "SQFuncs.h"
@@ -31,6 +27,11 @@ extern bool npchideAvailable;
 #ifdef WIN32
 INT SW_STATUS = 0;
 #endif
+enum Version
+{
+	REL004 = 67000,
+	REL006 = 67400
+};
 bool CallNPCClient(const char* szName, const char* szScript, bool bConsoleInputEnabled=false,
 	const char* host="127.0.0.1", const char* plugins = "",const char* loc = "",  std::vector<const char*>params = {})
 {
@@ -73,17 +74,18 @@ bool CallNPCClient(const char* szName, const char* szScript, bool bConsoleInputE
 		strcat(szCmd, " -c");
 	uint32_t ver = VCMP->GetServerVersion();
 #ifdef WIN32
-	if(bConsoleInputEnabled)
-		SW_STATUS = SW_SHOW;
+	INT STATUS_SW = SW_HIDE;
+	if(bConsoleInputEnabled||SW_STATUS==SW_SHOW)
+		STATUS_SW = SW_SHOW;
 	
 	if(ver==REL004)
-		ShellExecute(0, "open", "npcclient_r004.exe", szCmd, NULL, SW_STATUS);
+		ShellExecute(0, "open", "npcclient_r004.exe", szCmd, NULL, STATUS_SW);
 	else if(ver==REL006)
-		ShellExecute(0, "open", "npcclient.exe", szCmd, NULL, SW_STATUS);
+		ShellExecute(0, "open", "npcclient.exe", szCmd, NULL, STATUS_SW);
 	else {
 		printf("Error server version: %d. ", ver);
 		printf("Using REL006 = %d\n", REL006);
-		ShellExecute(0, "open", "npcclient.exe", szCmd, NULL, SW_STATUS);
+		ShellExecute(0, "open", "npcclient.exe", szCmd, NULL, STATUS_SW);
 	}
 #else
 	char szDir[MAX_PATH];
@@ -255,17 +257,31 @@ _SQUIRRELDEF(SQ_ConnectNPCEx) {
 	sq->pushbool(v, SQTrue);
 	return 1;
 }
-_SQUIRRELDEF(SQ_IsPlayerNPC) {//using UIDs
+bool IsPlayerNPC(uint8_t byteplayerId)
+{
 	char UID[255];
-	SQInteger playerid;
-	sq->getinteger(v, 2, &playerid);
-	VCMP->GetPlayerUID((int32_t)playerid,UID,sizeof(UID));
+	VCMP->GetPlayerUID(byteplayerId, UID, sizeof(UID));
+	
 	if (strcmp(UID, "0000000000000000000000000000000000000001") == 0)
 	{
-		sq->pushbool(v, SQTrue);
+		return true;
 	}
-	else sq->pushbool(v, SQFalse);
-	return 1;
+	else return false;
+}
+_SQUIRRELDEF(SQ_IsPlayerNPC) {//using UIDs
+	
+	SQInteger playerid;
+	sq->getinteger(v, 2, &playerid);
+	if (VCMP->IsPlayerConnected((int32_t)playerid))
+	{
+		if (IsPlayerNPC((uint8_t)playerid))
+		{
+			sq->pushbool(v, SQTrue);
+		}
+		else sq->pushbool(v, SQFalse);
+		return 1;
+	}
+	else return sq->throwerror(v, "Player not connected");
 }
 _SQUIRRELDEF(SQ_StartRecordingPlayerData) {
 	//StartRecordingPlayerData(playerid, type, name);
@@ -328,7 +344,24 @@ _SQUIRRELDEF(SQ_SetMaxPlayersOut) {
 			return 1;
 		}
 	}
-	return 0;
+	return sq->throwerror(v, "NPC_Hide Module not loaded.");
+}
+SQInteger SQ_SetNameOfAllNPC(HSQUIRRELVM v)
+{
+	if (npchideAvailable)
+	{
+		const SQChar* name;
+		sq->getstring(v, 2, &name);
+		if (npchideFuncs)
+		{
+			if (npchideFuncs->SetAllNPCNames(name, (uint8_t)strlen(name)))
+				sq->pushbool(v, SQTrue);
+			else
+				sq->pushbool(v, SQFalse);
+			return 1;
+		}
+	}
+	return sq->throwerror(v, "NPC_Hide Module not loaded.");
 }
 #ifdef WIN32
 SQInteger SQ_ShowWindow(HSQUIRRELVM v)
@@ -348,10 +381,18 @@ void RegisterFuncs(HSQUIRRELVM v) {
 	RegisterSquirrelFunc(v, SQ_IsPlayerNPC, "IsPlayerNPC", 1, "i");
 	RegisterSquirrelFunc(v, SQ_StartRecordingPlayerData, "StartRecordingPlayerData", 3, "iis");
 	RegisterSquirrelFunc(v, SQ_StopRecordingPlayerData, "StopRecordingPlayerData", 1, "i");
+//Need NPC_Hide Module. Otherwise throws error safely.
 	RegisterSquirrelFunc(v, SQ_SetMaxPlayersOut, "SetMaxPlayersOut", 1, "i");
+	RegisterSquirrelFunc(v, SQ_SetNameOfAllNPC, "SetNameOfAllNPC", 1, "s");
 
 #ifdef WIN32
 	RegisterSquirrelFunc(v, SQ_ShowWindow, "ShowNPCConsole", 0, "");
 	RegisterSquirrelFunc(v, SQ_HideWindow, "HideNPCConsole", 0, "");
 #endif
+
+
+	RegisterSquirrelFunc(v, SQ_CreateFunction, "F", 1, "s");
+	RegisterSquirrelFunc(v, SQ_CreateFunction, "RFC", 2, "is");
+	//RegisterSquirrelFunc(v, SQ_RegisterRemoteFunction, "RegisterRemoteFunc", 2, "is");
+
 }

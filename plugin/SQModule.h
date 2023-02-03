@@ -92,6 +92,7 @@ extern "C" {
         void            (*pushbool)(HSQUIRRELVM v,SQBool b);
         void            (*pushuserpointer)(HSQUIRRELVM v,SQUserPointer p);
         void            (*pushnull)(HSQUIRRELVM v);
+        
         SQObjectType    (*gettype)(HSQUIRRELVM v,SQInteger idx);
         SQInteger       (*getsize)(HSQUIRRELVM v,SQInteger idx);
         SQRESULT        (*getbase)(HSQUIRRELVM v,SQInteger idx);
@@ -189,9 +190,11 @@ extern "C" {
         /*debug*/
         SQRESULT        (*stackinfos)(HSQUIRRELVM v,SQInteger level,SQStackInfos *si);
         void            (*setdebughook)(HSQUIRRELVM v);
+
+        
     } sq_api;
     typedef sq_api* HSQAPI;
-
+    
 #ifdef __cplusplus
 } /*extern "C"*/
 #endif

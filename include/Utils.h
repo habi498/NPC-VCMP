@@ -14,13 +14,12 @@
 	You should have received a copy of the GNU General Public License
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-/*
-Note: The npcclient program and npc04relxx also uses this file. So any editing
-in one of the files must be made on the other too
-*/
+
 #include <stdint.h>
 #ifdef _WIN32
 	#include <windows.h>
+#else
+	#include <math.h>
 #endif
 #pragma pack(1)
 typedef struct _VECTOR

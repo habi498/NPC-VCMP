@@ -1,3 +1,22 @@
+/*
+	SqModule2 : API used to communicate with squirrel module of npcclient
+	
+	Copyright (C) 2022  habi
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 //
 // SqModule: API used to communicate with and register squirrel modules
 //
@@ -189,6 +208,13 @@ extern "C" {
         /*debug*/
         SQRESULT        (*stackinfos)(HSQUIRRELVM v,SQInteger level,SQStackInfos *si);
         void            (*setdebughook)(HSQUIRRELVM v);
+		
+		SQRESULT    (*getvector)(HSQUIRRELVM v, SQInteger idx, VECTOR* vecOut);
+        SQRESULT    (*getquaternion)(HSQUIRRELVM v, SQInteger idx, QUATERNION* quatOut);
+        SQRESULT    (*isvector)(HSQUIRRELVM v, SQInteger idx, SQBool* b);
+        SQRESULT    (*isquaternion)(HSQUIRRELVM v, SQInteger idx, SQBool* b);
+        SQRESULT    (*pushvector)(HSQUIRRELVM v, VECTOR vector);
+        SQRESULT    (*pushquaternion)(HSQUIRRELVM v, QUATERNION quaternion);
     } sq_api;
     typedef sq_api* HSQAPI;
 

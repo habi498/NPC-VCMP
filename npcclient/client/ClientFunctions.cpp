@@ -66,7 +66,7 @@ void CFunctions::FireSniperRifle(uint8_t weapon, float x, float y, float z, floa
 
 }
 
-void CFunctions::SendShotInfo(int bodypart, int animation)
+void CFunctions::SendShotInfo(bodyPart bodypart, int animation)
 {
     SetLastError(funcError::NoError); 
     RakNet::BitStream bsOut;
@@ -74,14 +74,14 @@ void CFunctions::SendShotInfo(int bodypart, int animation)
     char nbp; //new body part
     switch (bodypart)
     {
-    case 6: nbp = 2; break;
-    case 1: nbp = 1; break;
-    case 2: nbp = 3; break;
-    case 3: nbp = 4; break;
-    case 4: nbp = 7; break;
-    case 5: nbp = 8; break;
-    case 0: nbp = (uint8_t)255; break;
-    default: nbp = bodypart; break;
+    case bodyPart::Head: nbp = 2; break;
+    case bodyPart::Torso: nbp = 1; break;
+    case bodyPart::LeftArm: nbp = 3; break;
+    case bodyPart::RightArm: nbp = 4; break;
+    case bodyPart::LeftLeg: nbp = 7; break;
+    case bodyPart::RightLeg: nbp = 8; break;
+    case bodyPart::Body: nbp = (uint8_t)255; break;
+    default: nbp = (uint8_t)255; break;
     }
     bsOut.Write(nbp);
     bsOut.Write((char)animation);
@@ -163,14 +163,14 @@ void CFunctions::SendOnFootSyncData(uint32_t dwKeys, float x, float y, float z, 
     SendNPCSyncData(&m_pOfSyncData);
 }
 
-void CFunctions::SendDeathInfo(uint8_t weapon, uint8_t killerid, uint8_t bodypart)
+void CFunctions::SendDeathInfo(uint8_t weapon, uint8_t killerid, bodyPart bodypart)
 {
     SetLastError(funcError::NoError); 
     RakNet::BitStream bsOut;
     bsOut.Write((RakNet::MessageID)(ID_GAME_MESSAGE_DEATH_INFO));
     bsOut.Write(weapon);
     bsOut.Write(killerid);
-    bsOut.Write(bodypart);
+    bsOut.Write(static_cast<uint8_t>(bodypart));
     peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE, 0, systemAddress, false);
     npc->SetState(PLAYER_STATE_WASTED);
     iNPC->SetSpawnStatus(false);
@@ -237,16 +237,16 @@ uint16_t CFunctions::GetPlayerWeaponAmmo(uint8_t bytePlayerId)
     return 0;
 }
 
-uint8_t CFunctions::GetPlayerState(uint8_t bytePlayerId)
+playerState CFunctions::GetPlayerState(uint8_t bytePlayerId)
 {
     ClearLastError();
     CPlayer* player = m_pPlayerPool->GetAt(bytePlayerId);
     if (player)
     {
-        return player->GetState();
+        return playerState(player->GetState());
     }
     else SetLastError(funcError::EntityNotFound);
-    return 0;
+    return playerState(0);
 }
 
 uint16_t CFunctions::GetPlayerVehicle(uint8_t bytePlayerId)
@@ -538,6 +538,35 @@ void CFunctions::SetAngle(float fAngle, bool sync)
     npc->m_fAngle = fAngle;
     if (sync)
         SendNPCOfSyncDataLV();
+}
+void CFunctions::SetHealth(uint8_t byteHealth, bool sync)
+{
+    SetLastError(funcError::NoError);
+    npc->m_byteHealth = byteHealth;
+    if (sync)
+        SendNPCOfSyncDataLV();
+}
+void CFunctions::SetArmour(uint8_t byteArmour, bool sync)
+{
+    SetLastError(funcError::NoError);
+    npc->m_byteArmour = byteArmour;
+    if (sync)
+        SendNPCOfSyncDataLV();
+}
+uint8_t CFunctions::GetNPCId()
+{
+    SetLastError(funcError::NoError);
+    if (iNPC->Initialized())return iNPC->GetID();
+    else SetLastError(funcError::NPCNotConnected);
+    return 255;
+}
+void CFunctions::SendServerData(const void* data, size_t size)
+{
+    RakNet::BitStream bsOut;
+    bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_SERVER_DATA);
+    bsOut.Write((uint32_t)size);
+    bsOut.Write((char*)data, size);
+    peer->Send(&bsOut, HIGH_PRIORITY, RELIABLE_ORDERED, 0, systemAddress, false);
 }
 funcError CFunctions::SetWeapon(uint8_t byteWeaponId, bool sync)
 {

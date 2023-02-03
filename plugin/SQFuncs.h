@@ -10,6 +10,7 @@
 
 #include "SQMain.h"
 #include "squirrel.h"
+#include <vector>
 
 #define _SQUIRRELDEF(x) SQInteger x(HSQUIRRELVM v)
 
@@ -21,5 +22,10 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+SQInteger SQ_CreateFunction(HSQUIRRELVM v);
+bool CallNPCClient(const char* szName, const char* szScript, bool bConsoleInputEnabled ,
+	const char* host , const char* plugins , const char* loc , std::vector<const char*>params );
 
+bool IsPlayerNPC(uint8_t byteplayerId);
+#define RPC_STREAM_IDENTIFIER 0x40000000
 #endif

@@ -21,6 +21,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <string>
+#include "Exports.h"
 void CreateRecFolder();
 #define SUCCESS 0xFFFFFFFF
 #define SVRMSG 0xFFFFFFFF
@@ -38,6 +39,7 @@ HSQAPI sq;
 NPCHideImports* npchideFuncs = NULL;
 bool npchideAvailable = false;
 CPlayerPool* m_pPlayerPool;
+NPCExports* pExports;
 void OnPlayerUpdate2(int32_t playerId, vcmpPlayerUpdate updateType)
 {
 	if (!m_pPlayerPool->GetSlotState(playerId))return;
@@ -236,9 +238,16 @@ extern "C" unsigned int VcmpPluginInit(PluginFuncs* pluginFuncs, PluginCallbacks
 	pluginCalls->OnPlayerUpdate = OnPlayerUpdate2;
 
 	pluginCalls->OnPlayerCommand = OnPlayerCommand2;
-
 	pluginCalls->OnPlayerConnect = OnPlayerConnect2;
 	pluginCalls->OnPlayerDisconnect = OnPlayerDisconnect2;
+	
+	pExports = new NPCExports();
+	pExports->uStructSize = sizeof(NPCExports);
+	pExports->StartRecordingPlayerData = StartRecordingPlayerData;
+	pExports->StopRecordingPlayerData = StopRecordingPlayerData;
+	pExports->IsPlayerNPC = IsPlayerNPC;
+	pExports->CallNPCClient = CallNPCClient;
+	VCMP->ExportFunctions(pluginInfo->pluginId,
+		(const void**)&pExports, sizeof(NPCExports));
 	return 1;
 }
-

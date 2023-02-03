@@ -16,6 +16,17 @@
 */
 #include "main.h"
 extern  CPlugins* m_pPlugins;
+void CEvents::OnServerData(const uint8_t* data, size_t size)
+{
+    call_OnServerScriptData(data, size);
+    PluginPool_s* pPlugin;
+    for (DWORD i = 0; i < m_pPlugins->GetPluginCount(); i++)
+    {
+        pPlugin = m_pPlugins->GetPlugin(i);
+        if (pPlugin->pPluginCalls->OnServerData)
+            pPlugin->pPluginCalls->OnServerData(data, size);
+    }
+}
 void CEvents::OnPlayerDeath(uint8_t bytePlayerId)
 {
     call_OnPlayerDeath(bytePlayerId);
@@ -183,6 +194,17 @@ void CEvents::OnNPCSpawn()
         pPlugin = m_pPlugins->GetPlugin(i);
         if (pPlugin->pPluginCalls->OnNPCSpawn)
             pPlugin->pPluginCalls->OnNPCSpawn();
+    }
+}
+
+void CEvents::OnCycle()
+{
+    PluginPool_s* pPlugin;
+    for (DWORD i = 0; i < m_pPlugins->GetPluginCount(); i++)
+    {
+        pPlugin = m_pPlugins->GetPlugin(i);
+        if (pPlugin->pPluginCalls->OnCycle)
+            pPlugin->pPluginCalls->OnCycle();
     }
 }
 

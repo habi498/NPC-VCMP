@@ -14,6 +14,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+//Thanks to ysc3839's consoleinput plugin
 #include "main.h"
 
 #include <cstdio>
@@ -115,7 +116,11 @@ void CheckForConsoleInput()
     FD_ZERO(&fds);
     FD_SET(fileno(rl_instream), &fds);
 
-    r = select(FD_SETSIZE, &fds, NULL, NULL, NULL);
+    struct timeval timeout;
+
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 0;
+    r = select(FD_SETSIZE, &fds, NULL, NULL, &timeout);
     if (r < 0 && errno != EINTR)
     {
         perror("error on select");

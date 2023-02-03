@@ -27,21 +27,14 @@ CPlugins* m_pPlugins;
 #define NPC_PLUGINS_DIR "npcscripts/plugins"
 #ifdef LINUX
 #include <time.h>
- long getTick() {
+long GetTickCount()
+{
     struct timespec ts;
     long theTick = 0U;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     theTick = ts.tv_nsec / 1000000;
     theTick += ts.tv_sec * 1000;
     return theTick;
-}
-long GetTickCount()
-{
- /* Version 1.4 Bug noticed
- tms tm; CLOCKS_PER_SEC
-  return (times(&tm) * 10); 
-  */
-    return getTick();
 }
 #endif
 
@@ -51,7 +44,7 @@ int main(int argc, char** argv) {
     // because exceptions will be thrown for problems.
     try {
         // Define the command line object.
-        CmdLine cmd("VCMP-Non Player Characters v1.6", ' ', "0.1b",false);
+        CmdLine cmd("VCMP-Non Player Characters v1.6.1.29", ' ', "0.1b",false);
 
         // Define a value argument and add it to the command line.
         ValueArg<string> hostnameArg("h", "hostname", "IP address of host", false, "127.0.0.1",

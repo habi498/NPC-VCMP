@@ -18,8 +18,6 @@
 #include "main.h"
 extern HSQUIRRELVM v;
 extern CPlayerPool* m_pPlayerPool;
-#include "main.h"
-extern HSQUIRRELVM v;
 extern NPC* iNPC;
 extern CPlayerPool* m_pPlayerPool;
 extern CFunctions* m_pFunctions;
@@ -276,7 +274,8 @@ SQInteger fn_SendShotInfo(HSQUIRRELVM v)
     SQInteger bodypart, animation;
     sq_getinteger(v, 2, &bodypart);
     sq_getinteger(v, 3, &animation);
-    m_pFunctions->SendShotInfo(bodypart, animation);
+    if(bodypart>=0 && bodypart<=6)
+        m_pFunctions->SendShotInfo(bodyPart(bodypart), animation);
     return 0;
 }
 SQInteger fn_GetLocalValue(HSQUIRRELVM v)
@@ -398,7 +397,8 @@ SQInteger fn_SendDeathInfo(HSQUIRRELVM v)
     sq_getinteger(v, 2, &weapon);
     sq_getinteger(v, 3, &killerid);
     sq_getinteger(v, 4, &bodypart);
-    m_pFunctions->SendDeathInfo(weapon, killerid, bodypart);
+    if(bodypart>=0 && bodypart<=6)
+        m_pFunctions->SendDeathInfo(weapon, killerid, bodyPart(bodypart));
     return 0;
 }
 SQInteger fn_FaceNPCToPlayer(HSQUIRRELVM v)
@@ -508,6 +508,23 @@ SQInteger fn_EnterVehicle(HSQUIRRELVM v)
     else sq_pushbool(v, SQFalse);
     return 1;
 }
+SQInteger fn_SendServerData(HSQUIRRELVM v)
+{
+    SQUserPointer blob; size_t size;
+    if (SQ_SUCCEEDED(sqstd_getblob(v, 2, &blob)))
+    {
+        size = sqstd_getblobsize(v, 2);
+        m_pFunctions->SendServerData(blob, size);
+        sq_pushbool(v, SQTrue);
+        return 1;
+    }
+    else
+    {
+        sq_pushbool(v, SQFalse);
+        return 1;
+    }
+}
+
 void RegisterNPCFunctions3()
 {
     register_global_func(v, ::fn_SendOnFootSyncData, "SendOnFootSyncData", 21, "tif|if|if|if|iiiiif|if|if|if|if|if|if|if|if|ibb");
@@ -527,4 +544,7 @@ void RegisterNPCFunctions3()
     register_global_func(v, ::fn_SendIcSyncData, "SendInCarSyncData", 20, "tiiiiif|iif|if|if|if|if|if|if|if|if|if|if|if|i");
     register_global_func(v, ::fn_SendIcSyncDataEx, "SendInCarSyncDataEx",13 , "tiiiiif|iixxxf|if|i");
     register_global_func(v, ::fn_EnterVehicle, "EnterVehicle", 3, "tii");
+    register_global_func(v, ::fn_SendServerData, "SendServerData", 2, "tx");
+    
+
 }

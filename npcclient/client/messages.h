@@ -29,7 +29,7 @@ enum GameMessages
 	ID_GAME_MESSAGE_SET_SKIN = 0x9e,
 	ID_GAME_MESSAGE_SET_TEAM=0x9f,// two bytes. pid, team
 	ID_GAME_MESSAGE_SET_COLOUR = 0xa0,
-#
+
 	ID_GAME_MESSAGE_VEHICLE_ENTER = 0xa2,
 	ID_GAME_MESSAGE_VEHICLE_EXIT = 0xa4,
 
@@ -49,6 +49,7 @@ enum GameMessages
 	ID_GAME_MESSAGE_SNIPER_RIFLE_FIRED = 0xc7, 
 	ID_GAME_MESSAGE_CLIENT_MESSAGE = 0xcb,
 	ID_GAME_MESSAGE_PLAYER_TEXT = 0xcd,
+	ID_GAME_MESSAGE_SERVER_DATA_RCVD = 0xcf,
 #ifndef _REL004
 	ID_GAME_MESSAGE_VEHICLE_STREAM_IN = 0xea,
 	//not done much investigation on vehicle stream in
@@ -86,6 +87,7 @@ enum GameMessages
 
 	ID_GAME_MESSAGE_SNIPERFIRE = 0xae, //client
 	ID_GAME_MESSAGE_PROJECTILEFIRE = 0xaf,//client
+	ID_GAME_MESSAGE_SERVER_DATA = 0xbd,
 #else 
 	ID_GAME_MESSAGE_CHAT = 0xa1,
 	ID_GAME_MESSAGE_ENTER_VEHICLE_REQUEST = 0xaa, //client->server 
@@ -100,6 +102,7 @@ enum GameMessages
 
 	ID_GAME_MESSAGE_SNIPERFIRE = 0xad, //client
 	ID_GAME_MESSAGE_PROJECTILEFIRE = 0xae,//client
+	ID_GAME_MESSAGE_SERVER_DATA = 0xbc
 #endif
 	
 	

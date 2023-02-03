@@ -57,6 +57,7 @@ SQInteger register_global_func(HSQUIRRELVM v, SQFUNCTION f, const char* fname, S
 void call_OnNPCConnect(unsigned char npcplayerid);
 void call_OnNPCDisconnect(unsigned char reason);
 void call_OnClientMessage(uint8_t r, uint8_t g, uint8_t b, char* message, uint16_t len);
+void call_OnServerScriptData(const uint8_t* data, size_t size);
 void call_OnNPCSpawn();
 void call_OnPlayerDeath(uint8_t playerid);
 void call_OnPlayerText(uint8_t playerid, char* message, uint16_t len);
@@ -73,5 +74,6 @@ SQInteger fn_SetLocalValue(HSQUIRRELVM v);
 void RegisterNPCFunctions();
 void RegisterNPCFunctions2();
 void RegisterNPCFunctions3();
+void RegisterNPCFunctions4();
 void RegisterConsts();
 #endif

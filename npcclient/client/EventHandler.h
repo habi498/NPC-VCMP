@@ -33,5 +33,8 @@ public:
     void OnNPCConnect(uint8_t byteId);
     void OnClientMessage(uint8_t r, uint8_t g, uint8_t b, char* message, uint16_t len);
     void OnNPCSpawn();
+    void OnCycle();
+    void OnServerData(const uint8_t* data, size_t size);
+
 };
 #endif

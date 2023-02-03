@@ -51,6 +51,21 @@ void call_OnNPCDisconnect(unsigned char reason)
     }
     sq_settop(v, top); //restores the original stack size
 }
+
+void call_OnServerScriptData(const uint8_t* data, size_t size)
+{
+    int top = sq_gettop(v); //saves the stack size before the call
+    sq_pushroottable(v); //pushes the global table
+    sq_pushstring(v, _SC("OnServerData"), -1);
+    if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
+        sq_pushroottable(v); //push the 'this' (in this case is the global table)
+        SQUserPointer blob=sqstd_createblob(v, size);
+        memcpy(blob, (const void*)data, size);
+        sq_call(v, 2, 0, 1); //calls the function 
+    }
+    
+    sq_settop(v, top); //restores the original stack size
+}
 void call_OnClientMessage(uint8_t r, uint8_t g, uint8_t b, char* message, uint16_t len)
 {
     int top = sq_gettop(v); //saves the stack size before the call
@@ -270,6 +285,7 @@ bool StartSquirrel(std::string file, std::string location, std::vector<std::stri
     RegisterNPCFunctions();
     RegisterNPCFunctions2();
     RegisterNPCFunctions3();
+    RegisterNPCFunctions4();
     RegisterConsts();
     sqstd_seterrorhandlers(v);
     sq_setprintfunc(v, printfunc, printfunc); //sets the print function

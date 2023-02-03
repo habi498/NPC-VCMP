@@ -146,8 +146,18 @@ BOOL CPlugins::LoadSinglePlugin(char* szPluginPath)
         pPlugin->pPluginFuncs->IsPlayerSpawned = m_pFunctions->IsPlayerSpawned;
         pPlugin->pPluginFuncs->IsPlayerConnected = m_pFunctions->IsPlayerConnected;
         pPlugin->pPluginFuncs->GetSquirrelExports = GetSquirrelExports;
+        pPlugin->pPluginFuncs->GetNPCId = m_pFunctions->GetNPCId;
+        pPlugin->pPluginFuncs->SetHealth = m_pFunctions->SetHealth;
+        pPlugin->pPluginFuncs->SetArmour = m_pFunctions->SetArmour;
     }
     else return FALSE;
+    pPlugin->pPluginInfo->structSize = sizeof(PluginInfo);
+    pPlugin->pPluginInfo->pluginId = GetPluginCount();
+    pPlugin->pPluginInfo->apiMajorVersion = API_MAJOR;
+    pPlugin->pPluginInfo->apiMinorVersion = API_MINOR;
+    pPlugin->pPluginInfo->pluginVersion = NULL;
+    pPlugin->pPluginInfo->name[0] = 0;
+
     if (!pPlugin->Init(pPlugin->pPluginFuncs, pPlugin->pPluginCalls, pPlugin->pPluginInfo))
     {
         // Initialize failed!
@@ -158,6 +168,7 @@ BOOL CPlugins::LoadSinglePlugin(char* szPluginPath)
         delete pPlugin;
         return FALSE;
     }
+    //if(pPlugin)
     m_Plugins.push_back(pPlugin);
     return TRUE;
 }

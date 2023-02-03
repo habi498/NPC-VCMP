@@ -1,6 +1,6 @@
 #ifndef EXPORTS_H
 #define EXPORTS_H
-#include "sqrat/sqmodule.h"
+#include <sqmodule2.h>
 void InitSQAPI();
 
 HSQAPI* pfGetSquirrelAPI();

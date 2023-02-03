@@ -132,25 +132,18 @@ public:
 	bool PSOnServerCycle = false;//Automatic Passenger Syncing when
 	//vehicle has no driver or driver not streamed in
 	DWORD PSLastSyncedTick = 0;
+	DWORD TimeShotInfoSend = 0;
+	bool WaitingToRemoveBody = false;
 public:
 	NPC()
 	{
-		/*for (int i = 0; i < MAX_PLAYERS; i++)
-			strmdplrs[i] = false;*/
+		
 
 	}
 	~NPC() {};
 	uint32_t anticheatID;//Every time server sets health, armour position or anything of npc, this count is increased by one.
 	
-	/*bool IsPlayerStreamedIn(uint8_t playerid) { return this->strmdplrs[playerid]; }
-	void AddStreamedPlayer(uint8_t playerid)
-	{
-		strmdplrs[playerid] = true;
-	}
-	void RemoveStreamedPlayer(uint8_t playerid)
-	{
-		strmdplrs[playerid] = false;
-	}*/
+	
 	
 	unsigned char GetID() { return ID; }
 	void SetID(unsigned char id)

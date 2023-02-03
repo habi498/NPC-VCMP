@@ -37,7 +37,7 @@
 #endif
 
 #include "system.h"
-#include "SYNC_DATA.h"
+#include <Utils.h>
 #include "npc.h"
 #include "sqvm.h"
 #include "Playback.h"
@@ -48,9 +48,10 @@
 #include "VehiclePool.h"
 #include "npc32.h"
 #include "CTimer.h"
+#include "Plugins.h"
 #include "ClientFunctions.h"
 #include "EventHandler.h"
-#include "Plugins.h"
+uint32_t bytes_swap_u32(uint32_t i);
 #include "Exports.h"
 #define ZeroVEC(V){V.X=0;V.Y=0;V.Z=0;}
 #define MulVEC(V,f){V.X*=f;V.Y*=f;V.Z*=f;}

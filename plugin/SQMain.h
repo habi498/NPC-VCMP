@@ -21,9 +21,10 @@
 #include "SQImports.h"
 #include "ConsoleUtils.h"
 #include "system.h"
-#include "SYNC_DATA.h"
+#include <Utils.h>
 #include "PlayerRecording.h"
 #include "HideNPCImports.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -15,9 +15,31 @@ enum class funcError {
 	NotDriverOfVehicle = 9,
 	VehicleSeatIdInvalid = 10,
 	WeaponNotPossessed = 11,
+	NPCNotConnected=12,
 	ErrorUnknown = INT32_MAX
 };
 
+enum class playerState {
+	None = 0,
+	OnFoot = 1,
+	Aim = 2,
+	Driver = 3,
+	Passenger = 4,
+	EnterVehicleDriver = 5,
+	EnterVehiclePassenger = 6,
+	ExitVehicle = 7,
+	Wasted = 8,
+	Spawned = 9
+};
+enum class bodyPart {
+	Body = 0,
+	Torso = 1,
+	LeftArm = 2,
+	RightArm = 3,
+	LeftLeg = 4,
+	RightLeg = 5,
+	Head = 6
+};
 typedef enum {
 	vcmpPlayerUpdateNormal = 0,
 	vcmpPlayerUpdateAiming = 1,
@@ -41,7 +63,7 @@ struct PluginFuncs {
 	void (*SendCommandToServer)(const char* message) {};
 	void (*SendChatMessage)(const char* message) {};
 	void (*FireSniperRifle)(uint8_t weapon, float x, float y, float z, float dx, float dy, float dz) {};
-	void (*SendShotInfo)(int bodypart, int animation) {};
+	void (*SendShotInfo)(bodyPart bodypart, int animation) {};
 	funcError(*SendInCarSyncData)(uint32_t dwKeys, uint8_t byteHealth, uint8_t byteArmour, uint8_t byteWeapon, uint16_t wAmmo, float fCarHealth, uint32_t dwDamage, VECTOR vecPos, QUATERNION quatRotation, VECTOR vecSpeed, float fTurretx, float fTurrety) {};
 	void (*SendOnFootSyncDataEx)(uint32_t dwKeys, VECTOR vecPos, float fAngle, uint8_t byteHealth, uint8_t byteArmour, uint8_t byteCurrentWeapon, uint16_t wAmmo, VECTOR vecSpeed, VECTOR vecAimPos, VECTOR vecAimDir, bool bIsCrouching, bool bIsReloading) {};
 	void (*SendOnFootSyncData)(uint32_t dwKeys, float x, float y, float z,
@@ -49,7 +71,7 @@ struct PluginFuncs {
 		uint16_t wAmmo, float speedx, float speedy, float speedz,
 		float aimposx, float aimposy, float aimposz,
 		float aimdirx, float aimdiry, float aimdirz, bool bIsCrouching, bool bIsReloading) {};
-	void (*SendDeathInfo)(uint8_t weapon, uint8_t killerid, uint8_t bodypart) {};
+	void (*SendDeathInfo)(uint8_t weapon, uint8_t killerid, bodyPart bodypart) {};
 	void (*SendPassengerSync)() {};
 	void (*GetPosition)(float* x, float* y, float* z) {};
 	void (*GetAngle)(float* fAngle) {};
@@ -70,7 +92,7 @@ struct PluginFuncs {
 	funcError(*GetPlayerAimDir)(uint8_t bytePlayerId, VECTOR* vecAimDirOut) {};
 	funcError(*GetPlayerAimPos)(uint8_t bytePlayerId, VECTOR* vecAimPosOut) {};
 	uint16_t(*GetPlayerWeaponAmmo)(uint8_t bytePlayerId) {};
-	uint8_t(*GetPlayerState)(uint8_t bytePlayerId) {};
+	playerState(*GetPlayerState)(uint8_t bytePlayerId) {};
 	uint16_t(*GetPlayerVehicle)(uint8_t bytePlayerId) {};
 	uint8_t(*GetPlayerSeat)(uint8_t bytePlayerId) {};
 	uint8_t(*GetPlayerSkin)(uint8_t bytePlayerId) {};
@@ -90,6 +112,11 @@ struct PluginFuncs {
 	bool (*IsPlayerSpawned)(uint8_t bytePlayerId) {};
 	bool (*IsPlayerConnected)(uint8_t bytePlayerId) {};
 	const void** (*GetSquirrelExports)(size_t* sizeofExport) {};
+
+	void (*SetHealth)(uint8_t health, bool sync) {};
+	void (*SetArmour)(uint8_t armour, bool sync) {};
+	uint8_t(*GetNPCId)() {};
+	void (*SendServerData)(const void* data, size_t size) {};
 };
 
 struct PluginCallbacks {
@@ -109,6 +136,7 @@ struct PluginCallbacks {
 	void (*OnClientMessage)(uint8_t r, uint8_t g, uint8_t b, char* message, uint16_t len) {};
 	void (*OnNPCSpawn)() {};
 	void (*OnCycle) () {};
+	void (*OnServerData)(const uint8_t* data, size_t size) {};
 };
 
 

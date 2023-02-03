@@ -302,7 +302,25 @@ SQInteger fn_GetTickCount(HSQUIRRELVM v)
     sq_pushinteger(v, t_);
     return 1;
 }
-
+SQInteger fn_GetMyName(HSQUIRRELVM v)
+{
+    if (!npc)return 0;
+    char* name=m_pPlayerPool->GetPlayerName(iNPC->GetID());
+    sq_pushstring(v, name, -1);
+    return 1;
+}
+SQInteger fn_GetMyID(HSQUIRRELVM v)
+{
+    if (!npc)return 0;
+    sq_pushinteger(v, iNPC->GetID());
+    return 1;
+}
+SQInteger fn_Quit(HSQUIRRELVM v)
+{
+    peer->CloseConnection(systemAddress, true);
+    sq_pushbool(v, SQTrue);
+    return 1;
+}
 void RegisterNPCFunctions()
 {
     register_global_func(v, ::fn_StartRecordingPlayback,"StartRecordingPlayback",3,"tis");
@@ -324,6 +342,9 @@ void RegisterNPCFunctions()
     register_global_func(v, ::fn_GetMyPos,"GetMyPos",1,"t");
     register_global_func(v, ::fn_SetMyPos,"SetMyPos",2,"tx");
     register_global_func(v, ::fn_GetDistanceFromMeToPoint2,"GetDistanceFromMeToPoint",2,"tx");
+    register_global_func(v, ::fn_GetMyName, "GetMyName", 1, "t");
+    register_global_func(v, ::fn_GetMyID, "GetMyID", 1, "t");
+    register_global_func(v, ::fn_Quit, "QuitServer", 1, "t");
     }
 SQInteger RegisterSquirrelConst(HSQUIRRELVM v, const SQChar* cname, SQInteger cvalue) {
     sq_pushconsttable(v);

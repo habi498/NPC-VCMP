@@ -16,23 +16,6 @@
 */
 #ifndef CLIENT_FUNCTIONS_H
 #define CLIENT_FUNCTIONS_H
-enum class funcError {
-	NoError = 0,
-	EntityNotFound = 1,
-	BufferShortage = 2,
-	InputTooLarge = 3,
-	ArgumentIsOutOfBounds = 4,
-	ArgumentIsNull = 5,
-	NameIsInvalid = 6,
-	RequestIsDenied = 7,
-	VehicleNotEntered = 8,
-	NotDriverOfVehicle = 9,
-	VehicleSeatIdInvalid = 10,
-	WeaponNotPossessed = 11,
-	ErrorUnknown = INT32_MAX
-} ;
-
-
 
 class CFunctions
 {
@@ -44,7 +27,7 @@ public:
 	
 	static void FireSniperRifle(uint8_t weapon, float x, float y, float z, float dx, float dy, float dz);
 	
-	static void SendShotInfo(int bodypart, int animation);
+	static void SendShotInfo(bodyPart bodypart, int animation);
 	
 	static funcError SendInCarSyncData(uint32_t dwKeys, uint8_t byteHealth, uint8_t byteArmour, uint8_t byteWeapon, uint16_t wAmmo, float fCarHealth, uint32_t dwDamage, VECTOR vecPos, QUATERNION quatRotation, VECTOR vecSpeed, float fTurretx, float fTurrety);
 	
@@ -56,7 +39,7 @@ public:
 		float aimposx, float aimposy, float aimposz, 
 		float aimdirx, float aimdiry, float aimdirz, bool bIsCrouching, bool bIsReloading);
 	
-	static void SendDeathInfo(uint8_t weapon, uint8_t killerid, uint8_t bodypart);
+	static void SendDeathInfo(uint8_t weapon, uint8_t killerid, bodyPart bodypart);
 
 	static void SendPassengerSync();
 
@@ -86,7 +69,7 @@ public:
 	static funcError GetPlayerAimDir(uint8_t bytePlayerId, VECTOR* vecAimDirOut);
 	static funcError GetPlayerAimPos(uint8_t bytePlayerId, VECTOR* vecAimPosOut);
 	static uint16_t GetPlayerWeaponAmmo(uint8_t bytePlayerId);
-	static uint8_t GetPlayerState(uint8_t bytePlayerId);
+	static playerState GetPlayerState(uint8_t bytePlayerId);
 	static uint16_t GetPlayerVehicle(uint8_t bytePlayerId);
 	static uint8_t GetPlayerSeat(uint8_t bytePlayerId);
 	static uint8_t GetPlayerSkin(uint8_t bytePlayerId);
@@ -109,6 +92,11 @@ public:
 	static bool IsPlayerStreamedIn(uint8_t bytePlayerId);
 	static bool IsPlayerSpawned(uint8_t bytePlayerId);
 	static bool IsPlayerConnected(uint8_t bytePlayerId);
+
+	static void SetHealth(uint8_t health, bool sync);
+	static void SetArmour(uint8_t armour, bool sync);
+	static uint8_t GetNPCId();
+	static void SendServerData(const void* data, size_t size);
 	
 };
 #endif
