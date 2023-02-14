@@ -51,6 +51,55 @@ SQInteger fn_Vector_constructor(HSQUIRRELVM v)
     sq_set(v, 1);
     return 0;
 }
+SQInteger fn_Vector_Length(HSQUIRRELVM v)
+{
+    SQFloat x, y, z;
+    sq_pushstring(v, "x", -1);
+    sq_get(v, 1);
+    sq_getfloat(v, -1, &x);
+    sq_poptop(v);
+
+    sq_pushstring(v, "y", -1);
+    sq_get(v, 1);
+    sq_getfloat(v, -1, &y);
+    sq_poptop(v);
+
+    sq_pushstring(v, "z", -1);
+    sq_get(v, 1);
+    sq_getfloat(v, -1, &z);
+    sq_poptop(v);
+    
+    SQFloat len = (float)sqrt((pow(x, 2) + pow(y, 2) + pow(z, 2)));
+    sq_pushfloat(v, len);
+    return 1;
+}
+SQInteger fn_Vector_Normalised(HSQUIRRELVM v)
+{
+    SQFloat x, y, z;
+    sq_pushstring(v, "x", -1);
+    sq_get(v, 1);
+    sq_getfloat(v, -1, &x);
+    sq_poptop(v);
+
+    sq_pushstring(v, "y", -1);
+    sq_get(v, 1);
+    sq_getfloat(v, -1, &y);
+    sq_poptop(v);
+
+    sq_pushstring(v, "z", -1);
+    sq_get(v, 1);
+    sq_getfloat(v, -1, &z);
+    sq_poptop(v);
+
+    SQFloat len = (float)sqrt((pow(x, 2) + pow(y, 2) + pow(z, 2)));
+    VECTOR vec = VECTOR(x / len, y / len, z / len);
+    if (SQ_FAILED(sq_pushvector(v, vec)))
+    {
+        return sq_throwerror(v, "Error when returning vector");
+    }
+    return 1;
+}
+
 SQInteger fn_Vector_add(HSQUIRRELVM v)
 {
     SQInteger nargs = sq_gettop(v);
@@ -252,11 +301,22 @@ SQRESULT register_vectorlib(HSQUIRRELVM v)
     sq_pushstring(v, "z", -1);
     sq_pushfloat(v, 0.0);
     sq_createslot(v, -3);
+
     sq_pushstring(v, "constructor", -1);
     sq_newclosure(v, fn_Vector_constructor, 0);
     sq_setparamscheck(v, 4, "xf|if|if|i");
     sq_newslot(v, -3, SQFalse);
 
+    sq_pushstring(v, "Length", -1);
+    sq_newclosure(v, fn_Vector_Length, 0);
+    sq_setparamscheck(v, 1, "x");
+    sq_newslot(v, -3, SQFalse);
+
+    sq_pushstring(v, "Normalised", -1);
+    sq_newclosure(v, fn_Vector_Normalised, 0);
+    sq_setparamscheck(v, 1, "x");
+    sq_newslot(v, -3, SQFalse);
+    
     sq_pushstring(v, "_add", -1);
     sq_newclosure(v, fn_Vector_add, 0);
     sq_setparamscheck(v, 2, "xx");

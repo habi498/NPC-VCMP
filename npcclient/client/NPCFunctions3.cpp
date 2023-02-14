@@ -301,6 +301,31 @@ SQInteger fn_GetLocalValue(HSQUIRRELVM v)
         break;
     case F_POSZ: sq_pushfloat(v, npc->m_vecPos.Z);
         break;
+    case V_ONFOOT_SPEED: if (SQ_FAILED(sq_pushvector(v, npc->GetONFOOT_SYNC_DATA()->vecSpeed)))
+        return sq_throwerror(v, "Error when pushing vector");
+        break;
+    case V_AIMPOS: if (SQ_FAILED(sq_pushvector(v, npc->GetONFOOT_SYNC_DATA()->vecAimPos)))
+        return sq_throwerror(v, "Error when pushing vector");
+        break;
+    case V_AIMDIR: if (SQ_FAILED(sq_pushvector(v, npc->GetONFOOT_SYNC_DATA()->vecAimDir)))
+        return sq_throwerror(v, "Error when pushing vector");
+        break;
+    case V_POS: if (SQ_FAILED(sq_pushvector(v, npc->m_vecPos)))
+        return sq_throwerror(v, "Error when pushing vector");
+        break;
+    case V_CAR_SPEED: if (SQ_FAILED(sq_pushvector(v, npc->GetINCAR_SYNC_DATA()->vecMoveSpeed)))
+        return sq_throwerror(v, "Error when pushing vector");
+        break;
+    case F_CAR_HEALTH:sq_pushfloat(v, npc->GetINCAR_SYNC_DATA()->fCarHealth);
+        break;
+    case F_CAR_TURRETX: sq_pushfloat(v, npc->GetINCAR_SYNC_DATA()->Turretx);
+        break;
+    case F_CAR_TURRETY: sq_pushfloat(v, npc->GetINCAR_SYNC_DATA()->Turrety);
+        break;
+    case I_CAR_DAMAGE: sq_pushinteger(v, npc->GetINCAR_SYNC_DATA()->dDamage);
+        break;
+    case Q_CAR_ROTATION: if (SQ_FAILED(sq_pushquaternion(v, npc->GetINCAR_SYNC_DATA()->quatRotation)))
+        return sq_throwerror(v, "Error when pushing quaternion");
     case F_ANGLE: sq_pushfloat(v, npc->m_fAngle);
         break;
     case F_CAR_ROTATIONX:
@@ -339,45 +364,180 @@ SQInteger fn_SetLocalValue(HSQUIRRELVM v)
     if (!npc)return 0;
     SQInteger field;
     sq_getinteger(v, 2, &field);
-    SQFloat value;
+    SQFloat fvalue; SQInteger dwvalue;
+    VECTOR vec; QUATERNION quat;
+    SQBool bIsVector=SQFalse, bIsQuaternion=SQFalse;
+
     if (sq_gettype(v, 3) == OT_INTEGER)
     {
-        SQInteger temp;
-        sq_getinteger(v, 3, &temp);
-        value = static_cast<float>(temp);
+        sq_getinteger(v, 3, &dwvalue);
+        fvalue = static_cast<float>(dwvalue);
     }
     else if (sq_gettype(v, 3) == OT_FLOAT)
     {
-        sq_getfloat(v, 3, &value);
+        sq_getfloat(v, 3, &fvalue);
+    }
+    else if (sq_gettype(v, 3) == OT_INSTANCE)
+    {
+        if (SQ_SUCCEEDED(sq_isvector(v, 3, &bIsVector)))
+        {
+            if (bIsVector == SQTrue)
+            {
+                if (SQ_SUCCEEDED(sq_getvector(v, 3, &vec)))
+                {
+                    
+                }
+                else return sq_throwerror(v, "Error in getting vector");
+            }
+            else if (bIsVector == SQFalse)
+            {
+                if (SQ_SUCCEEDED(sq_isquaternion(v, 3, &bIsQuaternion)))
+                {
+                    if (bIsQuaternion == SQTrue)
+                    {
+                        if (SQ_SUCCEEDED(sq_getquaternion(v, 3, &quat)))
+                        {
+
+                        }
+                        else return sq_throwerror(v, "Error in getting quaternion");
+                    }
+                    else return sq_throwerror(v, "The instance provided is neither vector nor quaternion");
+                }
+                else return sq_throwerror(v, "Error when checking for quaternion");
+            }
+            else return sq_throwerror(v, "Unknown Error.");
+        }
+        else return sq_throwerror(v, "Error when checking for vector");
     }
     else return 0;
     uint8_t byteNewWeapon, byteSlot;
     switch (field)
     {
-    case I_KEYS: npc->SetKeys(static_cast<uint32_t>(value));
+    case I_KEYS: if (sq_gettype(v, 3) == OT_INTEGER)
+    {
+        npc->SetKeys(static_cast<uint32_t>(fvalue));
         break;
-    case I_HEALTH: npc->m_byteHealth = static_cast<uint8_t> (value);
+    }
+    else return sq_throwerror(v, "The value must be integer.");
+    case I_HEALTH: if (sq_gettype(v, 3) == OT_INTEGER || sq_gettype(v, 3) == OT_FLOAT)
+    {
+        npc->m_byteHealth = static_cast<uint8_t> (fvalue);
         break;
-    case I_ARMOUR: npc->m_byteArmour = static_cast<uint8_t> (value);
+    }
+    else return sq_throwerror(v, "The value must be float or integer.");
+    case I_ARMOUR:  if (sq_gettype(v, 3) == OT_INTEGER||sq_gettype(v,3)==OT_FLOAT)
+    {
+        npc->m_byteArmour = static_cast<uint8_t> (fvalue);
         break;
-    case I_CURWEP: 
-        byteNewWeapon = static_cast<uint8_t>(value);
+    }
+    else return sq_throwerror(v, "The value must be float or integer.");
+    case I_CURWEP:  if (sq_gettype(v, 3) == OT_INTEGER)
+    {
+        byteNewWeapon = static_cast<uint8_t>(fvalue);
         byteSlot = GetSlotId(byteNewWeapon);
         if (npc->GetSlotWeapon(byteSlot) == byteNewWeapon)
            npc->GetONFOOT_SYNC_DATA()->byteCurrentWeapon = byteNewWeapon;
         else return 0;
         break;
-    case I_CURWEP_AMMO: 
-        npc->SetCurrentWeaponAmmo(static_cast<uint16_t>(value));
-        break; 
-    case F_POSX: npc->m_vecPos.X = static_cast<float>(value);
+    }
+    else return sq_throwerror(v, "The value must be integer.");
+    case I_CURWEP_AMMO: if (sq_gettype(v, 3) == OT_INTEGER)
+    {
+        npc->SetCurrentWeaponAmmo(static_cast<uint16_t>(fvalue));
         break;
-    case F_POSY: npc->m_vecPos.Y = static_cast<float>(value);
+    }
+    else return sq_throwerror(v, "The value must be integer.");
+    case F_POSX: if (sq_gettype(v, 3) == OT_FLOAT || sq_gettype(v, 3) == OT_INTEGER)
+    {
+        npc->m_vecPos.X = static_cast<float>(fvalue);
         break;
-    case F_POSZ: npc->m_vecPos.Z = static_cast<float>(value);
+    }
+    else return sq_throwerror(v, "The value must be float or integer.");
+    case F_POSY: if (sq_gettype(v, 3) == OT_FLOAT || sq_gettype(v, 3) == OT_INTEGER)
+    {
+        npc->m_vecPos.Y = static_cast<float>(fvalue);
         break;
-    case F_ANGLE: npc->m_fAngle = static_cast<float>(value);
+    }
+    else return sq_throwerror(v, "The value must be float or integer.");
+    case F_POSZ: if (sq_gettype(v, 3) == OT_FLOAT || sq_gettype(v, 3) == OT_INTEGER)
+    {
+        npc->m_vecPos.Z = static_cast<float>(fvalue);
         break;
+    }
+    else return sq_throwerror(v, "The value must be float or integer.");
+    case F_ANGLE: if (sq_gettype(v, 3) == OT_FLOAT || sq_gettype(v, 3) == OT_INTEGER)
+    {
+        npc->m_fAngle = static_cast<float>(fvalue);
+        break;
+    }
+    else return sq_throwerror(v, "The value must be float or integer.");
+    case F_CAR_HEALTH: if (sq_gettype(v, 3) == OT_FLOAT || sq_gettype(v, 3) == OT_INTEGER)
+    {
+        npc->GetINCAR_SYNC_DATA()->fCarHealth = static_cast<float>(fvalue);
+        break;
+    }
+    else return sq_throwerror(v, "The value must be float or integer.");
+    case I_CAR_DAMAGE:if (sq_gettype(v, 3) == OT_FLOAT || sq_gettype(v, 3) == OT_INTEGER)
+    {
+        npc->GetINCAR_SYNC_DATA()->dDamage = static_cast<uint32_t>(fvalue);
+        break;
+    }
+    else return sq_throwerror(v, "The value must be integer");
+    case F_CAR_TURRETX:if (sq_gettype(v, 3) == OT_FLOAT || sq_gettype(v, 3) == OT_INTEGER)
+    {
+        npc->GetINCAR_SYNC_DATA()->Turretx = static_cast<float>(fvalue);
+        break;
+    }
+    else return sq_throwerror(v, "The value must be float or integer.");
+    case F_CAR_TURRETY:if (sq_gettype(v, 3) == OT_FLOAT || sq_gettype(v, 3) == OT_INTEGER)
+    {
+        npc->GetINCAR_SYNC_DATA()->Turrety = static_cast<float>(fvalue);
+        break;
+    }
+    else return sq_throwerror(v, "The value must be float or integer.");
+    case V_ONFOOT_SPEED: 
+        if (sq_gettype(v, 3) == OT_INSTANCE && bIsVector==SQTrue)
+        {
+            npc->GetONFOOT_SYNC_DATA()->vecSpeed = vec;
+        }
+        else return sq_throwerror(v, "The value corresponding to this field must be a vector");
+        break;
+    case V_AIMPOS:
+        if (sq_gettype(v, 3) == OT_INSTANCE&& bIsVector==SQTrue)
+        {
+            npc->GetONFOOT_SYNC_DATA()->vecAimPos = vec;
+        }
+        else return sq_throwerror(v, "The value corresponding to this field must be a vector");
+        break;
+    case V_AIMDIR:
+        if (sq_gettype(v, 3) == OT_INSTANCE&& bIsVector==SQTrue)
+        {
+            npc->GetONFOOT_SYNC_DATA()->vecAimDir = vec;
+        }
+        else return sq_throwerror(v, "The value corresponding to this field must be a vector");
+        break;
+    case V_POS:
+        if (sq_gettype(v, 3) == OT_INSTANCE && bIsVector == SQTrue)
+        {
+            npc->m_vecPos = vec;
+        }
+        else return sq_throwerror(v, "The value corresponding to this field must be a vector");
+        break;
+    case V_CAR_SPEED:
+        if (sq_gettype(v, 3) == OT_INSTANCE && bIsVector == SQTrue)
+        {
+            npc->GetINCAR_SYNC_DATA()->vecMoveSpeed = vec;
+        }
+        else return sq_throwerror(v, "The value corresponding to this field must be a vector");
+        break;
+    case Q_CAR_ROTATION:
+        if (sq_gettype(v, 3) == OT_INSTANCE && bIsQuaternion == SQTrue)
+        {
+            npc->GetINCAR_SYNC_DATA()->quatRotation = quat;
+        }
+        else return sq_throwerror(v, "The value corresponding to this field must be a quaternion");
+        break;
+    
     default: return 0;
     }
     sq_pushbool(v, SQTrue);
@@ -533,7 +693,7 @@ void RegisterNPCFunctions3()
     register_global_func(v, ::fn_FireSniperRifleEx, "FireSniperRifleEx", 4, "tixx");
     //register_global_func(v, ::fn_FireProjectile, "FireProjectile", 7, "tifffff");
     register_global_func(v, ::fn_SendShotInfo, "SendShotInfo", 3, "tii");
-    register_global_func(v, ::fn_SetLocalValue, "SetLocalValue", 3, "tii|f");
+    register_global_func(v, ::fn_SetLocalValue, "SetLocalValue", 3, "tii|f|x");
     register_global_func(v, ::fn_GetLocalValue, "GetLocalValue", 2, "ti");
     register_global_func(v, ::fn_SendOnFootSyncDataLV, "SendOnFootSyncDataLV", 1, "t");
     register_global_func(v, ::fn_SendDeathInfo, "SendDeathInfo", 4, "tiii");

@@ -412,6 +412,17 @@ void RegisterConsts() {
     RegisterSquirrelConst(v, "I_ARMOUR", I_ARMOUR );
     RegisterSquirrelConst(v, "I_CURWEP", I_CURWEP);
     RegisterSquirrelConst(v, "I_CURWEP_AMMO", I_CURWEP_AMMO);
+    RegisterSquirrelConst(v, "V_ONFOOT_SPEED", V_ONFOOT_SPEED);
+    RegisterSquirrelConst(v, "V_AIMPOS", V_AIMPOS);
+    RegisterSquirrelConst(v, "V_AIMDIR", V_AIMDIR);
+    RegisterSquirrelConst(v, "V_POS", V_POS);
+    RegisterSquirrelConst(v, "Q_CAR_ROTATION", Q_CAR_ROTATION);
+    RegisterSquirrelConst(v, "F_CAR_HEALTH", F_CAR_HEALTH);
+    RegisterSquirrelConst(v, "I_CAR_DAMAGE", I_CAR_DAMAGE);
+    RegisterSquirrelConst(v, "V_CAR_SPEED", V_CAR_SPEED);
+    RegisterSquirrelConst(v, "F_CAR_TURRETX", F_CAR_TURRETX);
+    RegisterSquirrelConst(v, "F_CAR_TURRETY", F_CAR_TURRETY);
+
 
     RegisterSquirrelConst(v, "PLAYERUPDATE_NORMAL", vcmpPlayerUpdateNormal);
     RegisterSquirrelConst(v, "PLAYERUPDATE_AIMING", vcmpPlayerUpdateAiming);

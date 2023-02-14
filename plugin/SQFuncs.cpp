@@ -391,8 +391,8 @@ void RegisterFuncs(HSQUIRRELVM v) {
 #endif
 
 
-	RegisterSquirrelFunc(v, SQ_CreateFunction, "F", 1, "s");
-	RegisterSquirrelFunc(v, SQ_CreateFunction, "RFC", 2, "is");
+	RegisterSquirrelFunc(v, SQ_CreateFunction, "F", 1, "s|u");
+	RegisterSquirrelFunc(v, SQ_CreateFunction, "RFC", 2, "is|u");
 	//RegisterSquirrelFunc(v, SQ_RegisterRemoteFunction, "RegisterRemoteFunc", 2, "is");
 
 }

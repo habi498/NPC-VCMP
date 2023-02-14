@@ -56,6 +56,20 @@ CPlayer::CPlayer()
 	ZeroVEC(m_pOfSyncData->vecAimPos);
 	ZeroVEC(m_pOfSyncData->vecPos);
 	ZeroVEC(m_pOfSyncData->vecSpeed);
+	INCAR_SYNC_DATA* m_pIcSyncData = GetINCAR_SYNC_DATA();
+	m_pIcSyncData->byteCurrentWeapon = 0;
+	m_pIcSyncData->bytePlayerArmour = 0;
+	m_pIcSyncData->bytePlayerHealth = 0;
+	m_pIcSyncData->dDamage = 0;
+	m_pIcSyncData->dwKeys = 0;
+	m_pIcSyncData->fCarHealth = 0;
+	m_pIcSyncData->quatRotation = QUATERNION();
+	m_pIcSyncData->Turretx = 0.0;
+	m_pIcSyncData->Turrety = 0.0;
+	m_pIcSyncData->vecMoveSpeed = VECTOR();
+	m_pIcSyncData->vecPos = VECTOR();
+	m_pIcSyncData->VehicleID = 0;
+	m_pIcSyncData->wAmmo = 0;
 }
 void CPlayer::SetState(BYTE byteNewState)
 {
