@@ -32,7 +32,7 @@ public:
 	BOOL New(WORD wVehicleID, VECTOR vecPos, uint16_t model, QUATERNION quatRot, float fCarHealth, uint32_t dwDamage);
 	BOOL Delete(WORD wVehicleID);
 
-	// Retrieve a player
+	// Retrieve a vehicle
 	CVehicle* GetAt(WORD wVehicleID) {
 		if (wVehicleID > MAX_VEHICLES) { return NULL; }
 		return m_pVehicles[wVehicleID];
@@ -43,13 +43,6 @@ public:
 		else return m_bVehicleSlotState[wVehicleID];
 	};
 
-	/*PCHAR GetPlayerName(BYTE bytePlayerID) {
-		if (bytePlayerID >= MAX_PLAYERS) { return FALSE; }
-		return m_szPlayerName[bytePlayerID];
-	};
-	void SetPlayerName(BYTE bytePlayerID, PCHAR szName) {
-		strcpy(m_szPlayerName[bytePlayerID], szName);
-	}*/
 	int GetVehicleCount() { return m_iVehicleCount; };
 };
 #endif

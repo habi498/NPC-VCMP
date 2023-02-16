@@ -585,25 +585,65 @@ funcError CFunctions::SetWeapon(uint8_t byteWeaponId, bool sync)
 funcError CFunctions::RequestVehicleEnter(uint16_t wVehicleId, uint8_t byteSeatId)
 {
     SetLastError(funcError::NoError);
+    
+    CVehicle* vehicle = m_pVehiclePool->GetAt(wVehicleId);
+    if (!vehicle)
+    {
+        return funcError::EntityNotFound;
+    }
+    uint16_t model = vehicle->GetModel();
+
     RakNet::BitStream bsOut;
     bsOut.Write((RakNet::MessageID)(ID_GAME_MESSAGE_ENTER_VEHICLE_REQUEST));
     bsOut.Write(wVehicleId);
-    switch (byteSeatId)
+    switch (model)
     {
-    case 1:bsOut.Write((uint8_t)0x0b);
-        bsOut.Write((uint8_t)0x04); break;
-    case 2:bsOut.Write((uint8_t)0x10);
-        bsOut.Write((uint8_t)0x02); break;
-    case 3:bsOut.Write((uint8_t)0x0c);
-        bsOut.Write((uint8_t)0x08); break;
-    case 0:bsOut.Write((uint8_t)0x0b);
-        bsOut.Write((uint8_t)0x04); break;
-    default:return funcError::VehicleSeatIdInvalid;
+    case 136:
+    case 160:case 176:
+    case 183:case 184:
+    case 202:case 203:case 214:case 223:
+        bsOut.Write((uint8_t)0x00);
+        bsOut.Write((uint8_t)0x00);
+        bsOut.Write((uint8_t)0x00); 
+        break;
+
+    case 166:case 178:case 191:case 192:
+    case 193:case 198:
+        switch (byteSeatId)
+        {
+        case 0:bsOut.Write((uint8_t)0x0b);
+            bsOut.Write((uint8_t)0x05); break;
+        case 1:bsOut.Write((uint8_t)0x10);
+            bsOut.Write((uint8_t)0x0a); break;
+        default:return funcError::VehicleSeatIdInvalid;
+        }
+        if (byteSeatId == 0)
+            bsOut.Write((uint8_t)0x12);
+        else
+            bsOut.Write((uint8_t)0x11);
+        break;
+    default:
+        switch (byteSeatId)
+        {
+        case 0:bsOut.Write((uint8_t)0x0b);
+            bsOut.Write((uint8_t)0x04); break;
+        case 1:bsOut.Write((uint8_t)0x0b);
+            bsOut.Write((uint8_t)0x04); break;
+        case 2:bsOut.Write((uint8_t)0x10);
+            bsOut.Write((uint8_t)0x02); break;
+        case 3:bsOut.Write((uint8_t)0x0c);
+            bsOut.Write((uint8_t)0x08); break;
+        
+        default:return funcError::VehicleSeatIdInvalid;
+        }
+        if (byteSeatId == 0)
+            bsOut.Write((uint8_t)0x12);
+        else
+            bsOut.Write((uint8_t)0x11);
+        break;
     }
-    if (byteSeatId == 0)
-        bsOut.Write((uint8_t)0x12);
-    else
-        bsOut.Write((uint8_t)0x11);
+    
+    
     peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE, 0, systemAddress, false);
     return funcError::NoError;
 }

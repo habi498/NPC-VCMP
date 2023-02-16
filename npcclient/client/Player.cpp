@@ -29,6 +29,7 @@ CPlayer::CPlayer()
 	m_byteState = PLAYER_STATE_NONE;
 	m_dwLastKeys = 0;
 	m_bIsStreamedIn = false;
+	m_byteWeapon = 0;
 
 	m_vecPos.X = 0.0f;
 	m_vecPos.Y = 0.0f;
@@ -93,79 +94,8 @@ void CPlayer::StoreOnFootFullSyncData(ONFOOT_SYNC_DATA* pofSync)
 	m_fAngle = pofSync->fAngle;
 	m_byteHealth = pofSync->byteHealth;
 	m_byteArmour = pofSync->byteArmour;
-	
-	// Determine the slot of the current weapon.
-	switch (m_ofSync.byteCurrentWeapon)
-	{
-	case 0:
-	case 1:
-		m_byteSlotWeapon[0] = m_ofSync.byteCurrentWeapon;
-		m_wSlotAmmo[0] = m_ofSync.wAmmo;
-		break;
-	case 2:
-	case 3:
-	case 4:
-	case 5:
-	case 6:
-	case 7:
-	case 8:
-	case 9:
-	case 10:
-	case 11:
-		m_byteSlotWeapon[1] = m_ofSync.byteCurrentWeapon;
-		m_wSlotAmmo[1] = m_ofSync.wAmmo;
-		break;
-	case 12:
-	case 13:
-	case 14:
-	case 15:
-	case 16:
-		m_byteSlotWeapon[2] = m_ofSync.byteCurrentWeapon;
-		m_wSlotAmmo[2] = m_ofSync.wAmmo;
-		break;
-	case 17:
-	case 18:
-		m_byteSlotWeapon[3] = m_ofSync.byteCurrentWeapon;
-		m_wSlotAmmo[3] = m_ofSync.wAmmo;
-		break;
-	case 19:
-	case 20:
-	case 21:
-		m_byteSlotWeapon[4] = m_ofSync.byteCurrentWeapon;
-		m_wSlotAmmo[4] = m_ofSync.wAmmo;
-		break;
-	case 22:
-	case 23:
-	case 24:
-	case 25:
-		m_byteSlotWeapon[5] = m_ofSync.byteCurrentWeapon;
-		m_wSlotAmmo[5] = m_ofSync.wAmmo;
-		break;
-
-	case 26:
-	case 27:
-		m_byteSlotWeapon[6] = m_ofSync.byteCurrentWeapon;
-		m_wSlotAmmo[6] = m_ofSync.wAmmo;
-		break;
-	case 28:
-	case 29:
-		m_byteSlotWeapon[8] = m_ofSync.byteCurrentWeapon;
-		m_wSlotAmmo[8] = m_ofSync.wAmmo;
-		break;
-	case 30:
-	case 31:
-	case 32:
-	case 33:
-		m_byteSlotWeapon[7] = m_ofSync.byteCurrentWeapon;
-		m_wSlotAmmo[7] = m_ofSync.wAmmo;
-		break;
-
-	default:
-		// If invalid weapon then set fists as weapon
-		m_byteSlotWeapon[0] = 0;
-		m_ofSync.byteCurrentWeapon = 0;
-		break;
-	}
+	m_byteWeapon = pofSync->byteCurrentWeapon;
+	UpdateWeaponSlot(pofSync->byteCurrentWeapon, pofSync->wAmmo);
 	if(m_dwLastKeys!=pofSync->dwKeys)
 		m_dwLastKeys = pofSync->dwKeys;
 	if (pofSync->IsPlayerUpdateAiming)
@@ -183,6 +113,8 @@ void CPlayer::StoreInCarFullSyncData(INCAR_SYNC_DATA* picSync)
 	m_fAngle = (float)asin(m_icSync.quatRotation.Z) * 2;
 	m_byteHealth = m_icSync.bytePlayerHealth;
 	m_byteArmour = m_icSync.bytePlayerArmour;
+	m_byteWeapon = m_icSync.byteCurrentWeapon;
+	UpdateWeaponSlot(m_icSync.byteCurrentWeapon, m_icSync.wAmmo);
 	if (m_dwLastKeys != m_icSync.dwKeys)
 		m_dwLastKeys = m_icSync.dwKeys;
 	SetState(PLAYER_STATE_DRIVER);
@@ -201,20 +133,110 @@ void CPlayer::SetWeaponSlot(BYTE byteSlot, BYTE byteWeapon, WORD wAmmo)
 //----------------------------------------------------
 void CPlayer::SetCurrentWeapon(BYTE byteWeapon)
 {
-	m_ofSync.byteCurrentWeapon = byteWeapon;
+	//m_ofSync.byteCurrentWeapon = byteWeapon;
+	m_byteWeapon = byteWeapon;
 }
+WORD CPlayer::GetCurrentWeaponAmmo()
+{
+	BYTE i;
+	for (i = 0; i < 9; i++)
+	{
+		if (m_byteSlotWeapon[i] == m_byteWeapon)
+		{
+			return m_wSlotAmmo[i];
+		}
+	}
+	return 0;
+}
+void CPlayer::UpdateWeaponSlot(uint8_t byteWeapon, WORD wAmmo)
+{
+	// Determine the slot of the current weapon.
+	switch (byteWeapon)
+	{
+	case 0:
+	case 1:
+		m_byteSlotWeapon[0] = byteWeapon;
+		m_wSlotAmmo[0] = wAmmo;
+		break;
+	case 2:
+	case 3:
+	case 4:
+	case 5:
+	case 6:
+	case 7:
+	case 8:
+	case 9:
+	case 10:
+	case 11:
+		m_byteSlotWeapon[1] = byteWeapon;
+		m_wSlotAmmo[1] = wAmmo;
+		break;
+	case 12:
+	case 13:
+	case 14:
+	case 15:
+	case 16:
+		m_byteSlotWeapon[2] = byteWeapon;
+		m_wSlotAmmo[2] = wAmmo;
+		break;
+	case 17:
+	case 18:
+		m_byteSlotWeapon[3] = byteWeapon;
+		m_wSlotAmmo[3] = wAmmo;
+		break;
+	case 19:
+	case 20:
+	case 21:
+		m_byteSlotWeapon[4] = byteWeapon;
+		m_wSlotAmmo[4] = wAmmo;
+		break;
+	case 22:
+	case 23:
+	case 24:
+	case 25:
+		m_byteSlotWeapon[5] = byteWeapon;
+		m_wSlotAmmo[5] = wAmmo;
+		break;
+
+	case 26:
+	case 27:
+		m_byteSlotWeapon[6] = byteWeapon;
+		m_wSlotAmmo[6] = wAmmo;
+		break;
+	case 28:
+	case 29:
+		m_byteSlotWeapon[8] = byteWeapon;
+		m_wSlotAmmo[8] = wAmmo;
+		break;
+	case 30:
+	case 31:
+	case 32:
+	case 33:
+		m_byteSlotWeapon[7] = byteWeapon;
+		m_wSlotAmmo[7] = wAmmo;
+		break;
+
+	default:
+		// If invalid weapon then set fists as weapon
+		m_byteSlotWeapon[0] = 0;
+		m_byteWeapon = 0;
+		break;
+	}
+
+}
+
 void CPlayer::SetCurrentWeaponAmmo(WORD wAmmo)
 {
 	BYTE i;
 	for (i = 0; i < 9; i++)
 	{
-		if (m_byteSlotWeapon[i] == m_ofSync.byteCurrentWeapon)
+		if (m_byteSlotWeapon[i] == m_byteWeapon)
 		{
 			m_wSlotAmmo[i] = wAmmo;
 			break;
 		}
 	}
-	m_ofSync.wAmmo = wAmmo;
+	//m_ofSync.wAmmo = wAmmo;
 }
 
 

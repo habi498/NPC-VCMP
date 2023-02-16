@@ -393,6 +393,7 @@ void SendNPCIcSyncDataLV(PacketPriority priority)
 {
 	INCAR_SYNC_DATA* pIcSyncData = npc->GetINCAR_SYNC_DATA();
 	pIcSyncData->byteCurrentWeapon = npc->GetCurrentWeapon();
+	pIcSyncData->wAmmo = npc->GetCurrentWeaponAmmo();
 	pIcSyncData->bytePlayerArmour = npc->m_byteArmour;
 	pIcSyncData->bytePlayerHealth = npc->m_byteHealth;
 	pIcSyncData->dwKeys = npc->GetKeys();
@@ -417,7 +418,7 @@ void SendNPCOfSyncDataLV(PacketPriority prioty) //with existing values, send a p
 	m_pOfSyncData->byteHealth = npc->m_byteHealth;
 	m_pOfSyncData->byteArmour = npc->m_byteArmour;
 	m_pOfSyncData->byteCurrentWeapon = npc->GetCurrentWeapon();
-	
+	m_pOfSyncData->wAmmo = npc->GetCurrentWeaponAmmo();
 	m_pOfSyncData->dwKeys = npc->GetKeys();
 	m_pOfSyncData->fAngle = npc->m_fAngle;
 	m_pOfSyncData->vecPos = npc->m_vecPos;

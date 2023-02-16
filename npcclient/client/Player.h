@@ -40,6 +40,7 @@ private:
 	ONFOOT_SYNC_DATA		m_ofSync;
 	INCAR_SYNC_DATA			m_icSync;
 	bool m_bIsStreamedIn;
+	uint8_t m_byteWeapon;
 public:
 	uint16_t m_wVehicleId;
 	uint8_t m_byteSeatId;
@@ -74,8 +75,9 @@ public:
 
 	BYTE GetSlotWeapon(BYTE bSlot) { return m_byteSlotWeapon[bSlot]; };
 	WORD GetSlotAmmo(BYTE bSlot) { return m_wSlotAmmo[bSlot]; };
-	BYTE GetCurrentWeapon() { return m_ofSync.byteCurrentWeapon; };
-	
+	BYTE GetCurrentWeapon() { return m_byteWeapon; };
+	WORD GetCurrentWeaponAmmo();
+	void UpdateWeaponSlot(uint8_t byteWeapon, WORD wAmmo);
 	//only for npcs
 	void SetCurrentWeaponAmmo(WORD wAmmo);
 	//only for npcs
