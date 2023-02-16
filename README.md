@@ -5,12 +5,17 @@ Implements Non Player Characters (NPC) in VC-MP 0.4 Servers
 
 This is a Visual Studio 'CMake Project'.
 ## Visual Studio -> File -> Clone Repository
-<img src="https://github.com/habi498/npc-vcmp/blob/master/pciture.png" width="510"></img>
+<img src="https://github.com/habi498/npc-vcmp/blob/master-1.6/picture.png" width="510"></img>
 ## Project Configurations
-1. WINODWS_32 (Release)
-2. WINDOWS_64 (Release)
-3. LINUX_32 (Release)
-4. LINUX_64 (Release)
+1. WINODWS_32 
+2. WINDOWS_64 
+3. WINDOWS_REL004 
+4. wsl_32
+5. wsl_32-rel004
+6. wsl_64
+7. wsl_64-rel004
+8. LINUX_32 (Remote machine)
+9. LINUX_64 (Remote machine)
 ## Building on windows
 As you can see below (section titled "There are two sub projects"), we have to build two binaries: npcclient.exe (The application which runs NPCs as client) and npc04relxx.dll (the VC-MP Server plugin).
 The bitness of npcclient.exe is currently 32 bit always. This is made in view of the idea that 64 bit machines can run 32 bit applications in windows. Since, the bitness of **npcclient.exe is 32 bit**, it can be built only on the configuration WINDOWS_32.  
@@ -20,7 +25,7 @@ The bitness of npcclient.exe is currently 32 bit always. This is made in view of
   Building after selecting WINDOWS_32 will produce both npcclient.exe and the plugin npc04rel32.dll in _out\build\WINDOWS_32\npcclient_ folder and _out\build\WINDOWS_32\plugin_ folder respectively.
   
   This can be summarised on the following table:
-  <img src="https://github.com/habi498/npc-vcmp/blob/master/binaries.png" width="510"></img>
+  <img src="https://github.com/habi498/npc-vcmp/blob/master-1.6/binaries.png" width="510"></img>
 ## Building for LINUX on windows
 You must have **Linux-development-workload** installed on Visual Studio.( See "Visual Studio Setup" and "Ubuntu on remote Linux systems" at [this](https://docs.microsoft.com/en-us/cpp/linux/download-install-and-setup-the-linux-development-workload?view=msvc-170) page.
 
@@ -56,8 +61,8 @@ The tclap libary has been made use and hence the the application can be run with
 ```
 USAGE:
 
-   npcclient  [-] [-h <string>] [-l <string>] [-m <string>] [-p <integer>]
-              [-w <string> ...] [-z <string>] -n <string>
+   npcclient  [-c] [-h <string>] [-l <string>] [-m <string>] [-p <integer>]
+              [-q <string>] [-w <string> ...] [-z <string>] -n <string>
 
 
 Where:
@@ -78,15 +83,22 @@ Where:
      Password of the server to connect
 
    -l <string>,  --location <string>
-     The location and skin to spawn eg. "x__ y__ z__ s__"
+     The location, skin, weapon and class to spawn eg. "x__ y__ z__ s_ w_
+     c_"
 
    -w <string>,  --params <string>  (accepted multiple times)
      The params to be passed to script
 
+   -q <string>,  --plugins <string>
+     List of plugins to be loaded
+
+   -c,  --consoleinput
+     Use Console Input
+
    --,  --ignore_rest
      Ignores the rest of the labeled arguments following this flag.
 
-   VCMP-Non Player Characters v1.5
+   VCMP-Non Player Characters v1.6.1.29
 ```
 
 ## Version Changes November 2022  
