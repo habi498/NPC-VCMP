@@ -125,3 +125,24 @@ wiki available at https://npc-for-vcmp.sourceforge.io/wikiw/index.php
 **Version 1.5 patch 1** (23.Dec.2022)
 1. Added Support for npc as passenger.
 2. Support for getting Team and Skin of players.
+
+**Version 1.6 alpha**(8.Jan.2023)
+Support for both rel004 and rel006 servers
+NPC now can send vehicle syncs (as driver)
+Introduced npc-plugins which can be loaded with the program.
+Added Vector, Quaternion classes and updated parameters of few functions which are using them.
+
+**Version 1.6 beta**(4.Feb.2023)
+Supports reading and writing ServerData(Streams)
+LibRPC (Remote Procedure Calls) module available and included in npcscripts/plugins so that functions of NPC can be called from Server side( See RFC, F )
+Fixed a major bug while using ConsoleInput in linux( program would wait indefinitely unless Enter key is pressed )
+The functions of npc04relxx are exported.
+NPC dies if health set to zero from server
+
+**Version 1.6 beta2 and patch1(14-16.Feb.2023)
+Now Vector.Length() and Vector.Normalized() functions to get magnitude and normalized copy of vector respectively.
+Added fields for SetLocalValue, GetLocalValue: V_ONFOOT_SPEED, V_AIMPOS, V_AIMDIR, V_POS, Q_CAR_ROTATION,
+F_CAR_HEALTH, I_CAR_DAMAGE, V_CAR_SPEED, F_CAR_TURRETX, F_CAR_TURRETY.
+LibRPC and npc04relxx update to call function returned by remote function.
+Bug fixed for function 'EnterVehicle'
+Bug fixed npc getting kicked for 'acquiring weapon' when exiting vehicle.
