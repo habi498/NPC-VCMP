@@ -149,6 +149,19 @@ BOOL CPlugins::LoadSinglePlugin(char* szPluginPath)
         pPlugin->pPluginFuncs->GetNPCId = m_pFunctions->GetNPCId;
         pPlugin->pPluginFuncs->SetHealth = m_pFunctions->SetHealth;
         pPlugin->pPluginFuncs->SetArmour = m_pFunctions->SetArmour;
+
+        pPlugin->pPluginFuncs->SendServerData = m_pFunctions->SendServerData;
+        pPlugin->pPluginFuncs->GetCurrentWeapon = m_pFunctions->GetCurrentWeapon;
+        pPlugin->pPluginFuncs->GetCurrentWeaponAmmo = m_pFunctions->GetCurrentWeaponAmmo;
+        pPlugin->pPluginFuncs->SendOnFootSyncDataEx2 = m_pFunctions->SendOnFootSyncDataEx2;
+        pPlugin->pPluginFuncs->SendInCarSyncDataEx = m_pFunctions->SendInCarSyncDataEx;
+        pPlugin->pPluginFuncs->GetOnFootSyncData = m_pFunctions->GetOnFootSyncData;
+        pPlugin->pPluginFuncs->GetInCarSyncData = m_pFunctions->GetInCarSyncData;
+        pPlugin->pPluginFuncs->SetAmmoAtSlot = m_pFunctions->SetAmmoAtSlot;
+        pPlugin->pPluginFuncs->SendOnFootSyncDataEx = m_pFunctions->SendOnFootSyncDataEx;;
+        
+
+
     }
     else return FALSE;
     pPlugin->pPluginInfo->structSize = sizeof(PluginInfo);

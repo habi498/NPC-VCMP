@@ -945,7 +945,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				if (!iNPC->IsSyncPaused())
 				{
 					//Set current weapon
-					npc->SetCurrentWeaponAmmo( ammo );
+					//npc->SetCurrentWeaponAmmo( ammo );
 					if (npc->GetCurrentWeapon() != weapon)
 					{
 						npc->SetCurrentWeapon(weapon);

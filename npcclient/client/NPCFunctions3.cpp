@@ -436,7 +436,7 @@ SQInteger fn_SetLocalValue(HSQUIRRELVM v)
         byteNewWeapon = static_cast<uint8_t>(fvalue);
         byteSlot = GetSlotId(byteNewWeapon);
         if (npc->GetSlotWeapon(byteSlot) == byteNewWeapon)
-           npc->GetONFOOT_SYNC_DATA()->byteCurrentWeapon = byteNewWeapon;
+            npc->SetCurrentWeapon(byteNewWeapon);
         else return 0;
         break;
     }

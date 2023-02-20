@@ -78,5 +78,53 @@ typedef struct _QUATERNION
 		this->W = w;
 	}
 }QUATERNION;
+#pragma pack(1)
+typedef struct _ONFOOT_SYNC_DATA
+{
+	uint32_t dwKeys;
+	VECTOR vecPos;
+	float fAngle;
+	uint8_t byteHealth;
+	uint8_t byteArmour;
+	uint8_t byteCurrentWeapon;
+	bool IsCrouching;
+	VECTOR vecSpeed;
+	bool IsPlayerUpdateAiming;
+	VECTOR vecAimDir;
+	VECTOR vecAimPos;
+	bool bIsReloading; //1 byte
+	uint16_t wAmmo; // 2 byte
+	_ONFOOT_SYNC_DATA()
+	{
+		dwKeys = 0; vecPos = VECTOR(0, 0, 0);
+		fAngle = 0.0; byteHealth = 100;
+		byteArmour = 0; byteCurrentWeapon = 0;
+		IsCrouching = false;
+		vecSpeed = VECTOR(0, 0, 0);
+		IsPlayerUpdateAiming = false;
+		vecAimDir = VECTOR(0, 0, 0);
+		vecAimPos = VECTOR(0, 0, 0);
+		bIsReloading = false;
+		wAmmo = 0;
+	}
+} ONFOOT_SYNC_DATA;
+
+#pragma pack(1)
+typedef struct _INCAR_SYNC_DATA
+{
+	uint16_t VehicleID;
+	uint32_t dwKeys;
+	QUATERNION quatRotation;
+	VECTOR vecPos;
+	VECTOR vecMoveSpeed;
+	float fCarHealth;
+	uint8_t bytePlayerHealth;
+	uint8_t bytePlayerArmour;
+	uint8_t byteCurrentWeapon;
+	uint32_t dDamage;
+	float Turretx;
+	float Turrety;
+	uint16_t wAmmo;
+} INCAR_SYNC_DATA;
 
 #endif

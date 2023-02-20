@@ -1,7 +1,8 @@
 #pragma once
 #include <stdint.h>
 #include "utils.h"
-
+#define API_MAJOR 1
+#define API_MINOR 1
 enum class funcError {
 	NoError = 0,
 	EntityNotFound = 1,
@@ -116,7 +117,15 @@ struct PluginFuncs {
 	void (*SetHealth)(uint8_t health, bool sync) {};
 	void (*SetArmour)(uint8_t armour, bool sync) {};
 	uint8_t(*GetNPCId)() {};
+	
 	void (*SendServerData)(const void* data, size_t size) {};
+	uint16_t (*GetCurrentWeaponAmmo)() {};
+	uint8_t (*GetCurrentWeapon)() {};
+	void (*SendOnFootSyncDataEx2)(ONFOOT_SYNC_DATA OfSyncData) {};
+	void (*SendInCarSyncDataEx)(INCAR_SYNC_DATA IcSyncData) {};
+	void (*GetOnFootSyncData)(ONFOOT_SYNC_DATA** pOfSyncData) {};
+	void (*GetInCarSyncData)(INCAR_SYNC_DATA* pIcSyncData) {};
+	void (*SetAmmoAtSlot)(uint8_t byteSlotId, uint16_t wAmmo) {};
 };
 
 struct PluginCallbacks {

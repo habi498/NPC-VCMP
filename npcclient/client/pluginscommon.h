@@ -1,5 +1,5 @@
 #define API_MAJOR 1
-#define API_MINOR 0
+#define API_MINOR 1
 enum class funcError {
 	NoError = 0,
 	EntityNotFound = 1,
@@ -67,7 +67,7 @@ struct PluginFuncs {
 	void (*GetPosition)(float* x, float* y, float* z) {};
 	void (*GetAngle)(float* fAngle) {};
 	void (*SetPosition)(float x, float y, float z, bool sync) {};
-	void (*SetAngle)(float fAngle, bool sync ) {};
+	void (*SetAngle)(float fAngle, bool sync) {};
 	funcError(*SetWeapon)(uint8_t byteWeaponId, bool sync) {};
 	funcError(*RequestVehicleEnter)(uint16_t wVehicleId, uint8_t byteSeatId) {};
 	funcError(*GetPlayerName)(uint8_t playerId, char* buffer, size_t size) {};
@@ -107,7 +107,17 @@ struct PluginFuncs {
 	void (*SetHealth)(uint8_t health, bool sync) {};
 	void (*SetArmour)(uint8_t armour, bool sync) {};
 	uint8_t(*GetNPCId)() {};
-	void SendServerData(const void* data, size_t size) {};
+	
+	void (*SendServerData)(const void* data, size_t size) {};
+	WORD (*GetCurrentWeaponAmmo)() {};
+	BYTE (*GetCurrentWeapon)(){};
+
+	void (*SendOnFootSyncDataEx2)(ONFOOT_SYNC_DATA OfSyncData) {};
+	void (*SendInCarSyncDataEx)(INCAR_SYNC_DATA IcSyncData) {};
+	void (*GetOnFootSyncData)(ONFOOT_SYNC_DATA** pOfSyncData) {};
+	void (*GetInCarSyncData)(INCAR_SYNC_DATA* pIcSyncData) {};
+	void (*SetAmmoAtSlot)(uint8_t byteSlotId, WORD wAmmo) {};
+	
 };
 
 struct PluginCallbacks {

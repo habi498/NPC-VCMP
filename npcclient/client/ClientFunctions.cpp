@@ -687,6 +687,11 @@ bool CFunctions::IsVehicleStreamedIn(uint16_t wVehicleId)
 bool CFunctions::IsPlayerStreamedIn(uint8_t bytePlayerId)
 {
     ClearLastError();
+    if (bytePlayerId == iNPC->GetID())
+    {
+        SetLastError(funcError::EntityNotFound);
+        return false;
+    }
     CPlayer* player = m_pPlayerPool->GetAt(bytePlayerId);
     if (player)
     {
@@ -722,3 +727,42 @@ bool CFunctions::IsPlayerConnected(uint8_t bytePlayerId)
     }
     else return false;
 }
+WORD CFunctions::GetCurrentWeaponAmmo()
+{
+    ClearLastError();
+    WORD wAmmo=npc->GetCurrentWeaponAmmo();
+    return wAmmo;
+}
+
+BYTE CFunctions::GetCurrentWeapon()
+{
+    ClearLastError();
+    BYTE weapon=npc->GetCurrentWeapon();
+    return weapon;
+}
+
+void CFunctions::SendOnFootSyncDataEx2(ONFOOT_SYNC_DATA OfSyncData)
+{
+    SendNPCSyncData(&OfSyncData);
+}
+
+void CFunctions::SendInCarSyncDataEx(INCAR_SYNC_DATA IcSyncData)
+{
+    SendNPCSyncData(&IcSyncData);
+}
+
+void CFunctions::GetOnFootSyncData(ONFOOT_SYNC_DATA** pOfSyncData)
+{
+    *pOfSyncData = npc->GetONFOOT_SYNC_DATA();
+}
+
+void CFunctions::GetInCarSyncData(INCAR_SYNC_DATA* pIcSyncData)
+{
+    pIcSyncData = npc->GetINCAR_SYNC_DATA();
+}
+
+void CFunctions::SetAmmoAtSlot(uint8_t byteSlotId, WORD wAmmo)
+{
+    npc->SetWeaponSlot(byteSlotId, npc->GetSlotWeapon(byteSlotId), wAmmo);
+}
+

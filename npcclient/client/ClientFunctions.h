@@ -97,6 +97,14 @@ public:
 	static void SetArmour(uint8_t armour, bool sync);
 	static uint8_t GetNPCId();
 	static void SendServerData(const void* data, size_t size);
+
+	static WORD GetCurrentWeaponAmmo();
+	static BYTE GetCurrentWeapon();
 	
+	static void SendOnFootSyncDataEx2(ONFOOT_SYNC_DATA OfSyncData);
+	static void SendInCarSyncDataEx(INCAR_SYNC_DATA IcSyncData);
+	static void GetOnFootSyncData(ONFOOT_SYNC_DATA** pOfSyncData);
+	static void GetInCarSyncData(INCAR_SYNC_DATA* pIcSyncData);
+	static void SetAmmoAtSlot(uint8_t byteSlotId, WORD wAmmo);
 };
 #endif

@@ -59,7 +59,12 @@ public:
 		m_dwLastKeys = dw_keys;
 	}
 	INCAR_SYNC_DATA* GetINCAR_SYNC_DATA() { return &m_icSync; };
-	ONFOOT_SYNC_DATA* GetONFOOT_SYNC_DATA() { return &m_ofSync; };
+	ONFOOT_SYNC_DATA* GetONFOOT_SYNC_DATA() { 
+		m_ofSync.byteArmour = m_byteArmour;
+		m_ofSync.byteHealth = m_byteHealth;
+		m_ofSync.fAngle = m_fAngle;
+		m_ofSync.vecPos = m_vecPos;
+		return &m_ofSync; };
 	CPlayer();
 	~CPlayer() {};
 	uint8_t m_byteHealth;
@@ -73,13 +78,23 @@ public:
 
 	void SetWeaponSlot(BYTE byteSlot, BYTE byteWeapon, WORD wAmmo);
 
-	BYTE GetSlotWeapon(BYTE bSlot) { return m_byteSlotWeapon[bSlot]; };
-	WORD GetSlotAmmo(BYTE bSlot) { return m_wSlotAmmo[bSlot]; };
+	BYTE GetSlotWeapon(BYTE bSlot)
+	{
+		if (bSlot < 9)
+			return m_byteSlotWeapon[bSlot];
+		else return 0;
+	};
+	WORD GetSlotAmmo(BYTE bSlot) {
+		if (bSlot < 9)
+			return m_wSlotAmmo[bSlot];
+		else return 0;
+	};
 	BYTE GetCurrentWeapon() { return m_byteWeapon; };
 	WORD GetCurrentWeaponAmmo();
 	void UpdateWeaponSlot(uint8_t byteWeapon, WORD wAmmo);
 	//only for npcs
 	void SetCurrentWeaponAmmo(WORD wAmmo);
+
 	//only for npcs
 	//----------------------------------------------------
 	void SetCurrentWeapon(BYTE byteWeapon);
