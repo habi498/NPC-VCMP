@@ -159,7 +159,7 @@ F_CAR_HEALTH, I_CAR_DAMAGE, V_CAR_SPEED, F_CAR_TURRETX, F_CAR_TURRETY.
 --Bug fixed for function 'EnterVehicle'.  
 --Bug fixed npc getting kicked for 'acquiring weapon' when exiting vehicle.  
 
-**Version 1.6 beta3 (20.Feb 2023)
+**Version 1.6 beta3** (20.Feb 2023)
 --Plugin API v1.1
 --New module which has inbuilt timer and other functions which
 enables npc to load ammo and shoot at any player. LibAction.
