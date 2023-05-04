@@ -326,6 +326,7 @@ SQInteger fn_GetLocalValue(HSQUIRRELVM v)
         break;
     case Q_CAR_ROTATION: if (SQ_FAILED(sq_pushquaternion(v, npc->GetINCAR_SYNC_DATA()->quatRotation)))
         return sq_throwerror(v, "Error when pushing quaternion");
+        break;
     case F_ANGLE: sq_pushfloat(v, npc->m_fAngle);
         break;
     case F_CAR_ROTATIONX:
@@ -549,6 +550,13 @@ SQInteger fn_SendOnFootSyncDataLV(HSQUIRRELVM v)
     SendNPCOfSyncDataLV();
     return 0;
 }
+SQInteger fn_SendInCarSyncDataLV(HSQUIRRELVM v)
+{
+    if (!npc)return 0;
+    SendNPCIcSyncDataLV();
+    return 0;
+}
+
 SQInteger fn_SendDeathInfo(HSQUIRRELVM v)
 {
     if (!npc)
@@ -684,7 +692,60 @@ SQInteger fn_SendServerData(HSQUIRRELVM v)
         return 1;
     }
 }
-
+SQInteger fn_FireProjectile(HSQUIRRELVM v)
+{
+    if (!npc)
+        return 0;
+    SQInteger weapon;
+    VECTOR vecPos;
+    // x y z aiming position
+    sq_getinteger(v, 2, &weapon);
+    if (!(SQ_SUCCEEDED(sq_getvector(v, 3, &vecPos))))
+    {
+        return sq_throwerror(v, "Parameter 2 should be Vector");
+    }
+    float r1, r2, r3, r4, r5, r6, r7;
+    SQInteger integer;
+    if (sq_gettype(v, 4) == OT_FLOAT)
+        sq_getfloat(v, 4, &r1);
+    else {
+        sq_getinteger(v, 4, &integer); r1 = (float)integer;
+    }
+    if (sq_gettype(v, 5) == OT_FLOAT)
+        sq_getfloat(v, 5, &r2);
+    else {
+        sq_getinteger(v, 5, &integer); r2 = (float)integer;
+    }
+    if (sq_gettype(v, 6) == OT_FLOAT)
+        sq_getfloat(v, 6, &r3);
+    else {
+        sq_getinteger(v, 6, &integer); r3 = (float)integer;
+    }
+    if (sq_gettype(v, 7) == OT_FLOAT)
+        sq_getfloat(v, 7, &r4);
+    else {
+        sq_getinteger(v, 7, &integer); r4 = (float)integer;
+    }
+    if (sq_gettype(v, 8) == OT_FLOAT)
+        sq_getfloat(v, 8, &r5);
+    else {
+    sq_getinteger(v, 8, &integer); r5 = (float)integer;
+    }
+    if (sq_gettype(v, 9) == OT_FLOAT)
+        sq_getfloat(v, 9, &r6);
+    else {
+    sq_getinteger(v, 9, &integer); r6 = (float)integer;
+    }
+    if (sq_gettype(v, 10) == OT_FLOAT)
+        sq_getfloat(v, 10, &r7);
+    else {
+    sq_getinteger(v, 10, &integer); r7 = (float)integer;
+    }
+    m_pFunctions->FireProjectile((unsigned char)weapon, vecPos,
+        r1, r2, r3, r4, r5, r6, r7);
+    sq_pushbool(v, SQTrue);
+    return 1;
+}
 void RegisterNPCFunctions3()
 {
     register_global_func(v, ::fn_SendOnFootSyncData, "SendOnFootSyncData", 21, "tif|if|if|if|iiiiif|if|if|if|if|if|if|if|if|ibb");
@@ -703,8 +764,11 @@ void RegisterNPCFunctions3()
     register_global_func(v, ::fn_SetPSLimit, "SetPSLimit", 2, "t");
     register_global_func(v, ::fn_SendIcSyncData, "SendInCarSyncData", 20, "tiiiiif|iif|if|if|if|if|if|if|if|if|if|if|if|i");
     register_global_func(v, ::fn_SendIcSyncDataEx, "SendInCarSyncDataEx",13 , "tiiiiif|iixxxf|if|i");
+    register_global_func(v, ::fn_SendInCarSyncDataLV, "SendInCarSyncDataLV", 1, "t");
     register_global_func(v, ::fn_EnterVehicle, "EnterVehicle", 3, "tii");
     register_global_func(v, ::fn_SendServerData, "SendServerData", 2, "tx");
+
+    register_global_func(v, ::fn_FireProjectile, "FireProjectile", 10, "tixf|if|if|if|if|if|if|i");
     
 
 }

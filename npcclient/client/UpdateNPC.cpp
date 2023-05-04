@@ -389,28 +389,7 @@ void SetVehicleIDFlag(INCAR_SYNC_DATA* m_pIcSyncData, uint8_t* nibble, uint8_t* 
 	if (m_pIcSyncData->dwKeys > 0xFFFF)(*byte) = (*byte) | (0x40);
 }
 
-void SendNPCIcSyncDataLV(PacketPriority priority)
-{
-	INCAR_SYNC_DATA* pIcSyncData = npc->GetINCAR_SYNC_DATA();
-	pIcSyncData->byteCurrentWeapon = npc->GetCurrentWeapon();
-	pIcSyncData->wAmmo = npc->GetCurrentWeaponAmmo();
-	pIcSyncData->bytePlayerArmour = npc->m_byteArmour;
-	pIcSyncData->bytePlayerHealth = npc->m_byteHealth;
-	pIcSyncData->dwKeys = npc->GetKeys();
-	pIcSyncData->VehicleID = npc->m_wVehicleId;
-	CVehicle* vehicle = m_pVehiclePool->GetAt(npc->m_wVehicleId);
-	if (vehicle)
-	{
-		pIcSyncData->vecPos = vehicle->GetPosition();
-		pIcSyncData->vecMoveSpeed = vehicle->GetSpeed();
-		pIcSyncData->dDamage = vehicle->GetDamage();
-		pIcSyncData->fCarHealth = vehicle->GetHealth();
-		pIcSyncData->quatRotation = vehicle->GetRotation();
-		pIcSyncData->Turretx = vehicle->GetTurretx();
-		pIcSyncData->Turrety = vehicle->GetTurrety();
-	}
-	SendNPCSyncData(pIcSyncData,priority);
-}
+
 void SendNPCOfSyncDataLV(PacketPriority prioty) //with existing values, send a packet. Normally to update health or angle
 {
 	ONFOOT_SYNC_DATA* m_pOfSyncData;
@@ -423,6 +402,23 @@ void SendNPCOfSyncDataLV(PacketPriority prioty) //with existing values, send a p
 	m_pOfSyncData->fAngle = npc->m_fAngle;
 	m_pOfSyncData->vecPos = npc->m_vecPos;
 	SendNPCSyncData(m_pOfSyncData, prioty);
+}
+void SendNPCIcSyncDataLV(PacketPriority prioty) //with existing values, send a packet. Normally to update health or angle
+{
+	INCAR_SYNC_DATA* m_pIcSyncData;
+	if (npc->m_wVehicleId)
+	{
+		m_pIcSyncData = npc->GetINCAR_SYNC_DATA();
+		m_pIcSyncData->bytePlayerHealth = npc->m_byteHealth;
+		m_pIcSyncData->bytePlayerArmour = npc->m_byteArmour;
+		m_pIcSyncData->byteCurrentWeapon = npc->GetCurrentWeapon();
+		m_pIcSyncData->wAmmo = npc->GetCurrentWeaponAmmo();
+		m_pIcSyncData->dwKeys = npc->GetKeys();
+		m_pIcSyncData->vecPos = npc->m_vecPos;
+		//In case player was put in new vehicle
+		m_pIcSyncData->VehicleID = npc->m_wVehicleId;
+		SendNPCSyncData(m_pIcSyncData, prioty);
+	}
 }
 #ifndef _REL004
 void SendPassengerSyncData()

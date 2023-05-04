@@ -8,8 +8,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    SQInteger               RegisterSquirrelConst               (HSQUIRRELVM v, const SQChar* cname, SQInteger cvalue);
-	void					RegisterConsts						(HSQUIRRELVM v);
+    SQInteger               NPC04_RegisterSquirrelConst               (HSQUIRRELVM v, const SQChar* cname, SQInteger cvalue);
+	void					NPC04_RegisterConsts						(HSQUIRRELVM v);
 
 #ifdef __cplusplus
 }

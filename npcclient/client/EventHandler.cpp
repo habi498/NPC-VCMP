@@ -27,6 +27,30 @@ void CEvents::OnServerData(const uint8_t* data, size_t size)
             pPlugin->pPluginCalls->OnServerData(data, size);
     }
 }
+void CEvents::OnExplosion(uint8_t byteExplosionType, VECTOR vecPos, uint8_t bytePlayerCaused, bool bIsOnGround)
+{
+    call_OnExplosion(byteExplosionType, vecPos, bytePlayerCaused, bIsOnGround);
+    PluginPool_s* pPlugin;
+    for (DWORD i = 0; i < m_pPlugins->GetPluginCount(); i++)
+    {
+        pPlugin = m_pPlugins->GetPlugin(i);
+        if (pPlugin->pPluginCalls->OnExplosion)
+            pPlugin->pPluginCalls->OnExplosion(byteExplosionType, vecPos, bytePlayerCaused, bIsOnGround);
+    }
+
+}
+void CEvents::OnProjectileFired(uint8_t bytePlayerId, uint8_t byteWeapon, VECTOR vecPos, float r1, float r2, float r3, float r4, float r5, float r6, float r7)
+{
+    call_OnProjectileFired(bytePlayerId, byteWeapon, vecPos, r1, r2, r3, r4, r5, r6, r7);
+    PluginPool_s* pPlugin;
+    for (DWORD i = 0; i < m_pPlugins->GetPluginCount(); i++)
+    {
+        pPlugin = m_pPlugins->GetPlugin(i);
+        if (pPlugin->pPluginCalls->OnProjectileFired)
+            pPlugin->pPluginCalls->OnProjectileFired(bytePlayerId, byteWeapon, vecPos, r1, r2, r3, r4, r5, r6, r7);
+    }
+
+}
 void CEvents::OnPlayerDeath(uint8_t bytePlayerId)
 {
     call_OnPlayerDeath(bytePlayerId);

@@ -524,18 +524,29 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				{
 					if (playerid == iNPC->GetID())
 					{
+						if (vehicle)
+							npc->m_vecPos = vehicle->GetPosition(); 
+						
 						if (seatid > 0) //to check if passenger
 						{
 							iNPC->PSCounter = 0;
 							iNPC->PSOnServerCycle = true;
 							//Update NPC's position locally
-							if(vehicle)
-								npc->m_vecPos = vehicle->GetPosition();
+							
 						}
 						else if (seatid == 0)
 						{
 							//npc entering vehicle as driver.
 							//send one 0x95 packet.(updateDriver)
+							if (vehicle)
+							{
+								npc->GetINCAR_SYNC_DATA()->vecMoveSpeed = vehicle->GetSpeed();
+								npc->GetINCAR_SYNC_DATA()->dDamage = vehicle->GetDamage();
+								npc->GetINCAR_SYNC_DATA()->fCarHealth = vehicle->GetHealth();
+								npc->GetINCAR_SYNC_DATA()->quatRotation = vehicle->GetRotation();
+								npc->GetINCAR_SYNC_DATA()->Turretx = vehicle->GetTurretx();
+								npc->GetINCAR_SYNC_DATA()->Turrety = vehicle->GetTurrety();
+							}
 							SendNPCIcSyncDataLV();
 						}
 						m_pEvents->OnNPCEnterVehicle(vehicleid, seatid);
@@ -980,14 +991,14 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 			{
 				RakNet::BitStream bsIn(packet->data, packet->length, false);
 				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
-				RakNet::BitSize_t unreadbits= bsIn.GetNumberOfUnreadBits();
+				RakNet::BitSize_t unreadbits = bsIn.GetNumberOfUnreadBits();
 				size_t size = unreadbits / 8;
 				uint32_t dwStreamLen;
 				bsIn.Read(dwStreamLen);
 				if (dwStreamLen + 4 > size)
 					break;
 				uint8_t* data = (uint8_t*)calloc(dwStreamLen, sizeof(unsigned char));
-				if (data )
+				if (data)
 				{
 					if (bsIn.Read((char*)data, dwStreamLen))
 					{
@@ -995,15 +1006,53 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					}
 					free(data);
 				}
-
-				/*uint32_t len;
-				bsIn.Read(len);
-				len = bytes_swap_u32(len);*/
-
-				//(1:int, 400:float, 15:byte,"hello":string, 15:byte, "hello:string)
-				// 
-				//00 00 00 18 01 00 00 00 00 00 c8 43 0f 00 05 48 65 6c 6c 6f 
-				//0f 00 05 48 65 6c 6c 6f
+			}
+			break;
+			case ID_GAME_MESSAGE_EXPLOSION_CREATED:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				if (bsIn.GetNumberOfUnreadBits() >= 18 * 8)
+				{
+					uint8_t byteType; float x, y, z;
+					bsIn.Read(byteType);
+					bsIn.Read(x); bsIn.Read(y); bsIn.Read(z);
+					bsIn.IgnoreBytes(3);//00 00 01
+					uint8_t playerCaused, isOnGround;
+					bsIn.Read(playerCaused);
+					bsIn.Read(isOnGround);
+					m_pEvents->OnExplosion(byteType, VECTOR(x, y, z),
+						playerCaused, (bool)isOnGround);
+				}
+			}
+			break;
+			case ID_GAME_MESSAGE_PROJECTILE_FIRED:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				if (bsIn.GetNumberOfUnreadBits() >= 47 * 8)
+				{
+					uint8_t bytePlayerId; uint8_t byteWeapon;
+					float x, y, z;
+					// 00 00 01 02 1e 00 13 z y x , f1, f2,...,f7 (02=pid)
+					// 00 13 is some kind of index. it increases
+					//after each projectile launch.
+					bsIn.IgnoreBytes(3);
+					bsIn.Read(bytePlayerId);
+					bsIn.Read(byteWeapon);
+					bsIn.IgnoreBytes(2);//some kind of index, not needed
+					bsIn.Read(z); bsIn.Read(y); bsIn.Read(x);
+					float r1, r2, r3, r4, r5, r6, r7;
+					bsIn.Read(r1);
+					bsIn.Read(r2);
+					bsIn.Read(r3);
+					bsIn.Read(r4);
+					bsIn.Read(r5);
+					bsIn.Read(r6);
+					bsIn.Read(r7);
+					m_pEvents->OnProjectileFired(bytePlayerId, byteWeapon,
+						VECTOR(x, y, z), r1, r2, r3, r4, r5, r6, r7);
+				}
 			}
 			break;
 			}

@@ -346,7 +346,7 @@ void RegisterNPCFunctions()
     register_global_func(v, ::fn_GetMyID, "GetMyID", 1, "t");
     register_global_func(v, ::fn_Quit, "QuitServer", 1, "t");
     }
-SQInteger RegisterSquirrelConst(HSQUIRRELVM v, const SQChar* cname, SQInteger cvalue) {
+SQInteger NPC04_RegisterSquirrelConst(HSQUIRRELVM v, const SQChar* cname, SQInteger cvalue) {
     sq_pushconsttable(v);
     sq_pushstring(v, cname, -1);
     sq_pushinteger(v, cvalue);
@@ -355,85 +355,85 @@ SQInteger RegisterSquirrelConst(HSQUIRRELVM v, const SQChar* cname, SQInteger cv
     return 0;
 }
 void RegisterConsts() {
-    RegisterSquirrelConst(v, "PLAYER_RECORDING_TYPE_ONFOOT", 1);
-    RegisterSquirrelConst(v, "PLAYER_RECORDING_TYPE_DRIVER", 2);
+    NPC04_RegisterSquirrelConst(v, "PLAYER_RECORDING_TYPE_ONFOOT", 1);
+    NPC04_RegisterSquirrelConst(v, "PLAYER_RECORDING_TYPE_DRIVER", 2);
 
-    RegisterSquirrelConst(v, "MAX_PLAYERS", 100);
-    RegisterSquirrelConst(v, "MAX_PLAYER_NAME", 24);
-    RegisterSquirrelConst(v, "MAX_VEHICLES", 1000);
-    RegisterSquirrelConst(v, "INVALID_PLAYER_ID", 0xFF);
-    RegisterSquirrelConst(v, "INVALID_VEHICLE_ID", 0);
+    NPC04_RegisterSquirrelConst(v, "MAX_PLAYERS", 100);
+    NPC04_RegisterSquirrelConst(v, "MAX_PLAYER_NAME", 24);
+    NPC04_RegisterSquirrelConst(v, "MAX_VEHICLES", 1000);
+    NPC04_RegisterSquirrelConst(v, "INVALID_PLAYER_ID", 0xFF);
+    NPC04_RegisterSquirrelConst(v, "INVALID_VEHICLE_ID", 0);
 
-    RegisterSquirrelConst(v, "PLAYER_STATE_NONE", PLAYER_STATE_NONE);
-    RegisterSquirrelConst(v, "PLAYER_STATE_ONFOOT", PLAYER_STATE_ONFOOT);
-    RegisterSquirrelConst(v, "PLAYER_STATE_AIM", PLAYER_STATE_AIM);
-    RegisterSquirrelConst(v, "PLAYER_STATE_DRIVER", PLAYER_STATE_DRIVER);
-    RegisterSquirrelConst(v, "PLAYER_STATE_PASSENGER", PLAYER_STATE_PASSENGER);
-    RegisterSquirrelConst(v, "PLAYER_STATE_ENTER_VEHICLE_DRIVER", PLAYER_STATE_ENTER_VEHICLE_DRIVER);
-    RegisterSquirrelConst(v, "PLAYER_STATE_ENTER_VEHICLE_PASSENGER", PLAYER_STATE_ENTER_VEHICLE_PASSENGER);
-    RegisterSquirrelConst(v, "PLAYER_STATE_EXIT_VEHICLE", PLAYER_STATE_EXIT_VEHICLE);
-    RegisterSquirrelConst(v, "PLAYER_STATE_WASTED", PLAYER_STATE_WASTED);
-    RegisterSquirrelConst(v, "PLAYER_STATE_SPAWNED", PLAYER_STATE_SPAWNED);
+    NPC04_RegisterSquirrelConst(v, "PLAYER_STATE_NONE", PLAYER_STATE_NONE);
+    NPC04_RegisterSquirrelConst(v, "PLAYER_STATE_ONFOOT", PLAYER_STATE_ONFOOT);
+    NPC04_RegisterSquirrelConst(v, "PLAYER_STATE_AIM", PLAYER_STATE_AIM);
+    NPC04_RegisterSquirrelConst(v, "PLAYER_STATE_DRIVER", PLAYER_STATE_DRIVER);
+    NPC04_RegisterSquirrelConst(v, "PLAYER_STATE_PASSENGER", PLAYER_STATE_PASSENGER);
+    NPC04_RegisterSquirrelConst(v, "PLAYER_STATE_ENTER_VEHICLE_DRIVER", PLAYER_STATE_ENTER_VEHICLE_DRIVER);
+    NPC04_RegisterSquirrelConst(v, "PLAYER_STATE_ENTER_VEHICLE_PASSENGER", PLAYER_STATE_ENTER_VEHICLE_PASSENGER);
+    NPC04_RegisterSquirrelConst(v, "PLAYER_STATE_EXIT_VEHICLE", PLAYER_STATE_EXIT_VEHICLE);
+    NPC04_RegisterSquirrelConst(v, "PLAYER_STATE_WASTED", PLAYER_STATE_WASTED);
+    NPC04_RegisterSquirrelConst(v, "PLAYER_STATE_SPAWNED", PLAYER_STATE_SPAWNED);
     
     /*Credits: Gudio  https://forum.vc-mp.org/?topic=215*/
-    RegisterSquirrelConst(v, "KEY_ONFOOT_FORWARD", 32768);
-    RegisterSquirrelConst(v, "KEY_ONFOOT_BACKWARD", 16384);
-    RegisterSquirrelConst(v, "KEY_ONFOOT_LEFT", 8192);
-    RegisterSquirrelConst(v, "KEY_ONFOOT_RIGHT", 4096);
-    RegisterSquirrelConst(v, "KEY_ONFOOT_JUMP", 2176);
-    RegisterSquirrelConst(v, "KEY_ONFOOT_SPRINT", 1024);
-    RegisterSquirrelConst(v, "KEY_ONFOOT_FIRE", 576);
-    RegisterSquirrelConst(v, "KEY_ONFOOT_CROUCH", 288);
-    RegisterSquirrelConst(v, "KEY_ONFOOT_PUNCH", 64);
-    RegisterSquirrelConst(v, "KEY_ONFOOT_PREVWEP", 4);
-    RegisterSquirrelConst(v, "KEY_ONFOOT_NEXTWEP", 2);
-    RegisterSquirrelConst(v, "KEY_ONFOOT_AIM", 1);
+    NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_FORWARD", 32768);
+    NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_BACKWARD", 16384);
+    NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_LEFT", 8192);
+    NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_RIGHT", 4096);
+    NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_JUMP", 2176);
+    NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_SPRINT", 1024);
+    NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_FIRE", 576);
+    NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_CROUCH", 288);
+    NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_PUNCH", 64);
+    NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_PREVWEP", 4);
+    NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_NEXTWEP", 2);
+    NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_AIM", 1);
 #ifndef _REL004
-    RegisterSquirrelConst(v, "KEY_ONFOOT_LOOKBHND", 65536);
+    NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_LOOKBHND", 65536);
 #endif
-    RegisterSquirrelConst(v, "KEY_INCAR_LEFT", 8192);
-    RegisterSquirrelConst(v, "KEY_INCAR_RIGHT", 4096);
-    RegisterSquirrelConst(v, "KEY_INCAR_BACKWARD", 2176);
-    RegisterSquirrelConst(v, "KEY_INCAR_FORWARD", 1024);
-    RegisterSquirrelConst(v, "KEY_INCAR_HORN", 288);
-    RegisterSquirrelConst(v, "KEY_INCAR_LEANUP", 16);
-    RegisterSquirrelConst(v, "KEY_INCAR_LEANDOWN", 8);
-    RegisterSquirrelConst(v, "KEY_INCAR_LOOKLEFT", 4);
-    RegisterSquirrelConst(v, "KEY_INCAR_LOOKRIGHT", 2);
-    RegisterSquirrelConst(v, "KEY_INCAR_SUB_MISSION", 65536);
-    RegisterSquirrelConst(v, "KEY_INCAR_HANDBRAKE", 1);//added  
+    NPC04_RegisterSquirrelConst(v, "KEY_INCAR_LEFT", 8192);
+    NPC04_RegisterSquirrelConst(v, "KEY_INCAR_RIGHT", 4096);
+    NPC04_RegisterSquirrelConst(v, "KEY_INCAR_BACKWARD", 2176);
+    NPC04_RegisterSquirrelConst(v, "KEY_INCAR_FORWARD", 1024);
+    NPC04_RegisterSquirrelConst(v, "KEY_INCAR_HORN", 288);
+    NPC04_RegisterSquirrelConst(v, "KEY_INCAR_LEANUP", 16);
+    NPC04_RegisterSquirrelConst(v, "KEY_INCAR_LEANDOWN", 8);
+    NPC04_RegisterSquirrelConst(v, "KEY_INCAR_LOOKLEFT", 4);
+    NPC04_RegisterSquirrelConst(v, "KEY_INCAR_LOOKRIGHT", 2);
+    NPC04_RegisterSquirrelConst(v, "KEY_INCAR_SUB_MISSION", 65536);
+    NPC04_RegisterSquirrelConst(v, "KEY_INCAR_HANDBRAKE", 1);//added  
     
-   RegisterSquirrelConst(v, "I_KEYS", I_KEYS);
-   RegisterSquirrelConst(v, "F_POSX", F_POSX);
-    RegisterSquirrelConst(v, "F_POSY", F_POSY);
-    RegisterSquirrelConst(v, "F_POSZ", F_POSZ);
-    RegisterSquirrelConst(v, "F_ANGLE", F_ANGLE);
-    RegisterSquirrelConst(v, "I_HEALTH", I_HEALTH);
-    RegisterSquirrelConst(v, "I_ARMOUR", I_ARMOUR );
-    RegisterSquirrelConst(v, "I_CURWEP", I_CURWEP);
-    RegisterSquirrelConst(v, "I_CURWEP_AMMO", I_CURWEP_AMMO);
-    RegisterSquirrelConst(v, "V_ONFOOT_SPEED", V_ONFOOT_SPEED);
-    RegisterSquirrelConst(v, "V_AIMPOS", V_AIMPOS);
-    RegisterSquirrelConst(v, "V_AIMDIR", V_AIMDIR);
-    RegisterSquirrelConst(v, "V_POS", V_POS);
-    RegisterSquirrelConst(v, "Q_CAR_ROTATION", Q_CAR_ROTATION);
-    RegisterSquirrelConst(v, "F_CAR_HEALTH", F_CAR_HEALTH);
-    RegisterSquirrelConst(v, "I_CAR_DAMAGE", I_CAR_DAMAGE);
-    RegisterSquirrelConst(v, "V_CAR_SPEED", V_CAR_SPEED);
-    RegisterSquirrelConst(v, "F_CAR_TURRETX", F_CAR_TURRETX);
-    RegisterSquirrelConst(v, "F_CAR_TURRETY", F_CAR_TURRETY);
+   NPC04_RegisterSquirrelConst(v, "I_KEYS", I_KEYS);
+   NPC04_RegisterSquirrelConst(v, "F_POSX", F_POSX);
+    NPC04_RegisterSquirrelConst(v, "F_POSY", F_POSY);
+    NPC04_RegisterSquirrelConst(v, "F_POSZ", F_POSZ);
+    NPC04_RegisterSquirrelConst(v, "F_ANGLE", F_ANGLE);
+    NPC04_RegisterSquirrelConst(v, "I_HEALTH", I_HEALTH);
+    NPC04_RegisterSquirrelConst(v, "I_ARMOUR", I_ARMOUR );
+    NPC04_RegisterSquirrelConst(v, "I_CURWEP", I_CURWEP);
+    NPC04_RegisterSquirrelConst(v, "I_CURWEP_AMMO", I_CURWEP_AMMO);
+    NPC04_RegisterSquirrelConst(v, "V_ONFOOT_SPEED", V_ONFOOT_SPEED);
+    NPC04_RegisterSquirrelConst(v, "V_AIMPOS", V_AIMPOS);
+    NPC04_RegisterSquirrelConst(v, "V_AIMDIR", V_AIMDIR);
+    NPC04_RegisterSquirrelConst(v, "V_POS", V_POS);
+    NPC04_RegisterSquirrelConst(v, "Q_CAR_ROTATION", Q_CAR_ROTATION);
+    NPC04_RegisterSquirrelConst(v, "F_CAR_HEALTH", F_CAR_HEALTH);
+    NPC04_RegisterSquirrelConst(v, "I_CAR_DAMAGE", I_CAR_DAMAGE);
+    NPC04_RegisterSquirrelConst(v, "V_CAR_SPEED", V_CAR_SPEED);
+    NPC04_RegisterSquirrelConst(v, "F_CAR_TURRETX", F_CAR_TURRETX);
+    NPC04_RegisterSquirrelConst(v, "F_CAR_TURRETY", F_CAR_TURRETY);
 
 
-    RegisterSquirrelConst(v, "PLAYERUPDATE_NORMAL", vcmpPlayerUpdateNormal);
-    RegisterSquirrelConst(v, "PLAYERUPDATE_AIMING", vcmpPlayerUpdateAiming);
-    RegisterSquirrelConst(v, "PLAYERUPDATE_DRIVER", vcmpPlayerUpdateDriver);
-    RegisterSquirrelConst(v, "PLAYERUPDATE_PASSENGER", vcmpPlayerUpdatePassenger);
+    NPC04_RegisterSquirrelConst(v, "PLAYERUPDATE_NORMAL", vcmpPlayerUpdateNormal);
+    NPC04_RegisterSquirrelConst(v, "PLAYERUPDATE_AIMING", vcmpPlayerUpdateAiming);
+    NPC04_RegisterSquirrelConst(v, "PLAYERUPDATE_DRIVER", vcmpPlayerUpdateDriver);
+    NPC04_RegisterSquirrelConst(v, "PLAYERUPDATE_PASSENGER", vcmpPlayerUpdatePassenger);
 
-    RegisterSquirrelConst(v, "BODYPART_BODY", 0 );
-    RegisterSquirrelConst(v, "BODYPART_TORSO", 1 );
-    RegisterSquirrelConst(v, "BODYPART_LEFTARM", 2 );
-    RegisterSquirrelConst(v, "BODYPART_RIGHTARM", 3);
-    RegisterSquirrelConst(v, "BODYPART_LEFTLEG", 4 );
-    RegisterSquirrelConst(v, "BODYPART_RIGHTLEG", 5 );
-    RegisterSquirrelConst(v, "BODYPART_HEAD", 6 );    
+    NPC04_RegisterSquirrelConst(v, "BODYPART_BODY", 0 );
+    NPC04_RegisterSquirrelConst(v, "BODYPART_TORSO", 1 );
+    NPC04_RegisterSquirrelConst(v, "BODYPART_LEFTARM", 2 );
+    NPC04_RegisterSquirrelConst(v, "BODYPART_RIGHTARM", 3);
+    NPC04_RegisterSquirrelConst(v, "BODYPART_LEFTLEG", 4 );
+    NPC04_RegisterSquirrelConst(v, "BODYPART_RIGHTLEG", 5 );
+    NPC04_RegisterSquirrelConst(v, "BODYPART_HEAD", 6 );    
 }

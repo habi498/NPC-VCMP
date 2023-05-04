@@ -11,14 +11,14 @@
 #include "SQMain.h"
 #include "squirrel.h"
 #include <vector>
-
+#include "ClientScriptData.h"
 #define _SQUIRRELDEF(x) SQInteger x(HSQUIRRELVM v)
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-	SQInteger				RegisterSquirrelFunc				(HSQUIRRELVM v, SQFUNCTION f, const SQChar* fname, char uiParams, const SQChar* szParams);
-	void					RegisterFuncs						(HSQUIRRELVM v);
+	SQInteger				NPC04_RegisterSquirrelFunc				(HSQUIRRELVM v, SQFUNCTION f, const SQChar* fname, char uiParams, const SQChar* szParams);
+	void					NPC04_RegisterFuncs						(HSQUIRRELVM v);
 #ifdef __cplusplus
 }
 #endif

@@ -267,17 +267,36 @@ SQRESULT FormatBuffer(HSQUIRRELVM v, SQInteger stackIndex, uint8_t* &buffer, siz
             if (SQ_SUCCEEDED(sq->getclass(v, -1))) //-1 class
             {
                 sq->push(v, stackIndex);// -2 class,-1 instance 
-                SQBool b;
+                SQBool b,_b=SQFalse;
                 //if instance at -1 is instance of class at -2. squirrel documentation is wrong here
                 b = sq->instanceof(v);
                 sq->pop(v, 2);//pop both instance and class.
                 //now stack is roottable, closure, instance of Vector
                 sq->pop(v, 2);//roottable left.
-                if (b == SQTrue || b == SQFalse)
-                {
-                    if (b == SQTrue)
+                sq->pushstring(v, _SC("EntityVector"), -1);
+                if (SQ_SUCCEEDED(sq->get(v, -2))) {
+                    sq->pushroottable(v); //push the 'this' (in this case is the global table)
+                    sq->pushinteger(v, -1);
+                    sq->pushinteger(v, -1);
+                    sq->pushinteger(v, -1);
+                    sq->pushfloat(v, 0.0);
+                    sq->pushfloat(v, 0.0);
+                    sq->pushfloat(v, 0.0);
+                    sq->call(v, 7, 1, 1); //calls the function 
+                    if (SQ_SUCCEEDED(sq->getclass(v, -1))) //-1 class
                     {
-                        //It is a Vector instance.
+                        sq->push(v, stackIndex);// -2 class,-1 instance 
+                        _b = sq->instanceof(v);
+                        sq->pop(v, 2);//pop both instance and class.
+                        //now stack is roottable, closure, instance of EntityVector
+                        sq->pop(v, 2);//roottable left.
+                    }
+                }
+                if (b == SQTrue || b == SQFalse||_b==SQTrue||_b==SQFalse)
+                {
+                    if (b == SQTrue||_b==SQTrue)
+                    {
+                        //It is a Vector instance or EntityVector
                         buffer[size - 1] = (char)('v');
                         temp = (uint8_t*)realloc(buffer, size + 12);
                         if (!temp) { free(buffer); return sq->throwerror(v, "Error in allocating memory"); }

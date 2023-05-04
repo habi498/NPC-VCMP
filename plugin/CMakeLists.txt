@@ -6,7 +6,7 @@ add_library(npc04 MODULE
 "ConsoleUtils.cpp"
 "PlayerRecording.cpp"
 "SQConsts.cpp"
- "RPC.cpp" )
+ "RPC.cpp"  "ClientScriptData.cpp" "ClientScriptData.h")
 target_include_directories(npc04 PRIVATE "${PROJECT_SOURCE_DIR}/include")
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	set(OUTPUT_BITNESS 64)

@@ -300,7 +300,7 @@ _SQUIRRELDEF(SQ_StartRecordingPlayerData) {
 	else sq->pushbool(v, SQFalse);
 	return 1;//1 because we are returning value
 }
-SQInteger RegisterSquirrelFunc(HSQUIRRELVM v, SQFUNCTION f, const SQChar* fname, char ucParams, const SQChar* szParams) {
+SQInteger NPC04_RegisterSquirrelFunc(HSQUIRRELVM v, SQFUNCTION f, const SQChar* fname, char ucParams, const SQChar* szParams) {
 	char szNewParams[32];
 
 	sq->pushroottable(v);
@@ -333,7 +333,7 @@ _SQUIRRELDEF(SQ_StopRecordingPlayerData) {
 _SQUIRRELDEF(SQ_SetMaxPlayersOut) {
 	if (npchideAvailable)
 	{
-		SQInteger maxplayers;
+		SQInteger maxplayers; 
 		sq->getinteger(v, 2, &maxplayers);
 		if (npchideFuncs)
 		{
@@ -375,24 +375,24 @@ SQInteger SQ_HideWindow(HSQUIRRELVM v)
 	return 0;
 }
 #endif
-void RegisterFuncs(HSQUIRRELVM v) {
-	RegisterSquirrelFunc(v, SQ_ConnectNPC, "ConnectNPC", -1, "ssbss");
-	RegisterSquirrelFunc(v, SQ_ConnectNPCEx, "ConnectNPCEx", -4, "sf|if|if|if|iiiisbss");
-	RegisterSquirrelFunc(v, SQ_IsPlayerNPC, "IsPlayerNPC", 1, "i");
-	RegisterSquirrelFunc(v, SQ_StartRecordingPlayerData, "StartRecordingPlayerData", 3, "iis");
-	RegisterSquirrelFunc(v, SQ_StopRecordingPlayerData, "StopRecordingPlayerData", 1, "i");
+void NPC04_RegisterFuncs(HSQUIRRELVM v) {
+	NPC04_RegisterSquirrelFunc(v, SQ_ConnectNPC, "ConnectNPC", -1, "ssbss");
+	NPC04_RegisterSquirrelFunc(v, SQ_ConnectNPCEx, "ConnectNPCEx", -4, "sf|if|if|if|iiiisbss");
+	NPC04_RegisterSquirrelFunc(v, SQ_IsPlayerNPC, "IsPlayerNPC", 1, "i");
+	NPC04_RegisterSquirrelFunc(v, SQ_StartRecordingPlayerData, "StartRecordingPlayerData", 3, "iis");
+	NPC04_RegisterSquirrelFunc(v, SQ_StopRecordingPlayerData, "StopRecordingPlayerData", 1, "i");
 //Need NPC_Hide Module. Otherwise throws error safely.
-	RegisterSquirrelFunc(v, SQ_SetMaxPlayersOut, "SetMaxPlayersOut", 1, "i");
-	RegisterSquirrelFunc(v, SQ_SetNameOfAllNPC, "SetNameOfAllNPC", 1, "s");
+	NPC04_RegisterSquirrelFunc(v, SQ_SetMaxPlayersOut, "SetMaxPlayersOut", 1, "i");
+	NPC04_RegisterSquirrelFunc(v, SQ_SetNameOfAllNPC, "SetNameOfAllNPC", 1, "s");
 
 #ifdef WIN32
-	RegisterSquirrelFunc(v, SQ_ShowWindow, "ShowNPCConsole", 0, "");
-	RegisterSquirrelFunc(v, SQ_HideWindow, "HideNPCConsole", 0, "");
+	NPC04_RegisterSquirrelFunc(v, SQ_ShowWindow, "ShowNPCConsole", 0, "");
+	NPC04_RegisterSquirrelFunc(v, SQ_HideWindow, "HideNPCConsole", 0, "");
 #endif
 
 
-	RegisterSquirrelFunc(v, SQ_CreateFunction, "F", 1, "s|u");
-	RegisterSquirrelFunc(v, SQ_CreateFunction, "RFC", 2, "is|u");
+	NPC04_RegisterSquirrelFunc(v, SQ_CreateFunction, "F", 1, "s|u");
+	NPC04_RegisterSquirrelFunc(v, SQ_CreateFunction, "RFC", 2, "is|u");
 	//RegisterSquirrelFunc(v, SQ_RegisterRemoteFunction, "RegisterRemoteFunc", 2, "is");
 
 }

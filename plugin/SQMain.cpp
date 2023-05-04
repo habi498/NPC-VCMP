@@ -34,13 +34,13 @@ long GetTickCount()
 #endif
 #define PLAYBACK_CMDS_DISABLE
 PluginFuncs* VCMP;
-HSQUIRRELVM v;
-HSQAPI sq; 
+HSQUIRRELVM v = NULL;
+HSQAPI sq = NULL;
 NPCHideImports* npchideFuncs = NULL;
 bool npchideAvailable = false;
 CPlayerPool* m_pPlayerPool;
 NPCExports* pExports;
-void OnPlayerUpdate2(int32_t playerId, vcmpPlayerUpdate updateType)
+void NPC04_OnPlayerUpdate(int32_t playerId, vcmpPlayerUpdate updateType)
 {
 	if (!m_pPlayerPool->GetSlotState(playerId))return;
 	CPlayer* m_pPlayer = m_pPlayerPool->GetAt(playerId);
@@ -48,7 +48,7 @@ void OnPlayerUpdate2(int32_t playerId, vcmpPlayerUpdate updateType)
 	m_pPlayer->ProcessUpdate2(VCMP,updateType);
 }
 
-uint8_t OnPlayerCommand2(int32_t playerId, const char* message)
+uint8_t NPC04_OnPlayerCommand(int32_t playerId, const char* message)
 {
 	std::string mes = std::string(message);
 	uint32_t r=(uint32_t)mes.find(' ');
@@ -126,23 +126,24 @@ uint8_t OnPlayerCommand2(int32_t playerId, const char* message)
 	}
 	return 1;
 }
-void OnPlayerConnect2(int32_t playerId)
+void NPC04_OnPlayerConnect(int32_t playerId)
 {
 	m_pPlayerPool->New(playerId);
 }
-void OnPlayerDisconnect2(int32_t playerId, vcmpDisconnectReason reason)
+void NPC04_OnPlayerDisconnect(int32_t playerId, vcmpDisconnectReason reason)
 {
 	/*CPlayer* m_pPlayer = m_pPlayerPool->GetAt(playerId);
 	if (m_pPlayer->IsRecording())m_pPlayer->Abort();*/
 	m_pPlayerPool->Delete(playerId);
 }
-uint8_t OnServerInitialise2 ()
+uint8_t NPC04_OnServerInitialise ()
 {
 	m_pPlayerPool = new CPlayerPool();
 	CreateRecFolder();
 	return 1;
 }
-void OnSquirrelScriptLoad() {
+
+void NPC04_OnSquirrelScriptLoad() {
 	// See if we have any imports from Squirrel
 	size_t size;
 	int32_t sqId      = VCMP->FindPlugin(const_cast<char*>("SQHost2"));
@@ -164,10 +165,10 @@ void OnSquirrelScriptLoad() {
 			sq = *(sqFuncs->GetSquirrelAPI());
 
 			// Register functions
-			RegisterFuncs(v);
+			NPC04_RegisterFuncs(v);
 			
 			// Register constants
-			RegisterConsts(v);
+			NPC04_RegisterConsts(v);
 		}
 	}
 	else
@@ -175,10 +176,10 @@ void OnSquirrelScriptLoad() {
 }
 
 // Called when the server is loading the Squirrel plugin
-uint8_t OnPluginCommand2(uint32_t type, const char* text) {
+uint8_t NPC04_OnPluginCommand2(uint32_t type, const char* text) {
 	switch (type) {
 		case 0x7D6E22D8:
-			OnSquirrelScriptLoad();
+			NPC04_OnSquirrelScriptLoad();
 			break;
 		case 0x10001000:
 			if (strcmp(text, "NPCHideExportsReady") == 0)
@@ -198,7 +199,6 @@ uint8_t OnPluginCommand2(uint32_t type, const char* text) {
 							if (npchideFuncs)
 							{
 								npchideAvailable = true;
-								//bool success=npchideFuncs->ShowMaxPlayersAs(90);
 							}
 						}
 					}
@@ -233,14 +233,16 @@ extern "C" unsigned int VcmpPluginInit(PluginFuncs* pluginFuncs, PluginCallbacks
 	pluginInfo->apiMajorVersion = PLUGIN_API_MAJOR;
 	pluginInfo->apiMinorVersion = PLUGIN_API_MINOR;
 	strcpy(pluginInfo->name, "NPC");
-	pluginCalls->OnServerInitialise = OnServerInitialise2;
-	pluginCalls->OnPluginCommand = OnPluginCommand2;
-	pluginCalls->OnPlayerUpdate = OnPlayerUpdate2;
+	pluginCalls->OnServerInitialise = NPC04_OnServerInitialise;
+	pluginCalls->OnPluginCommand = NPC04_OnPluginCommand2;
+	pluginCalls->OnPlayerUpdate = NPC04_OnPlayerUpdate;
 
-	pluginCalls->OnPlayerCommand = OnPlayerCommand2;
-	pluginCalls->OnPlayerConnect = OnPlayerConnect2;
-	pluginCalls->OnPlayerDisconnect = OnPlayerDisconnect2;
+	pluginCalls->OnPlayerCommand = NPC04_OnPlayerCommand;
+	pluginCalls->OnPlayerConnect = NPC04_OnPlayerConnect;
+	pluginCalls->OnPlayerDisconnect = NPC04_OnPlayerDisconnect;
 	
+	pluginCalls->OnClientScriptData = NPC04_OnClientScriptData;
+
 	pExports = new NPCExports();
 	pExports->uStructSize = sizeof(NPCExports);
 	pExports->StartRecordingPlayerData = StartRecordingPlayerData;

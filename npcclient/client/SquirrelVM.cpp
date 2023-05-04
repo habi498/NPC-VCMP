@@ -279,6 +279,45 @@ void call_OnConsoleInput(char* input)
     }
     sq_settop(v, top); //restores the original stack size
 }
+void call_OnExplosion(uint8_t byteExplosionType, VECTOR vecPos, uint8_t bytePlayerCaused, bool bIsOnGround)
+{
+    int top = sq_gettop(v); //saves the stack size before the call
+    sq_pushroottable(v); //pushes the global table
+    sq_pushstring(v, _SC("OnExplosion"), -1);
+    if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
+        sq_pushroottable(v); //push the 'this' (in this case is the global table)
+        sq_pushinteger(v, byteExplosionType);
+        sq_pushvector(v, vecPos);
+        sq_pushinteger(v, bytePlayerCaused==(uint8_t)(-1)?-1:bytePlayerCaused);
+        if (bIsOnGround)sq_pushbool(v, SQTrue);
+        else sq_pushbool(v, SQFalse);
+        sq_call(v, 5, 0, 1); //calls the function 
+    }
+    sq_settop(v, top); //restores the original stack size
+}
+
+void call_OnProjectileFired(uint8_t bytePlayerId, uint8_t byteWeapon, VECTOR vecPos, float r1, float r2, float r3, float r4, float r5, float r6, float r7)
+{
+    int top = sq_gettop(v); //saves the stack size before the call
+    sq_pushroottable(v); //pushes the global table
+    sq_pushstring(v, _SC("OnProjectileFired"), -1);
+    if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
+        sq_pushroottable(v); //push the 'this' (in this case is the global table)
+        sq_pushinteger(v, bytePlayerId);
+        sq_pushinteger(v, byteWeapon);
+        sq_pushvector(v, vecPos);
+        sq_pushfloat(v, r1);
+        sq_pushfloat(v, r2);
+        sq_pushfloat(v, r3);
+        sq_pushfloat(v, r4);
+        sq_pushfloat(v, r5);
+        sq_pushfloat(v, r6);
+        sq_pushfloat(v, r7);
+        sq_call(v, 11, 0, 1); //calls the function 
+    }
+    sq_settop(v, top); //restores the original stack size
+}
+
 bool StartSquirrel(std::string file, std::string location, std::vector<std::string> params)
 {
     v = sq_open(1024); // creates a VM with initial stack size 1024 
@@ -297,9 +336,11 @@ bool StartSquirrel(std::string file, std::string location, std::vector<std::stri
     sqstd_register_bloblib(v);//Register the BLOB library
     register_vectorlib(v);
     register_quaternionlib(v);
-   
+    
+    bool bDefaultScriptLoaded = true;
     if (!SQ_SUCCEEDED(sqstd_dofile(v, _SC(UNIT), 0, 1)))
-        return 0;
+        bDefaultScriptLoaded = false;
+
     bSquirrelVMRunning = true;
     if (location.length() > 0)
     {

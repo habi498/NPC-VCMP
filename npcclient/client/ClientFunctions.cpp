@@ -766,3 +766,23 @@ void CFunctions::SetAmmoAtSlot(uint8_t byteSlotId, WORD wAmmo)
     npc->SetWeaponSlot(byteSlotId, npc->GetSlotWeapon(byteSlotId), wAmmo);
 }
 
+void CFunctions::FireProjectile(uint8_t byteWeapon, VECTOR vecPos, float r1, float r2, float r3, float r4, float r5, float r6, float r7)
+{
+    SetLastError(funcError::NoError);
+    RakNet::BitStream bsOut;
+    bsOut.Write((RakNet::MessageID)(ID_GAME_MESSAGE_FIRE_PROJECTILE));
+    bsOut.Write((char)byteWeapon);
+    bsOut.Write(vecPos.Z);// z first
+    bsOut.Write(vecPos.Y);
+    bsOut.Write(vecPos.X);
+    bsOut.Write(r1);
+    bsOut.Write(r2);
+    bsOut.Write(r3);
+    bsOut.Write(r4);
+    bsOut.Write(r5);
+    bsOut.Write(r6);
+    bsOut.Write(r7);
+    peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE, 0, systemAddress, false);
+
+}
+

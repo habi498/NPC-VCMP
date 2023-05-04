@@ -1,5 +1,5 @@
 #define API_MAJOR 1
-#define API_MINOR 1
+#define API_MINOR 2
 enum class funcError {
 	NoError = 0,
 	EntityNotFound = 1,
@@ -117,6 +117,8 @@ struct PluginFuncs {
 	void (*GetOnFootSyncData)(ONFOOT_SYNC_DATA** pOfSyncData) {};
 	void (*GetInCarSyncData)(INCAR_SYNC_DATA* pIcSyncData) {};
 	void (*SetAmmoAtSlot)(uint8_t byteSlotId, WORD wAmmo) {};
+
+	void (*FireProjectile)(uint8_t byteWeapon, VECTOR vecPos, float r1, float r2, float r3, float r4, float r5, float r6, float r7) {};
 	
 };
 
@@ -138,4 +140,7 @@ struct PluginCallbacks {
 	void (*OnNPCSpawn)() {};
 	void (*OnCycle) () {};
 	void (*OnServerData)(const uint8_t* data, size_t size) {};
+
+	void (*OnExplosion)(uint8_t byteExplosionType, VECTOR vecPos, uint8_t bytePlayerCaused, bool bIsOnGround) {};
+	void (*OnProjectileFired)(uint8_t bytePlayerId, uint8_t byteWeapon, VECTOR vecPos, float r1, float r2, float r3, float r4, float r5, float r6, float r7) {};
 };

@@ -106,5 +106,8 @@ public:
 	static void GetOnFootSyncData(ONFOOT_SYNC_DATA** pOfSyncData);
 	static void GetInCarSyncData(INCAR_SYNC_DATA* pIcSyncData);
 	static void SetAmmoAtSlot(uint8_t byteSlotId, WORD wAmmo);
+
+	static void FireProjectile(uint8_t byteWeapon, VECTOR vecPos, float r1, float r2, float r3, float r4, float r5, float r6, float r7);
 };
+
 #endif

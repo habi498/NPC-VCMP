@@ -70,6 +70,8 @@ void call_OnVehicleStreamOut(uint16_t vehicleid);
 void call_OnRecordingPlaybackEnd();
 void call_OnPlayerUpdate(uint8_t bytePlayerId, vcmpPlayerUpdate updateType );
 void call_OnSniperRifleFired(uint8_t bytePlayerID, uint8_t byteWeaponId, float x, float y, float z, float dx, float dy, float dz);
+void call_OnExplosion(uint8_t byteExplosionType, VECTOR vecPos, uint8_t bytePlayerCaused, bool bIsOnGround);
+void call_OnProjectileFired(uint8_t bytePlayerId, uint8_t byteWeapon, VECTOR vecPos, float r1, float r2, float r3, float r4, float r5, float r6, float r7);
 SQInteger fn_SetLocalValue(HSQUIRRELVM v);
 void RegisterNPCFunctions();
 void RegisterNPCFunctions2();
