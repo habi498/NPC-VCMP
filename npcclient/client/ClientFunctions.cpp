@@ -40,6 +40,39 @@ void CFunctions::SendCommandToServer(const char* message)
     bsOut.Write(message, len);
     peer->Send(&bsOut, HIGH_PRIORITY, RELIABLE, 0, systemAddress, false);
 }
+funcError CFunctions::GetLastError()
+{
+    return elastError;
+}
+funcError CFunctions::RequestClass(uint8_t relativeindex)
+{
+    SetLastError(funcError::NoError);
+    if (iNPC->IsSpawned() == false)
+    {
+        if (relativeindex == 0 || relativeindex == 1 || relativeindex == -1)
+        {
+            RakNet::BitStream bsOut3;
+            bsOut3.Write((RakNet::MessageID)ID_GAME_MESSAGE_REQUEST_CLASS);
+            bsOut3.Write(relativeindex);
+            peer->Send(&bsOut3, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, systemAddress, false);
+            return funcError::NoError;
+        }
+        else return SetLastError(funcError::ArgumentIsOutOfBounds);
+    }
+    else return SetLastError(funcError::NPCAlreadySpawned);
+}
+funcError CFunctions::RequestSpawn()
+{
+    SetLastError(funcError::NoError);
+    if (iNPC->IsSpawned() == false)
+    {
+        RakNet::BitStream bsOut;
+        bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_REQUEST_SPAWN);
+        peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, systemAddress, false);
+        return funcError::NoError;
+    }
+    else return SetLastError(funcError::NPCAlreadySpawned);
+}
 void CFunctions::SendChatMessage(const char* message)
 {
     SetLastError(funcError::NoError); 
@@ -785,4 +818,3 @@ void CFunctions::FireProjectile(uint8_t byteWeapon, VECTOR vecPos, float r1, flo
     peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE, 0, systemAddress, false);
 
 }
-

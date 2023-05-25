@@ -153,6 +153,7 @@ BOOL CPlugins::LoadSinglePlugin(char* szPluginPath)
         pPlugin->pPluginFuncs->SendServerData = m_pFunctions->SendServerData;
         pPlugin->pPluginFuncs->GetCurrentWeapon = m_pFunctions->GetCurrentWeapon;
         pPlugin->pPluginFuncs->GetCurrentWeaponAmmo = m_pFunctions->GetCurrentWeaponAmmo;
+        
         pPlugin->pPluginFuncs->SendOnFootSyncDataEx2 = m_pFunctions->SendOnFootSyncDataEx2;
         pPlugin->pPluginFuncs->SendInCarSyncDataEx = m_pFunctions->SendInCarSyncDataEx;
         pPlugin->pPluginFuncs->GetOnFootSyncData = m_pFunctions->GetOnFootSyncData;
@@ -160,6 +161,10 @@ BOOL CPlugins::LoadSinglePlugin(char* szPluginPath)
         pPlugin->pPluginFuncs->SetAmmoAtSlot = m_pFunctions->SetAmmoAtSlot;
         pPlugin->pPluginFuncs->SendOnFootSyncDataEx = m_pFunctions->SendOnFootSyncDataEx;;
         
+        pPlugin->pPluginFuncs->FireProjectile = m_pFunctions->FireProjectile;
+        pPlugin->pPluginFuncs->RequestClass = m_pFunctions->RequestClass;
+        pPlugin->pPluginFuncs->RequestSpawn = m_pFunctions->RequestSpawn;
+
 
 
     }

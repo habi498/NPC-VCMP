@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
     // because exceptions will be thrown for problems.
     try {
         // Define the command line object.
-        CmdLine cmd("VCMP-Non Player Characters v1.6.2.05", ' ', "0.1b",false);
+        CmdLine cmd("VCMP-Non Player Characters v1.6.5.25", ' ', "0.1b",false);
 
         // Define a value argument and add it to the command line.
         ValueArg<string> hostnameArg("h", "hostname", "IP address of host", false, "127.0.0.1",
@@ -109,9 +109,14 @@ int main(int argc, char** argv) {
             {
                  m_pPlugins->LoadPlugins(NPC_PLUGINS_DIR, pluginArg.getValue());
             }
-            ConnectToServer(hostname, port, npcname, password);
+            int s= LoadScript(scriptpath.c_str(), params);
+            if (s)
+                ConnectToServer(hostname, port, npcname, password);
+            else
+                goto error;
         }
         else {
+        error:
             printf("Error in loading script file. Does it exist?");
             exit(0);
         }

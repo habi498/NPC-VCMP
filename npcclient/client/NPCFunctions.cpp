@@ -25,7 +25,7 @@ extern CVehiclePool* m_pVehiclePool;
 extern RakNet::RakPeerInterface* peer;
 extern RakNet::SystemAddress systemAddress;
 extern CPlayerPool* m_pPlayerPool;
-
+uint8_t GetSlotId(uint8_t byteWeapon);
 Playback mPlayback;
 SQInteger register_global_func(HSQUIRRELVM v, SQFUNCTION f, const char* fname, SQInteger nparamscheck, const SQChar* typemask)
 {
@@ -131,7 +131,66 @@ SQInteger fn_SetMyFacingAngle(HSQUIRRELVM v)
     SendNPCOfSyncDataLV();
     return 0;//0 because we are returning nothing
 }
-
+SQInteger fn_SelectWeapon(HSQUIRRELVM v)
+{
+    if (!npc) {
+        return 0;
+    }
+    SQInteger  weapon;
+    sq_getinteger(v, 2, &weapon);
+    funcError e= m_pFunctions->SetWeapon(weapon,true);
+    if (e == funcError::NoError)sq_pushbool(v, true);
+    else sq_pushbool(v, false);
+    return 1;
+}
+SQInteger fn_GetAvailableWeapons(HSQUIRRELVM v)
+{
+    if (!npc) {
+        return 0;
+    }
+    sq_newarray(v, 0);
+    int npcid = iNPC->GetID(); uint8_t j;
+    for (int i = 0; i <= 9; i++)
+    {
+        j = m_pFunctions->GetPlayerWeaponAtSlot(npcid, i);
+        if (j != 0)
+        {
+            sq_pushinteger(v, j);
+            sq_arrayappend(v, -2);
+        }
+    }
+    return 1;
+}
+SQInteger fn_GetAmmoOfMyWeapon(HSQUIRRELVM v)
+{
+    if (!npc) {
+        return 0;
+    }
+    SQInteger weapon;
+    sq_getinteger(v, 2, &weapon);
+    int slotid = GetSlotId(weapon);
+    if (slotid == 0)
+    {
+        sq_pushinteger(v, 0);
+        return 1;
+    }
+    else
+    {
+        uint8_t w=m_pFunctions->GetPlayerWeaponAtSlot(iNPC->GetID(), slotid);
+        if (w != weapon)
+        {
+            sq_pushinteger(v, 0);
+            return 1;
+        }
+        uint16_t ammo = m_pFunctions->GetPlayerAmmoAtSlot(iNPC->GetID(), slotid);
+        funcError e = m_pFunctions->GetLastError();
+        if (e == funcError::NoError)
+            sq_pushinteger(v, ammo);
+        else
+            sq_pushinteger(v, 0);//some error occured
+    }
+    return 1;
+}
 SQInteger fn_PauseRecordingPlayback(HSQUIRRELVM v)
 {
     if (mPlayback.running == true)
@@ -321,12 +380,39 @@ SQInteger fn_Quit(HSQUIRRELVM v)
     sq_pushbool(v, SQTrue);
     return 1;
 }
+SQInteger fn_RequestSpawn(HSQUIRRELVM v)
+{
+    if (m_pFunctions->RequestSpawn() == funcError::NoError)
+        sq_pushbool(v, SQTrue);
+    else
+        sq_pushbool(v, SQFalse);
+    return 1;
+}
+SQInteger fn_RequestClass(HSQUIRRELVM v)
+{
+    SQInteger c = 0;
+    if (sq_gettop(v) > 1)
+    {
+            sq_getinteger(v, 2, &c);
+    }
+    if (c != 0 && c != 1 && c != -1)
+        return sq_throwerror(v, "Invalid relative class index specified. Use 1,0 or -1");
+    funcError e=m_pFunctions->RequestClass(c);
+    if (e == funcError::NoError)
+        sq_pushbool(v, SQTrue);
+    else
+        sq_pushbool(v, SQFalse);
+    return 1;
+}
 void RegisterNPCFunctions()
 {
     register_global_func(v, ::fn_StartRecordingPlayback,"StartRecordingPlayback",3,"tis");
     register_global_func(v, ::fn_IsPlayerStreamedIn,"IsPlayerStreamedIn",2,"ti");
     register_global_func(v, ::fn_IsVehicleStreamedIn,"IsVehicleStreamedIn",2,"ti");
     register_global_func(v, ::fn_SetMyFacingAngle,"SetMyFacingAngle",2,"tf|i");
+    register_global_func(v, ::fn_SelectWeapon,"SelectWeapon",2,"ti");
+    register_global_func(v, ::fn_GetAvailableWeapons,"GetAvailableWeapons",1,"t");
+    register_global_func(v, ::fn_GetAmmoOfMyWeapon,"GetAmmoOfMyWeapon",2,"ti");
     register_global_func(v, ::fn_GetMyFacingAngle,"GetMyFacingAngle",1,"t");
     register_global_func(v, ::fn_SetMyPos2,"SetMyPos2",4,"tf|if|if|i");
     register_global_func(v, ::fn_GetMyPosX,"GetMyPosX",1,"t");
@@ -345,7 +431,9 @@ void RegisterNPCFunctions()
     register_global_func(v, ::fn_GetMyName, "GetMyName", 1, "t");
     register_global_func(v, ::fn_GetMyID, "GetMyID", 1, "t");
     register_global_func(v, ::fn_Quit, "QuitServer", 1, "t");
-    }
+    register_global_func(v, ::fn_RequestSpawn, "RequestSpawn", 1, "t");
+    register_global_func(v, ::fn_RequestClass, "RequestClass", -1, "t");
+}
 SQInteger NPC04_RegisterSquirrelConst(HSQUIRRELVM v, const SQChar* cname, SQInteger cvalue) {
     sq_pushconsttable(v);
     sq_pushstring(v, cname, -1);
@@ -436,4 +524,8 @@ void RegisterConsts() {
     NPC04_RegisterSquirrelConst(v, "BODYPART_LEFTLEG", 4 );
     NPC04_RegisterSquirrelConst(v, "BODYPART_RIGHTLEG", 5 );
     NPC04_RegisterSquirrelConst(v, "BODYPART_HEAD", 6 );    
+   
+    NPC04_RegisterSquirrelConst(v, "CLASS_PREVIOUS", -1 );    
+    NPC04_RegisterSquirrelConst(v, "CLASS_NEXT", 1 );    
+    NPC04_RegisterSquirrelConst(v, "CLASS_CURRENT", 0 );    
 }

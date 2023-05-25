@@ -60,6 +60,7 @@ void call_OnClientMessage(uint8_t r, uint8_t g, uint8_t b, char* message, uint16
 void call_OnServerScriptData(const uint8_t* data, size_t size);
 void call_OnNPCSpawn();
 void call_OnPlayerDeath(uint8_t playerid);
+uint8_t call_OnNPCClassSelect();
 void call_OnPlayerText(uint8_t playerid, char* message, uint16_t len);
 void call_OnNPCEnterVehicle(uint16_t vehicleid, uint8_t seatid);
 void call_OnNPCExitVehicle();
@@ -78,4 +79,5 @@ void RegisterNPCFunctions2();
 void RegisterNPCFunctions3();
 void RegisterNPCFunctions4();
 void RegisterConsts();
+int LoadScript(std::string file, std::vector<std::string> params);
 #endif

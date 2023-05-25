@@ -40,7 +40,7 @@ public:
         uint8_t bytePlayerCaused, bool bIsOnGround);
     void OnProjectileFired(uint8_t bytePlayerId, uint8_t byteWeapon,
         VECTOR vecPos, float r1, float r2, float r3, float r4, float r5, float r6, float r7);
-
+    uint8_t OnNPCClassSelect();
 
 };
 #endif

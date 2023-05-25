@@ -368,20 +368,23 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				//bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
 				if (iNPC && iNPC->Initialized() && iNPC->IsSpawned() == false)
 				{
-					if ((iNPC->SpawnClass - iNPC->ClassSelectionCounter++)==0)
+					if (m_pEvents->OnNPCClassSelect() == 0)
 					{
-						RakNet::BitStream bsOut;
-						bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_REQUEST_SPAWN);
-						peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, packet->systemAddress, false);
-					}else
-					{
-						RakNet::BitStream bsOut3;
-						bsOut3.Write((RakNet::MessageID)ID_GAME_MESSAGE_REQUEST_CLASS);
-						bsOut3.Write((uint8_t)1);
-						peer->Send(&bsOut3, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, packet->systemAddress, false);
-						
+						if ((iNPC->SpawnClass - iNPC->ClassSelectionCounter++) == 0)
+						{
+							iNPC->ClassSelectionCounter--;
+							RakNet::BitStream bsOut;
+							bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_REQUEST_SPAWN);
+							peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, packet->systemAddress, false);
+						}
+						else
+						{
+							RakNet::BitStream bsOut3;
+							bsOut3.Write((RakNet::MessageID)ID_GAME_MESSAGE_REQUEST_CLASS);
+							bsOut3.Write((uint8_t)1);
+							peer->Send(&bsOut3, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, packet->systemAddress, false);
+						}
 					}
-					
 					
 				}
 			}
@@ -397,7 +400,11 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE, 0, packet->systemAddress, false);
 					npc->m_byteHealth = 100;
 					npc->SetState(PLAYER_STATE_SPAWNED);
-					//npc->m_byteCurWeap = 0;
+					//send a packet
+					npc->SetCurrentWeapon(0);
+					npc->m_byteArmour = 0;
+					//npc->m_ = VECTOR(0, 0, 0);
+
 					iNPC->SetSpawnStatus(true);
 					if (iNPC->bSpawnAtXYZ)
 					{
@@ -438,7 +445,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				m_pEvents->OnPlayerDeath(playerid);
 			}
 			break;
-			case ID_GAME_MESSAGE_PLAYER_SPAWN:
+			/*case ID_GAME_MESSAGE_PLAYER_SPAWN:
 			{
 				RakNet::BitStream bsIn(packet->data, packet->length, false);
 				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
@@ -451,7 +458,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 						player->SetState(PLAYER_STATE_SPAWNED);
 				}
 			}
-			break;
+			break;*/
 			case ID_GAME_MESSAGE_PLAYER_TEXT:
 			{
 				RakNet::BitStream bsIn(packet->data, packet->length, false);
@@ -1477,6 +1484,7 @@ void CheckPassengerSync()
 		&& iNPC->PSOnServerCycle)
 		HandlePassengerSync();
 }
+//used when server set player.Health=0.
 void CheckRemoveDeadBody()
 {
 	if (iNPC && iNPC->Initialized()
@@ -1488,7 +1496,7 @@ void CheckRemoveDeadBody()
 			DWORD n = GetTickCount();
 			if (n - t > 2100 || n - t < 0)
 			{
-				m_pFunctions->SendDeathInfo(0, 255, bodyPart::Body);
+				m_pFunctions->SendDeathInfo(44, 255, bodyPart::Body);
 				iNPC->WaitingToRemoveBody = false;
 				return;
 			}

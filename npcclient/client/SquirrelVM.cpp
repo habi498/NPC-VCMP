@@ -104,6 +104,24 @@ void call_OnPlayerDeath(uint8_t playerid)
     }
     sq_settop(v, top); //restores the original stack size
 }
+uint8_t call_OnNPCClassSelect()
+{
+    SQInteger retval = 0;
+    int top = sq_gettop(v); //saves the stack size before the call
+    sq_pushroottable(v); //pushes the global table
+    sq_pushstring(v, _SC("OnNPCClassSelect"), -1);
+    if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
+        sq_pushroottable(v); //push the 'this' (in this case is the global table)
+        sq_call(v, 1, 1, 1); //calls the function 
+        if (sq_gettype(v, -1) == OT_INTEGER)
+        {
+            sq_getinteger(v, -1, &retval);
+        }
+    }
+    
+    sq_settop(v, top); //restores the original stack size
+    return (uint8_t)retval;
+}
 void call_OnNPCEnterVehicle(uint16_t vehicleid, uint8_t seatid)
 {
     int top = sq_gettop(v); //saves the stack size before the call
@@ -396,7 +414,10 @@ bool StartSquirrel(std::string file, std::string location, std::vector<std::stri
                 iNPC->SpawnClass = spawnclass;
         }
     }
-
+    return 1;
+}
+int LoadScript(std::string file, std::vector<std::string> params)
+{
     if (file.length() > 0)
     {
         if (SQ_SUCCEEDED(sqstd_dofile(v, _SC(file.c_str()), 0, 1))) // also prints syntax errors if any 
@@ -408,6 +429,7 @@ bool StartSquirrel(std::string file, std::string location, std::vector<std::stri
     }
     else return 1; //npc without any script
 }
+
 int StopSquirrel()
 {
     call_OnNPCScriptUnload();

@@ -1,5 +1,5 @@
 #define API_MAJOR 1
-#define API_MINOR 2
+#define API_MINOR 3
 enum class funcError {
 	NoError = 0,
 	EntityNotFound = 1,
@@ -14,6 +14,7 @@ enum class funcError {
 	VehicleSeatIdInvalid = 10,
 	WeaponNotPossessed = 11,
 	NPCNotConnected=12,
+	NPCAlreadySpawned=13,
 	ErrorUnknown = INT32_MAX
 };
 
@@ -119,7 +120,8 @@ struct PluginFuncs {
 	void (*SetAmmoAtSlot)(uint8_t byteSlotId, WORD wAmmo) {};
 
 	void (*FireProjectile)(uint8_t byteWeapon, VECTOR vecPos, float r1, float r2, float r3, float r4, float r5, float r6, float r7) {};
-	
+	funcError(*RequestClass)(uint8_t relativeindex) {};
+	funcError(*RequestSpawn)() {};
 };
 
 struct PluginCallbacks {
@@ -143,4 +145,6 @@ struct PluginCallbacks {
 
 	void (*OnExplosion)(uint8_t byteExplosionType, VECTOR vecPos, uint8_t bytePlayerCaused, bool bIsOnGround) {};
 	void (*OnProjectileFired)(uint8_t bytePlayerId, uint8_t byteWeapon, VECTOR vecPos, float r1, float r2, float r3, float r4, float r5, float r6, float r7) {};
+	
+	uint8_t(*OnNPCClassSelect)() {};
 };

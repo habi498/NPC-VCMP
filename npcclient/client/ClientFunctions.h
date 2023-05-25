@@ -108,6 +108,10 @@ public:
 	static void SetAmmoAtSlot(uint8_t byteSlotId, WORD wAmmo);
 
 	static void FireProjectile(uint8_t byteWeapon, VECTOR vecPos, float r1, float r2, float r3, float r4, float r5, float r6, float r7);
+
+	funcError GetLastError();
+	static funcError RequestClass(uint8_t relativeindex);
+	static funcError RequestSpawn();
 };
 
 #endif
