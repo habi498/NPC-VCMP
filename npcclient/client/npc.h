@@ -120,7 +120,7 @@ private:
 	
 public:
 	bool bSpawnAtXYZ = false;
-	
+	bool bIsClassRequested = false;
 	float fSpawnLocX = 0.0, fSpawnLocY = 0.0, fSpawnLocZ = 0.0;
 	float fSpawnAngle = 0.0;
 	uint8_t SpecialSkin = 255;

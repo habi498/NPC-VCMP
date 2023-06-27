@@ -32,6 +32,7 @@ enum Version
 	REL004 = 67000,
 	REL006 = 67400
 };
+SQObject* ArrayIsNPC = NULL;
 bool CallNPCClient(const char* szName, const char* szScript, bool bConsoleInputEnabled=false,
 	const char* host="127.0.0.1", const char* plugins = "",const char* loc = "",  std::vector<const char*>params = {})
 {
@@ -162,52 +163,111 @@ _SQUIRRELDEF(SQ_ConnectNPCEx) {
 	const SQChar* szName = NULL, * szScript = NULL, * host = NULL,
 		* szPlugins = NULL;
 	sq->getstring(v, 2, &szName);
-	float x, y, z, angle; SQInteger skinId, weaponId, classId;
+	VECTOR pos;
+	float angle; SQInteger skinId, weaponId, classId;
 	SQBool bConsoleInput;
 	uint16_t flag = 0;
 	const SQChar* szLoc = NULL;
 	std::vector<const char*> params = {};
-	if (iArgCount > 4) //means pos (x,y,z) specified
+	if (iArgCount > 2) //means pos Vector(x,y,z) specified
 	{
-		sq->getfloat(v, 3, &x);
-		sq->getfloat(v, 4, &y);
-		sq->getfloat(v, 5, &z);
-		flag |= 1;
-		if (iArgCount > 5)
-		{
-			sq->getfloat(v, 6, &angle);
-			flag |= 2;
-			if (iArgCount > 6)
+		sq->pushroottable(v);
+		sq->pushstring(v, _SC("Vector"), -1);
+		if (SQ_SUCCEEDED(sq->get(v, -2))) {
+			sq->pushroottable(v); //push the 'this' (in this case is the global table)
+			sq->pushfloat(v, 0.0);
+			sq->pushfloat(v, 0.0);
+			sq->pushfloat(v, 0.0);
+			sq->call(v, 4, 1, 1); //calls the function 
+			if (SQ_SUCCEEDED(sq->getclass(v, -1))) //-1 class
 			{
-				sq->getinteger(v, 7, &skinId);
-				flag |= 4;
-				if (iArgCount > 7)
-				{
-					sq->getinteger(v, 8, &weaponId);
-					flag |= 8;
-					if (iArgCount > 8)
+				sq->push(v, 3);// -2 class,-1 instance 
+				SQBool b, _b = SQFalse;
+				//if instance at -1 is instance of class at -2. squirrel documentation is wrong here
+				b = sq->instanceof(v);
+				sq->pop(v, 2);//pop both instance and class.
+				//now stack is roottable, closure, instance of Vector
+				sq->pop(v, 2);//roottable left.
+				sq->pushstring(v, _SC("EntityVector"), -1);
+				if (SQ_SUCCEEDED(sq->get(v, -2))) {
+					sq->pushroottable(v); //push the 'this' (in this case is the global table)
+					sq->pushinteger(v, -1);
+					sq->pushinteger(v, -1);
+					sq->pushinteger(v, -1);
+					sq->pushfloat(v, 0.0);
+					sq->pushfloat(v, 0.0);
+					sq->pushfloat(v, 0.0);
+					sq->call(v, 7, 1, 1); //calls the function 
+					if (SQ_SUCCEEDED(sq->getclass(v, -1))) //-1 class
 					{
-						sq->getinteger(v, 9, &classId);
+						sq->push(v, 3);// -2 class,-1 instance 
+						_b = sq->instanceof(v);
+						sq->pop(v, 2);//pop both instance and class.
+						//now stack is roottable, closure, instance of EntityVector
+						sq->pop(v, 2);//roottable left.
+					}
+				}
+				//sq->instanceof might return integer other than SQTrue or SQFalse
+				if (b == SQTrue || b == SQFalse || _b == SQTrue || _b == SQFalse)
+				{
+					if (b == SQTrue || _b == SQTrue)
+					{
+						sq->pushstring(v, "x", -1);
+						sq->get(v, 3);
+						sq->getfloat(v, -1, (SQFloat*)&pos.X);
+						sq->poptop(v);
+						sq->pushstring(v, "y", -1);
+						sq->get(v, 3);
+						sq->getfloat(v, -1, (SQFloat*)&pos.Y);
+						sq->poptop(v);
+						sq->pushstring(v, "z", -1);
+						sq->get(v, 3);
+						sq->getfloat(v, -1, (SQFloat*)&pos.Z);
+						sq->poptop(v);
+						sq->poptop(v);//pops roottable
+						flag |= 1;
+					}
+				}
+			}
+		}
+		if ((flag & 1) != 1)
+			return sq->throwerror(v, "Error in obtaining vector position");
+		
+		if (iArgCount > 3)
+		{
+			sq->getfloat(v, 4, &angle);
+			flag |= 2;
+			if (iArgCount > 4)
+			{
+				sq->getinteger(v, 5, &skinId);
+				flag |= 4;
+				if (iArgCount > 5)
+				{
+					sq->getinteger(v, 6, &weaponId);
+					flag |= 8;
+					if (iArgCount > 6)
+					{
+						sq->getinteger(v, 7, &classId);
 						flag |= 16;
-						if (iArgCount > 9)
+						if (iArgCount > 7)
 						{
-							sq->getstring(v, 10, &szScript);
+							sq->getstring(v, 8, &szScript);
 							flag |= 32;
-							if (iArgCount > 10)
+							if (iArgCount > 8)
 							{
-								sq->getbool(v, 11, &bConsoleInput);
+								sq->getbool(v, 9, &bConsoleInput);
 								flag |= 64;
-								if(iArgCount > 11)
+								if(iArgCount > 9)
 								{
-									sq->getstring(v, 12, &host);
+									sq->getstring(v, 10, &host);
 									flag |= 128;
-									if (iArgCount > 12)
+									if (iArgCount > 10)
 									{
-										sq->getstring(v, 13, &szPlugins);
+										sq->getstring(v, 11, &szPlugins);
 										flag |= 256;
-										if (iArgCount > 13)
+										if (iArgCount > 11)
 										{
-											for (int i = 14; i <= iArgCount; i++)
+											for (int i = 12; i <= iArgCount; i++)
 											{
 												if (sq->gettype(v, i) != OT_STRING)
 												{
@@ -240,15 +300,15 @@ _SQUIRRELDEF(SQ_ConnectNPCEx) {
 	if (!(flag & 128)||strlen(host)==0)
 		host = "127.0.0.1";
 	if(flag & 16)
-		sprintf(szArgs, "x%f y%f z%f a%f s%d w%d c%d", x, y, z, angle, (int)skinId, (int)weaponId, (int)classId);
+		sprintf(szArgs, "x%f y%f z%f a%f s%d w%d c%d", pos.X, pos.Y, pos.Z, angle, (int)skinId, (int)weaponId, (int)classId);
 	else if (flag & 8)
-		sprintf(szArgs, "x%f y%f z%f a%f s%d w%d", x, y, z, angle, (int)skinId, (int)weaponId);
+		sprintf(szArgs, "x%f y%f z%f a%f s%d w%d", pos.X, pos.Y, pos.Z, angle, (int)skinId, (int)weaponId);
 	else if (flag & 4)
-		sprintf(szArgs, "x%f y%f z%f a%f s%d", x, y, z, angle, (int)skinId);
+		sprintf(szArgs, "x%f y%f z%f a%f s%d", pos.X, pos.Y, pos.Z, angle, (int)skinId);
 	else if(flag&2)
-		sprintf(szArgs, "x%f y%f z%f a%f", x, y, z, angle);
+		sprintf(szArgs, "x%f y%f z%f a%f", pos.X, pos.Y, pos.Z, angle);
 	else 
-		sprintf(szArgs, "x%f y%f z%f", x, y, z);
+		sprintf(szArgs, "x%f y%f z%f", pos.X, pos.Y, pos.Z);
 	if(flag & 512)
 		CallNPCClient(szName, szScript, bConsoleInput, host, szPlugins, szArgs, params);
 	else 
@@ -375,9 +435,48 @@ SQInteger SQ_HideWindow(HSQUIRRELVM v)
 	return 0;
 }
 #endif
+SQInteger IsNPC(HSQUIRRELVM v)
+{
+	//class instance at top
+	sq->pushstring(v, "ID", -1);
+	if (SQ_SUCCEEDED(sq->get(v, -2)))
+	{
+		//ID at top
+		SQInteger dw_playerId;
+		sq->getinteger(v, -1, &dw_playerId);
+		if (IsPlayerNPC((uint8_t)dw_playerId))
+		{
+			sq->pushbool(v, SQTrue);
+		}
+		else
+			sq->pushbool(v, SQFalse);
+		return 1;
+	}
+	return sq->throwerror(v, "Error getting ID of player instance");
+}
+void AddPropertyToCPlayer(HSQUIRRELVM v)
+{
+	sq->pushroottable(v);
+	sq->pushstring(v, "CPlayer", -1);
+	if (SQ_SUCCEEDED(sq->get(v, -2)))
+	{
+		//CPlayer class at top
+		sq->pushstring(v, "__getTable", -1);
+		if (SQ_SUCCEEDED(sq->get(v, -2)))
+		{
+			//__getTable on top
+			sq->pushstring(v, "IsNPC", -1);
+			sq->newclosure(v, IsNPC, 0);
+			sq->newslot(v, -3, SQFalse);
+			sq->poptop(v);//pops __getTable
+		}
+		sq->poptop(v);//pops class CPlayer
+	}
+	sq->poptop(v);//pops roottable
+}
 void NPC04_RegisterFuncs(HSQUIRRELVM v) {
 	NPC04_RegisterSquirrelFunc(v, SQ_ConnectNPC, "ConnectNPC", -1, "ssbss");
-	NPC04_RegisterSquirrelFunc(v, SQ_ConnectNPCEx, "ConnectNPCEx", -4, "sf|if|if|if|iiiisbss");
+	NPC04_RegisterSquirrelFunc(v, SQ_ConnectNPCEx, "ConnectNPCEx", -2, "sxf|iiiisbss");
 	NPC04_RegisterSquirrelFunc(v, SQ_IsPlayerNPC, "IsPlayerNPC", 1, "i");
 	NPC04_RegisterSquirrelFunc(v, SQ_StartRecordingPlayerData, "StartRecordingPlayerData", 3, "iis");
 	NPC04_RegisterSquirrelFunc(v, SQ_StopRecordingPlayerData, "StopRecordingPlayerData", 1, "i");
@@ -392,7 +491,8 @@ void NPC04_RegisterFuncs(HSQUIRRELVM v) {
 
 
 	NPC04_RegisterSquirrelFunc(v, SQ_CreateFunction, "F", 1, "s|u");
+	NPC04_RegisterSquirrelFunc(v, SQ_CreateFunction2, "Fa", 1, "s|u");
 	NPC04_RegisterSquirrelFunc(v, SQ_CreateFunction, "RFC", 2, "is|u");
-	//RegisterSquirrelFunc(v, SQ_RegisterRemoteFunction, "RegisterRemoteFunc", 2, "is");
-
+	NPC04_RegisterSquirrelFunc(v, SQ_CreateFunction2, "RFCa", 2, "is|u");
+	AddPropertyToCPlayer(v);
 }

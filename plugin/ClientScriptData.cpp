@@ -118,6 +118,48 @@ SQRESULT ReadBuffer(HSQUIRRELVM v, const uint8_t*& buffer, const size_t& size, s
 		else return -1;
 		break;
 	}
+	case 'D':
+	{
+		if (index + 4 <= size)
+		{
+			subfunctionStreamLen = swap4(*(uint32_t*)(buffer + index));
+			index += 4;
+			//G,PQRS,F,ABCD,00 05 w h a t i (s hello )
+			if (index + subfunctionStreamLen <= size)
+			{
+				res = CallFunctionAdvanced(buffer + index - 5, subfunctionStreamLen + 5);
+				if (SQ_FAILED(res))
+				{
+					return -1;
+				}
+				//Otherwise result is pushed into stack.
+				index += subfunctionStreamLen;
+			}
+			else return -1;
+		}
+		else return -1;
+		break;
+	}
+	case 'E':
+	{
+		if (index + 4 <= size)
+		{
+			subfunctionStreamLen = swap4(*(uint32_t*)(buffer + index));
+			index += 4;
+			//F,ABCD,00 05 w h a t i (s hello )
+			if (index + subfunctionStreamLen <= size)
+			{
+				res = CallFunctionAdvanced(buffer + index - 5, subfunctionStreamLen + 5);
+				if (SQ_FAILED(res))
+					return -1;
+				//Otherwise result is pushed into stack.
+				index += subfunctionStreamLen;
+			}
+			else return -1;
+		}
+		else return -1;
+		break;
+	}
 	case 'F':
 	{
 		if (index + 4 <= size)
@@ -134,6 +176,52 @@ SQRESULT ReadBuffer(HSQUIRRELVM v, const uint8_t*& buffer, const size_t& size, s
 				index += subfunctionStreamLen;
 			}
 			else return -1;
+		}
+		else return -1;
+		break;
+	}
+	case 'g'://get
+	{
+		if (index + 4 <= size)
+		{
+			uint32_t StreamLen = swap4(*(uint32_t*)(buffer + index));
+			if (StreamLen + 5 > size)return -1;
+			index += 4;
+			uint32_t i = index + StreamLen;
+			SQRESULT res0 = ReadBuffer(v, buffer, size, index);//this will push something into the stack
+			if (SQ_FAILED(res0))
+			{
+				return -1;
+			}
+			//Special case below: if string, get it from roottable
+			if (sq->gettype(v, -1) == OT_STRING)
+			{
+				sq->pushroottable(v);
+				sq->push(v, -2);
+				sq->remove(v, -3);//remove the string
+				if (SQ_FAILED(sq->get(v, -2)))
+				{
+					return -1;
+				}
+				//now something got through 'get' is on top
+				sq->remove(v, -2);//roottable
+			}
+			while (size > index && i>index) //more parameters
+			{
+				//Second parameter provided
+				res0 = ReadBuffer(v, buffer, size, index);//this will push the key into the stack
+				if (SQ_FAILED(res0))
+				{
+					return -1;
+				}
+
+				if (SQ_SUCCEEDED(sq->get(v, -2)))
+				{
+					sq->remove(v, -2);//the object at -2.
+				}
+				else return -1;
+			}
+			index = i;//actually index is already equal to i
 		}
 		else return -1;
 		break;
@@ -268,9 +356,30 @@ SQRESULT CallFunctionAdvanced(const uint8_t* data, size_t size)
 {
 	SQRESULT res0; size_t index;
 	bool bFunctionPushed = false;
-	int top = sq->gettop(v);
+	int top = sq->gettop(v); uint16_t nparams = 0;
 	if (*data == 'G' && size >= 5)
 	{
+		uint32_t GfuncStreamLen = swap4(*(uint32_t*)(data + 1));
+		if (GfuncStreamLen + 5 > size)return -1;
+		index = 5;
+		res0 = ReadBuffer(v, data, size, index);//this will push function into the stack
+		if (SQ_FAILED(res0))
+		{
+			return -1;
+		}
+		if (sq->gettype(v, -1) == OT_CLOSURE || sq->gettype(v, -1) == OT_NATIVECLOSURE)
+		{
+			bFunctionPushed = true;
+		}
+		else {
+			printf("A function was not returned from squirrel while processing");
+			return -1;
+		}
+
+	}
+	else if (*data == 'D' && size >= 5)
+	{
+		//copied from section for 'G'
 		uint32_t GfuncStreamLen = swap4(*(uint32_t*)(data + 1));
 		if (GfuncStreamLen + 5 > size)return -1;
 		index = 5;
@@ -296,20 +405,86 @@ SQRESULT CallFunctionAdvanced(const uint8_t* data, size_t size)
 		uint16_t lenfuncname = swap2(*(uint16_t*)(data + 5));
 		sq->pushroottable(v);
 		sq->pushstring(v, (char*)(data + 7), lenfuncname);
-		if (SQ_FAILED(sq->get(v, -2))) {
-			return -1;
-		}
+		if (SQ_FAILED(sq->get(v, -2)))return -1;
 		sq->remove(v, -2);//remove root table pushed before function.
 		//F(ABCD)(00 05)(w h a t i )i integer
 		index = 5 + 2 + lenfuncname;
 	}
-	else {
-		return -1;
+	else if (*data == 'E' && size >= 5)
+	{
+		uint32_t funcStreamLen = swap4(*(uint32_t*)(data + 1));
+		if (funcStreamLen + 5 > size)return -1;
+		uint16_t lenfuncname = swap2(*(uint16_t*)(data + 5));
+		index = 5 + 2 + lenfuncname;
 	}
+	else if (*data == 'h' && size >=5)
+	{
+		int top = sq->gettop(v);
+		uint32_t StreamLen = swap4(*(uint32_t*)(data + 1));
+		if (StreamLen + 5 > size)return -1;
+		index = 5;
+		SQRESULT res0 = ReadBuffer(v, data, size, index);//this will push something into the stack
+		if (SQ_FAILED(res0))
+		{
+			return -1;
+		}
+		bool envIsRootTable = false;
+		if (sq->gettype(v, -1) == OT_STRING)
+		{
+			envIsRootTable = true;
+			sq->pushroottable(v);
+			sq->push(v, -2);//the string as key
+			sq->remove(v, -3);//the string before roottable
+		}
+		if (size <= index)
+			return -1;
+		res0 = ReadBuffer(v, data, size, index);//this will push the key or value(if envIsRootTable) into the stack
+		if (SQ_FAILED(res0))
+		{
+				return -1;
+		}
+		if (!envIsRootTable)//read value
+		{
+			if (size <= index)
+				return -1; 
+			res0 = ReadBuffer(v, data, size, index);//this will push the value into the stack
+			if (SQ_FAILED(res0))
+			{
+				return -1;
+			}
+		}
+		//Store the key and value
+		HSQOBJECT obj,key, val;
+		sq->getstackobj(v, -3, &obj);
+		sq->getstackobj(v, -2, &key);
+		sq->getstackobj(v, -1, &val);
+		if (SQ_FAILED(sq->set(v, -3)))
+		{
+			//Check if key exist
+			sq->pushobject(v, obj);
+			sq->pushobject(v, key);
+			if (SQ_FAILED(sq->get(v, -2)))
+			{
+				sq->pushobject(v, key);
+				sq->pushobject(v, val);
+				if (SQ_FAILED(sq->newslot(v, -3, SQFalse)))
+					return -1;
+			}
+			else 
+				return -1;
+		}
+		sq->settop(v, top);//the object on which set operation was performed
+		return 0;//unlike other cases here we return immediately
+	}
+	else return -1;
 	//CallFunctionAdvanced: Now function is pushed into the stack.
 
-	uint16_t nparams = 0;
-	sq->pushroottable(v); nparams++;
+
+	if (*data == 'F' || *data == 'G')
+	{
+		sq->pushroottable(v); nparams++;
+	}
+
 	SQRESULT res;
 	while (index < size)
 	{
@@ -318,22 +493,52 @@ SQRESULT CallFunctionAdvanced(const uint8_t* data, size_t size)
 		{
 			return res;
 		}
+		if (nparams == 0 && (*data == 'D' || *data == 'E'))
+		{
+			if (*data == 'E')
+			{
+				//Function has not been fetched
+				//Do some calculations again
+				uint16_t lenfuncname = swap2(*(uint16_t*)(data + 5));
+
+				sq->pushstring(v, (char*)(data + 7), lenfuncname);
+				if (SQ_FAILED(sq->get(v, -2)))return -1;
+				//Now we have function on top and it's env on -2
+				//Reorder it
+				sq->push(v, -2);//env fn env
+				sq->remove(v, -3);//fn env
+			}
+			else if (*data == 'D')
+			{
+				//Do nothing. We have parameter one(env) on top
+			}
+		}
 		nparams++;
 	}//end of while
-	res = sq->call(v, nparams, 1, 1);
-	if (SQ_SUCCEEDED(res))
+	if (sq->gettype(v, -nparams - 1) == OT_CLOSURE ||
+		sq->gettype(v, -nparams - 1) == OT_NATIVECLOSURE)
 	{
-		sq->remove(v, -2);//the closure
+		res = sq->call(v, nparams, 1, 1);//Call it
+//else if(nparams==1)
+
+		if (SQ_SUCCEEDED(res))
+		{
+			sq->remove(v, -2);//the closure
+		}
+		else {
+			sq->settop(v, top);
+			sq->getlasterror(v);
+			if (sq->gettype(v, -1) == OT_STRING)
+			{
+				const SQChar* str;
+				sq->getstring(v, -1, &str);
+				printf("Error: %s\n", str);
+			}
+		}
 	}
 	else {
-		sq->settop(v, top);
-		sq->getlasterror(v);
-		if (sq->gettype(v, -1) == OT_STRING)
-		{
-			const SQChar* str;
-			sq->getstring(v, -1, &str);
-			printf("Error: %s\n", str);
-		}
+		sq->settop(v, top); printf("Error: Not a function. ");
+		return -1;
 	}
 	return res;
 }

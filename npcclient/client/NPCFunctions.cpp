@@ -397,7 +397,7 @@ SQInteger fn_RequestClass(HSQUIRRELVM v)
     }
     if (c != 0 && c != 1 && c != -1)
         return sq_throwerror(v, "Invalid relative class index specified. Use 1,0 or -1");
-    funcError e=m_pFunctions->RequestClass(c);
+    funcError e=m_pFunctions->RequestClass(c==-1?255:c);
     if (e == funcError::NoError)
         sq_pushbool(v, SQTrue);
     else

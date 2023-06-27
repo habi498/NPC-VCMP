@@ -94,7 +94,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 			{
 			case ID_CONNECTION_REQUEST_ACCEPTED:
 			{
-				printf("Connected\n");
+				printf("Connected. ");
 				ConnectAsVCMPClient(peer, npcname.c_str(), (uint8_t)npcname.length(), packet->systemAddress);
 				systemAddress = packet->systemAddress;
 			}
@@ -266,6 +266,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				uint8_t npcid;//same as playerid
 				bsIn.ReadAlignedBytes(&npcid, 1);
 				iNPC->SetID(npcid);
+				printf("ID %d.\n", npcid);
 				char* name;
 				name = (char*)malloc(sizeof(char) * (npcname.length() + 1));
 				if (name)
@@ -297,7 +298,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				bsOut.Write(byteZero);
 				
 				peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 0, packet->systemAddress, false);
-				#ifndef _REL004
+				/*#ifndef _REL004
 				bsOut2.Write((RakNet::MessageID)0xbd);
 				bsOut2.Write((uint8_t)0);
 				bsOut2.Write((uint8_t)0);
@@ -307,13 +308,15 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				bsOut2.Write((uint8_t)1);
 				peer->Send(&bsOut2, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 0, packet->systemAddress, false);
 				#endif
+				*/
 				//Not tested thouroughly
-				{
-					RakNet::BitStream bsOut3;
-					bsOut3.Write((RakNet::MessageID)ID_GAME_MESSAGE_REQUEST_CLASS);
-					bsOut3.Write0();
-					peer->Send(&bsOut3, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, packet->systemAddress, false);
-				}
+				
+				/*RakNet::BitStream bsOut3;
+				bsOut3.Write((RakNet::MessageID)ID_GAME_MESSAGE_REQUEST_CLASS);
+				bsOut3.Write0();
+				peer->Send(&bsOut3, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, packet->systemAddress, false);
+				*/
+				m_pFunctions->RequestClass(0);
 				
 				//Sometimes client sends an additional message which is omitted here: 0xbd. 
 			}	
@@ -362,12 +365,15 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 			}
 			break;
 			*/
-			case ID_GAME_MESSAGE_CLASS_GRANTED:
+			case ID_GAME_MESSAGE_SPECIAL_SIGNAL:
 			{
+				//This is send along with class grant as well as spawn grant/not grant
 				//::BitStream bsIn(packet->data, packet->length, false);
 				//bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
-				if (iNPC && iNPC->Initialized() && iNPC->IsSpawned() == false)
+				if (iNPC && iNPC->Initialized() && iNPC->IsSpawned() == false
+					&& iNPC->bIsClassRequested==true)
 				{
+					iNPC->bIsClassRequested = false;
 					if (m_pEvents->OnNPCClassSelect() == 0)
 					{
 						if ((iNPC->SpawnClass - iNPC->ClassSelectionCounter++) == 0)
@@ -379,10 +385,11 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 						}
 						else
 						{
-							RakNet::BitStream bsOut3;
+							/*RakNet::BitStream bsOut3;
 							bsOut3.Write((RakNet::MessageID)ID_GAME_MESSAGE_REQUEST_CLASS);
 							bsOut3.Write((uint8_t)1);
-							peer->Send(&bsOut3, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, packet->systemAddress, false);
+							peer->Send(&bsOut3, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, packet->systemAddress, false);*/
+							m_pFunctions->RequestClass(1);
 						}
 					}
 					
@@ -1060,6 +1067,16 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					m_pEvents->OnProjectileFired(bytePlayerId, byteWeapon,
 						VECTOR(x, y, z), r1, r2, r3, r4, r5, r6, r7);
 				}
+			}
+			break;
+			//Every 5 seconds, server sends below packet
+			case ID_GAME_MESSAGE_TICK:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				unsigned int tickcount;
+				bsIn.Read(tickcount);
+				m_pEvents->OnServerShareTick(tickcount);
 			}
 			break;
 			}

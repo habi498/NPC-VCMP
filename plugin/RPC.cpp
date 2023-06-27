@@ -2,7 +2,9 @@
 extern PluginFuncs* VCMP;
 extern HSQAPI sq;
 #define RPC_CALL 0x1
+#define RPC_CALL2 0x4
 #define RPC_FUNCTION 0x2
+#define RPC_FUNCTION2 0x3
 uint32_t swap4(uint32_t i) { //aa bb cc dd
     //00 00 00 aa | 00 aa bb cc | bb cc dd 00 | dd 00 00 00
     uint32_t u = (i >> 24) |
@@ -34,7 +36,7 @@ SQInteger SQ_RemoteFunction(HSQUIRRELVM v)
             return sq->throwerror(v, "Failed when getting userdata");
     }
     SQInteger dwInteger;
-    if (typeRPC == RPC_CALL)
+    if (typeRPC == RPC_CALL||typeRPC==RPC_CALL2)
         sq->getinteger(v, nargs--, &dwInteger);
     uint8_t* data = (uint8_t*)calloc(5, sizeof(char));
     size_t size = 5; uint8_t* temp;
@@ -43,7 +45,10 @@ SQInteger SQ_RemoteFunction(HSQUIRRELVM v)
     {
         if (paramtype == Type::STRING)
         {
-            data[0] = (char)('F');
+            if (typeRPC == RPC_FUNCTION2||typeRPC==RPC_CALL2)
+                data[0] = (char)('E');
+            else
+                data[0] = (char)('F');
             //fill *(uint32_t*)(data+1) with length of func data later.
             uint16_t len;
             len = (uint16_t)strlen(funcname);
@@ -63,12 +68,18 @@ SQInteger SQ_RemoteFunction(HSQUIRRELVM v)
         }
         else if (paramtype == Type::USERDATA)
         {
-            data[0] = 'G';
+            if (typeRPC == RPC_FUNCTION2||typeRPC==RPC_CALL2)
+                data[0] = 'D';
+            else
+                data[0] = 'G';
             if (!userpointer || (*(char*)userpointer != 'F'
-                && *(char*)userpointer != 'G')) {
+                && *(char*)userpointer != 'G'
+                &&*(char*)userpointer != 'E'
+                &&*(char*)userpointer != 'D'
+                )) {
                 free(data);
                 return sq->throwerror(v, "Error when getting user data.\
-                or invalid user data.");
+or invalid user data.");
             }
 
             
@@ -108,14 +119,14 @@ SQInteger SQ_RemoteFunction(HSQUIRRELVM v)
     //VCMP->SendClientScriptData(playerid, (const void*) data, 8); printf("--");
     //vcmpError e=VCMP->SendClientScriptData(playerid, (const void*)data, size); 
     *(uint32_t*)(data + 1) = swap4((uint32_t)size - 5);//customary to swap length of following item
-    if (typeRPC == RPC_FUNCTION)
+    if (typeRPC == RPC_FUNCTION||typeRPC==RPC_FUNCTION2)
     {
         SQUserPointer p = sq->newuserdata(v, size);
         memcpy(p, data, size);
         free(data); 
         return 1;
     }
-    else if (typeRPC == RPC_CALL)
+    else if (typeRPC == RPC_CALL||typeRPC==RPC_CALL2)
     {
         SQInteger playerid = dwInteger;
         //sq->getinteger(v, sq->gettop(v) - 2, &playerid);
@@ -229,7 +240,9 @@ SQRESULT FormatBuffer(HSQUIRRELVM v, SQInteger stackIndex, uint8_t* &buffer, siz
         sizeOfUserData = sq->getsize(v, stackIndex);
         if (!userdata || 
             ( * (char*)userdata != 'F' &&
-            *(char*)userdata!='G'))
+            *(char*)userdata!='G' &&
+            *(char*)userdata!='E' &&
+            *(char*)userdata!='D'  ))
         {
             free(buffer);
             return sq->throwerror(v, "Unknown userdata passed as parameter");
@@ -411,9 +424,6 @@ SQInteger SQ_CreateFunction(HSQUIRRELVM v)
         paramtype = Type::USERDATA;
         sq->getuserdata(v, n, &userdata, NULL);
     }
-   
-    
-    
     if (n == 3)sq->pushinteger(v, RPC_CALL);
     else sq->pushinteger(v, RPC_FUNCTION);
     if (paramtype == Type::STRING)
@@ -428,4 +438,34 @@ SQInteger SQ_CreateFunction(HSQUIRRELVM v)
     }
    	sq->newclosure(v, SQ_RemoteFunction, n);
 	return 1;
+}
+SQInteger SQ_CreateFunction2(HSQUIRRELVM v)
+{
+    SQInteger n = sq->gettop(v); 
+    const SQChar* remotefuncname; SQUserPointer userdata;
+    Type paramtype = Type::STRING;
+
+    if (sq->gettype(v, n) == OT_STRING)
+    {
+        sq->getstring(v, n, &remotefuncname);
+    }
+    else if (sq->gettype(v, n) == OT_USERDATA)
+    {
+        paramtype = Type::USERDATA;
+        sq->getuserdata(v, n, &userdata, NULL);
+    }
+    if (n == 3)sq->pushinteger(v, RPC_CALL2);
+    else sq->pushinteger(v, RPC_FUNCTION2);
+    if (paramtype == Type::STRING)
+        sq->pushstring(v, remotefuncname, -1);
+    else
+        sq->push(v, n);
+    if (n == 3)
+    {
+        SQInteger playerid;
+        sq->getinteger(v, 2, &playerid);
+        sq->pushinteger(v, playerid);
+    }
+    sq->newclosure(v, SQ_RemoteFunction, n);
+    return 1;
 }

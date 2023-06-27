@@ -122,6 +122,18 @@ uint8_t call_OnNPCClassSelect()
     sq_settop(v, top); //restores the original stack size
     return (uint8_t)retval;
 }
+void call_OnServerShareTick(uint32_t tickcount)
+{
+    int top = sq_gettop(v); //saves the stack size before the call
+    sq_pushroottable(v); //pushes the global table
+    sq_pushstring(v, _SC("OnServerShareTick"), -1);
+    if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
+        sq_pushroottable(v); //push the 'this' (in this case is the global table)
+        sq_pushinteger(v, tickcount);
+        sq_call(v, 2, 0, 1); //calls the function 
+    }
+    sq_settop(v, top); //restores the original stack size
+}
 void call_OnNPCEnterVehicle(uint16_t vehicleid, uint8_t seatid)
 {
     int top = sq_gettop(v); //saves the stack size before the call

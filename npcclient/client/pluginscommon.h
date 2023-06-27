@@ -1,5 +1,5 @@
 #define API_MAJOR 1
-#define API_MINOR 3
+#define API_MINOR 4
 enum class funcError {
 	NoError = 0,
 	EntityNotFound = 1,
@@ -147,4 +147,5 @@ struct PluginCallbacks {
 	void (*OnProjectileFired)(uint8_t bytePlayerId, uint8_t byteWeapon, VECTOR vecPos, float r1, float r2, float r3, float r4, float r5, float r6, float r7) {};
 	
 	uint8_t(*OnNPCClassSelect)() {};
+	void (*OnServerShareTick)(unsigned int tickcount) {};
 };

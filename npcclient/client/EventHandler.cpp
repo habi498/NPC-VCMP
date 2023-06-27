@@ -52,6 +52,7 @@ void CEvents::OnProjectileFired(uint8_t bytePlayerId, uint8_t byteWeapon, VECTOR
 }
 uint8_t CEvents::OnNPCClassSelect()
 {
+    
     uint8_t retval = call_OnNPCClassSelect();
     if (retval)
         return retval;
@@ -67,6 +68,17 @@ uint8_t CEvents::OnNPCClassSelect()
         }
     }
     return 0;
+}
+void CEvents::OnServerShareTick(unsigned int tickcount)
+{
+    call_OnServerShareTick(tickcount);
+    PluginPool_s* pPlugin;
+    for (DWORD i = 0; i < m_pPlugins->GetPluginCount(); i++)
+    {
+        pPlugin = m_pPlugins->GetPlugin(i);
+        if (pPlugin->pPluginCalls->OnServerShareTick)
+            pPlugin->pPluginCalls->OnServerShareTick(tickcount);
+    }
 }
 void CEvents::OnPlayerDeath(uint8_t bytePlayerId)
 {

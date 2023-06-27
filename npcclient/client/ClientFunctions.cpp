@@ -49,12 +49,13 @@ funcError CFunctions::RequestClass(uint8_t relativeindex)
     SetLastError(funcError::NoError);
     if (iNPC->IsSpawned() == false)
     {
-        if (relativeindex == 0 || relativeindex == 1 || relativeindex == -1)
+        if (relativeindex == 0 || relativeindex == 1 || relativeindex == 255)
         {
             RakNet::BitStream bsOut3;
             bsOut3.Write((RakNet::MessageID)ID_GAME_MESSAGE_REQUEST_CLASS);
             bsOut3.Write(relativeindex);
             peer->Send(&bsOut3, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, systemAddress, false);
+            iNPC->bIsClassRequested = true;
             return funcError::NoError;
         }
         else return SetLastError(funcError::ArgumentIsOutOfBounds);
