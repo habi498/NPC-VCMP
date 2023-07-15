@@ -1,5 +1,5 @@
 # npc-vcmp
-Implements Non Player Characters (NPC) in VC-MP 0.4 Servers
+Implements Non Player Characters (NPC)  also called bots in VC-MP 0.4 Servers
 
 # Instructions for building the project. 
 
