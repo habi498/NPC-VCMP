@@ -7,7 +7,7 @@ This is a Visual Studio 'CMake Project'.
 ## Visual Studio -> File -> Clone Repository
 <img src="https://github.com/habi498/npc-vcmp/blob/master-1.6/picture.png" width="510"></img>
 ## Project Configurations
-1. WINODWS_32 
+1. WINDOWS_32 
 2. WINDOWS_64 
 3. WINDOWS_REL004 
 4. wsl_32
