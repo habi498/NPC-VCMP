@@ -181,6 +181,6 @@ enables npc to load ammo and shoot at any player. LibAction.
   2. npc crashing if Vector class tostring method used.
   3. many more
 
---Events added: OnTimeWeatherSync, OnPickupStreamIn, OnPickupDestroyed
+--Events added: OnTimeWeatherSync, OnPickupStreamIn, OnPickupDestroyed  
 --Functions new: IsPickupStreamedIn, GetPickupModel, GetPickupAlpha, GetPickupQuantity, GetPickupPosition, GetPickupCount
 
