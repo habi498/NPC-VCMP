@@ -164,17 +164,17 @@ F_CAR_HEALTH, I_CAR_DAMAGE, V_CAR_SPEED, F_CAR_TURRETX, F_CAR_TURRETY.
 --New module which has inbuilt timer and other functions which
 enables npc to load ammo and shoot at any player. LibAction.
 
-**Version 1.6 beta 4** (05. May. 2023)
---fixed Q_CAR_ROTATION returning float instead of Quaternion.
---fixed SendInCarSyncData function not available.
---Earlier plugin npc04relxx do not work when some other plugins are loaded. It is fixed.
---New functions and events of sending Projectiles and Explosions.
---LibRPC now supports not only calling of functions of npcscripts from server, but reverse also provided npc is given admin status.
---Script will load after plugins are loaded. (patch1)
---API is updated to 1.3 (patch2) from 1.2 (patch1)
---New functions RequestClass, RequestSpawn and event OnNPCClassSelect
+**Version 1.6 beta 4** (05. May. 2023)  
+--fixed Q_CAR_ROTATION returning float instead of Quaternion.  
+--fixed SendInCarSyncData function not available.  
+--Earlier plugin npc04relxx do not work when some other plugins are loaded. It is fixed.  
+--New functions and events of sending Projectiles and Explosions.  
+--LibRPC now supports not only calling of functions of npcscripts from server, but reverse also provided npc is given admin status (for security reasons).  
+--Script will load after plugins are loaded. (patch1)  
+--API is updated to 1.3 (patch2) from 1.2 (patch1)  
+--New functions RequestClass, RequestSpawn and event OnNPCClassSelect  
 
-**Version 1.6 beta 5**( 27. June. 2023)
---ConnectNPCEx takes position as Vector instead of x,y,z.
---LibRPC functions extended to perform sq_get and sq_set on server vm from npcclient.
---Fixed bug when onPlayerRequestClass return 0 on server.
+**Version 1.6 beta 5**( 27. June. 2023)  
+--ConnectNPCEx takes position as Vector instead of x,y,z.  
+--LibRPC functions extended to perform sq_get and sq_set on server vm from npcclient.  
+--Fixed bug when onPlayerRequestClass return 0 on server.  
