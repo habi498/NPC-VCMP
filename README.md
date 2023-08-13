@@ -114,14 +114,6 @@ Where:
 --Added boolean parameter for crouching in SendOnFootSyncData.  
 --Windows builds were made.  
 
-**Version 1.3** Changes (15.11.2022)
-Timer new implemented SetTimerEx
-Fixed npc running unwantedly due to an error while writing 4 bits through raknet.
-Fixed potential issue of not killing Timer if function not found at proper time.
-Added ability for npc to shoot through sniper rifle
-Added boolean parameter for crouching in SendOnFootSyncData
-Windows builds were made.
-
 **Version 1.5** ( 05.12.2022 )
 1. NPCs can be called with (l flag) -l "xPos yPos zPos aAngle sSkin wWeapon cClass" where
    Pos and Angle are floating points. The npc after connecting
