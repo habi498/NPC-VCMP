@@ -172,7 +172,7 @@ enables npc to load ammo and shoot at any player. LibAction.
 --Fixed bug when onPlayerRequestClass return 0 on server. 
 
 **Version 1.7** ( T.B.A )  
---Pickup Support
+--Pickup Support  
 --Bug fixes 
   1. npc getting kicked if shooting another player and npc has armour 
   2. npc crashing if Vector class tostring method used.
