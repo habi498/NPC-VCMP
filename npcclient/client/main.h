@@ -46,6 +46,7 @@
 #include "Player.h"
 #include "Playerpool.h"
 #include "VehiclePool.h"
+#include "pickuppool.h"
 #include "npc32.h"
 #include "CTimer.h"
 #include "Plugins.h"
@@ -65,8 +66,11 @@ uint32_t bytes_swap_u32(uint32_t i);
 #define OF_FLAG_ARMOUR 0x04
 #define OF_FLAG_SPEED 0x01
 #define OF_FLAG_KEYS 0x10
-#define OF_FLAG_CROUCHING 0x80
+//#define OF_FLAG_CROUCHING 0x80
+#define OF_FLAG_EXTRA_NIBBLE 0x80
 #define OF_FLAG_NOHEALTH 0x08
+#define OF_FLAG_NIBBLE_CROUCHING 0x2
+#define OF_FLAG_NIBBLE_RELOADING 0x8
 
 #define IC_FLAG_ARMOUR 0x40
 #define IC_FLAG_WEAPON 0x80

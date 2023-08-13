@@ -109,6 +109,12 @@ int main(int argc, char** argv) {
             {
                  m_pPlugins->LoadPlugins(NPC_PLUGINS_DIR, pluginArg.getValue());
             }
+#ifdef WIN32
+            /*White letters on black background*/
+            HANDLE hstdout = GetStdHandle(STD_OUTPUT_HANDLE); 
+            if (hstdout)
+                SetConsoleTextAttribute(hstdout, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+#endif
             int s= LoadScript(scriptpath.c_str(), params);
             if (s)
                 ConnectToServer(hostname, port, npcname, password);

@@ -1,5 +1,5 @@
 #define API_MAJOR 1
-#define API_MINOR 4
+#define API_MINOR 5 //since setfps
 enum class funcError {
 	NoError = 0,
 	EntityNotFound = 1,
@@ -122,6 +122,17 @@ struct PluginFuncs {
 	void (*FireProjectile)(uint8_t byteWeapon, VECTOR vecPos, float r1, float r2, float r3, float r4, float r5, float r6, float r7) {};
 	funcError(*RequestClass)(uint8_t relativeindex) {};
 	funcError(*RequestSpawn)() {};
+
+	//api 1.5
+	void (*SetFPS)(double fps) {};
+	//Success
+	bool (*IsPickupStreamedIn)(uint16_t wPickupID) {};
+	//GetLastError
+	uint16_t(*GetPickupModel)(uint16_t wPickupID) {};
+	funcError(*GetPickupPosition)(uint16_t wPickupID, VECTOR* vecPos) {};
+	uint8_t(*GetPickupAlpha)(uint16_t wPickupID) {};
+	uint32_t(*GetPickupQuantity)(uint16_t wPickupID) {};
+	uint32_t(*GetStreamedPickupCount)() {};
 };
 
 struct PluginCallbacks {
@@ -148,4 +159,9 @@ struct PluginCallbacks {
 	
 	uint8_t(*OnNPCClassSelect)() {};
 	void (*OnServerShareTick)(unsigned int tickcount) {};
+
+	//1.5 api
+	void (*OnTimeWeatherSync)(uint16_t timerate, uint8_t minute, uint8_t hour, uint8_t weather) {};
+	void (*OnPickupStreamIn)(uint16_t wPickupId) {};
+	void (*OnPickupDestroyed)(uint16_t wPickupId) {};
 };

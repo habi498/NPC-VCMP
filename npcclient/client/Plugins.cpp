@@ -165,8 +165,17 @@ BOOL CPlugins::LoadSinglePlugin(char* szPluginPath)
         pPlugin->pPluginFuncs->RequestClass = m_pFunctions->RequestClass;
         pPlugin->pPluginFuncs->RequestSpawn = m_pFunctions->RequestSpawn;
 
+        
+        pPlugin->pPluginFuncs->SetFPS = m_pFunctions->SetFPS;
+        pPlugin->pPluginFuncs->IsPickupStreamedIn = m_pFunctions->IsPickupStreamedIn;
+#define PLUGIN_CALLBACK(event) (pPlugin->pPluginFuncs->event = m_pFunctions->event)
+        PLUGIN_CALLBACK(GetPickupModel);
+        PLUGIN_CALLBACK(GetPickupPosition);
+        PLUGIN_CALLBACK(GetPickupAlpha);
+        PLUGIN_CALLBACK(GetPickupQuantity);
+        PLUGIN_CALLBACK(GetStreamedPickupCount);
 
-
+        
     }
     else return FALSE;
     pPlugin->pPluginInfo->structSize = sizeof(PluginInfo);

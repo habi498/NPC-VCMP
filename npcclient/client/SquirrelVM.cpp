@@ -134,6 +134,21 @@ void call_OnServerShareTick(uint32_t tickcount)
     }
     sq_settop(v, top); //restores the original stack size
 }
+void call_OnTimeWeatherSync(uint16_t timerate, uint8_t minute, uint8_t hour, uint8_t weather)
+{
+    int top = sq_gettop(v); //saves the stack size before the call
+    sq_pushroottable(v); //pushes the global table
+    sq_pushstring(v, _SC("OnTimeWeatherSync"), -1);
+    if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
+        sq_pushroottable(v); //push the 'this' (in this case is the global table)
+        sq_pushinteger(v, timerate);
+        sq_pushinteger(v, minute);
+        sq_pushinteger(v, hour);
+        sq_pushinteger(v, weather);
+        sq_call(v, 5, 0, 1); //calls the function 
+    }
+    sq_settop(v, top); //restores the original stack size
+}
 void call_OnNPCEnterVehicle(uint16_t vehicleid, uint8_t seatid)
 {
     int top = sq_gettop(v); //saves the stack size before the call
@@ -215,6 +230,30 @@ void call_OnVehicleStreamOut(uint16_t vehicleid)
     if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
         sq_pushroottable(v); //push the 'this' (in this case is the global table)
         sq_pushinteger(v, vehicleid);
+        sq_call(v, 2, 0, 1); //calls the function 
+    }
+    sq_settop(v, top); //restores the original stack size
+}
+void call_OnPickupStreamIn(uint16_t wPickupId)
+{
+    int top = sq_gettop(v); //saves the stack size before the call
+    sq_pushroottable(v); //pushes the global table
+    sq_pushstring(v, _SC("OnPickupStreamIn"), -1);
+    if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
+        sq_pushroottable(v); //push the 'this' (in this case is the global table)
+        sq_pushinteger(v, wPickupId);
+        sq_call(v, 2, 0, 1); //calls the function 
+    }
+    sq_settop(v, top); //restores the original stack size
+}
+void call_OnPickupDestroyed(uint16_t wPickupId)
+{
+    int top = sq_gettop(v); //saves the stack size before the call
+    sq_pushroottable(v); //pushes the global table
+    sq_pushstring(v, _SC("OnPickupDestroyed"), -1);
+    if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
+        sq_pushroottable(v); //push the 'this' (in this case is the global table)
+        sq_pushinteger(v, wPickupId);
         sq_call(v, 2, 0, 1); //calls the function 
     }
     sq_settop(v, top); //restores the original stack size
@@ -355,6 +394,7 @@ bool StartSquirrel(std::string file, std::string location, std::vector<std::stri
     RegisterNPCFunctions2();
     RegisterNPCFunctions3();
     RegisterNPCFunctions4();
+    RegisterNPCFunctions5();
     RegisterConsts();
     sqstd_seterrorhandlers(v);
     sq_setprintfunc(v, printfunc, printfunc); //sets the print function

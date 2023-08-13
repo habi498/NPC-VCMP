@@ -21,7 +21,6 @@
 extern HSQUIRRELVM v;
 extern CPlayerPool* m_pPlayerPool;
 extern NPC* iNPC;
-extern CPlayerPool* m_pPlayerPool;
 extern CFunctions* m_pFunctions;
 extern CPlayer* npc;
 extern RakNet::RakPeerInterface* peer;

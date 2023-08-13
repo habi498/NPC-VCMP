@@ -22,6 +22,7 @@ extern NPC* iNPC;
 extern CPlayer* npc;
 extern CPlayerPool* m_pPlayerPool;
 extern CVehiclePool* m_pVehiclePool;
+extern CPickupPool* m_pPickupPool;
 extern RakNet::RakPeerInterface* peer;
 extern RakNet::SystemAddress systemAddress;
 uint8_t GetSlotId(uint8_t byteWeapon);
@@ -73,6 +74,72 @@ funcError CFunctions::RequestSpawn()
         return funcError::NoError;
     }
     else return SetLastError(funcError::NPCAlreadySpawned);
+}
+void CFunctions::SetFPS(double fps)
+{
+    SetLastError(funcError::NoError);
+    RakNet::BitStream bsOut;
+    bsOut.Write((RakNet::MessageID)(ID_GAME_MESSAGE_PLAYER_FPS));
+    bsOut.Write(fps);
+    peer->Send(&bsOut, HIGH_PRIORITY, RELIABLE, 0, systemAddress, false);
+}
+bool CFunctions::IsPickupStreamedIn(uint16_t wPickupID)
+{
+    ClearLastError();
+    PICKUP* pickup = m_pPickupPool->GetByID(wPickupID);
+    if (pickup)
+    {
+        return true;
+    }
+    else return false;
+}
+uint16_t CFunctions::GetPickupModel(uint16_t wPickupID)
+{
+    ClearLastError(); 
+    PICKUP* pickup = m_pPickupPool->GetByID(wPickupID);
+    if (pickup)
+    {
+        return pickup->wModel;
+    }
+    else SetLastError(funcError::EntityNotFound);
+    return 0;
+}
+funcError CFunctions::GetPickupPosition(uint16_t wPickupID, VECTOR* vecPos)
+{
+    ClearLastError();
+    PICKUP* pickup = m_pPickupPool->GetByID(wPickupID);
+    if (pickup)
+    {
+        *vecPos = pickup->vecPos;
+        return funcError::NoError;
+    }
+    else return SetLastError(funcError::EntityNotFound);
+}
+uint8_t CFunctions::GetPickupAlpha(uint16_t wPickupID)
+{
+    ClearLastError();
+    PICKUP* pickup = m_pPickupPool->GetByID(wPickupID);
+    if (pickup)
+    {
+        return pickup->bAlpha;
+    }
+    else SetLastError(funcError::EntityNotFound);
+    return 0;
+}
+uint32_t CFunctions::GetPickupQuantity(uint16_t wPickupID)
+{
+    ClearLastError();
+    PICKUP* pickup = m_pPickupPool->GetByID(wPickupID);
+    if (pickup)
+    {
+        return pickup->dwQuantity;
+    }
+    else SetLastError(funcError::EntityNotFound);
+    return 0;
+}
+uint32_t CFunctions::GetStreamedPickupCount()
+{
+   return m_pPickupPool->GetCount();
 }
 void CFunctions::SendChatMessage(const char* message)
 {

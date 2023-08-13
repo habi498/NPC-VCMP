@@ -446,8 +446,10 @@ SQInteger fn_GetPlayerPos(HSQUIRRELVM v)
     {
         CPlayer* player = m_pPlayerPool->GetAt(bytePlayerId);
         VECTOR pos = player->m_vecPos;
-        sq_pushvector(v, pos);
-        return 1;
+        if (SQ_SUCCEEDED(sq_pushvector(v, pos)))
+            return 1;
+        else
+            return sq_throwerror(v, "Error occured when getting vector");
     }
     else return 0;
 }

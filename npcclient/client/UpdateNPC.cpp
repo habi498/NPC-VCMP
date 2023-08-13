@@ -21,7 +21,7 @@ extern RakNet::SystemAddress systemAddress;
 extern NPC* iNPC;
 extern CPlayer* npc;
 extern CVehiclePool* m_pVehiclePool;
-void SetActionFlags(ONFOOT_SYNC_DATA* m_pOfSyncData, uint8_t* action);
+void SetActionFlags(ONFOOT_SYNC_DATA* m_pOfSyncData, uint8_t* action, uint8_t* nibble);
 void SetActionFlags(INCAR_SYNC_DATA* m_InSyncData, uint8_t* action);
 void SetTypeFlags(INCAR_SYNC_DATA* m_InSyncData, uint8_t* type);
 void SetRotationFlags(INCAR_SYNC_DATA* m_InSyncData, uint8_t* flag);
@@ -240,11 +240,9 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData, PacketPriority priority)
 	else
 		bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_ONFOOT_UPDATE_AIM);
 	bsOut.Write(iNPC->anticheatID);
-	uint8_t action = 0;
-	SetActionFlags(m_pOfSyncData, &action);
-	uint8_t nibble = 0;
-	if (action & OF_FLAG_CROUCHING)
-		nibble |= 0x2;
+	uint8_t action = 0; uint8_t nibble = 0;
+	SetActionFlags(m_pOfSyncData, &action,&nibble);
+	
 	#ifdef NPC_SHOOTING_ENABLED
 		bool reloading_weapon = false;
 		if (m_pOfSyncData->IsPlayerUpdateAiming)
@@ -252,9 +250,13 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData, PacketPriority priority)
 			if ((m_pOfSyncData->dwKeys & 512) == 0)
 			{
 				//This means player is reloading weapon!
+				//key_onfoot_fire is 576
 				reloading_weapon = true;
-				nibble|= 0x8;
-				action = 0xd0;
+				
+				//07 Aug 2023, commented 0xd0. If armour this lead error
+				//action = 0xd0;
+				action |= OF_FLAG_EXTRA_NIBBLE;//in somecases, this is already 'OR'ed.
+				nibble |= OF_FLAG_NIBBLE_RELOADING;
 			}
 		}
 	#endif
@@ -300,7 +302,7 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData, PacketPriority priority)
 		bsOut.Write(msb);
 		#ifdef NPC_SHOOTING_ENABLED
 			uint8_t byteVal = 0;
-			if ((m_pOfSyncData->dwKeys & 1) && !reloading_weapon)
+			if ((m_pOfSyncData->dwKeys & 1) && !reloading_weapon)//key_aim=1
 				byteVal = uint8_t(0xc);
 			else if (reloading_weapon)
 				byteVal = uint8_t(0x1);
@@ -346,14 +348,19 @@ void WriteNibble(uint8_t nibble, RakNet::BitStream *bsOut)
 	bsOut->WriteBits(bytearray, 4);
 }
 #ifndef _REL004
-void SetActionFlags(ONFOOT_SYNC_DATA* m_pOfSyncData, uint8_t* action)
+void SetActionFlags(ONFOOT_SYNC_DATA* m_pOfSyncData, uint8_t* action, uint8_t* nibble)
 {
 	if (m_pOfSyncData->byteCurrentWeapon)(*action) |= OF_FLAG_WEAPON;
 	if (m_pOfSyncData->byteArmour)(*action) |= OF_FLAG_ARMOUR;
 	if (m_pOfSyncData->vecSpeed.X != 0 || m_pOfSyncData->vecSpeed.Y != 0 ||
 		m_pOfSyncData->vecSpeed.Z != 0)(*action) |= OF_FLAG_SPEED;
 	if (m_pOfSyncData->dwKeys)(*action) |= OF_FLAG_KEYS;
-	if (m_pOfSyncData->IsCrouching)(*action) |= OF_FLAG_CROUCHING;
+	if (m_pOfSyncData->IsCrouching)
+	{
+
+		(*action) |= OF_FLAG_EXTRA_NIBBLE;
+		(*nibble) |= OF_FLAG_NIBBLE_CROUCHING;
+	}
 	if (m_pOfSyncData->byteHealth <= 0)(*action) |= OF_FLAG_NOHEALTH;
 }
 #endif

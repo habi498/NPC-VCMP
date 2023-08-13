@@ -80,6 +80,39 @@ void CEvents::OnServerShareTick(unsigned int tickcount)
             pPlugin->pPluginCalls->OnServerShareTick(tickcount);
     }
 }
+void CEvents::OnTimeWeatherSync(uint16_t timerate, uint8_t minute, uint8_t hour, uint8_t weather)
+{
+    call_OnTimeWeatherSync(timerate, minute, hour, weather);
+    PluginPool_s* pPlugin;
+    for (DWORD i = 0; i < m_pPlugins->GetPluginCount(); i++)
+    {
+        pPlugin = m_pPlugins->GetPlugin(i);
+        if (pPlugin->pPluginCalls->OnTimeWeatherSync)
+            pPlugin->pPluginCalls->OnTimeWeatherSync(timerate, minute, hour, weather);
+    }
+}
+void CEvents::OnPickupStreamIn(uint16_t wPickupId)
+{
+    call_OnPickupStreamIn(wPickupId);
+    PluginPool_s* pPlugin;
+    for (DWORD i = 0; i < m_pPlugins->GetPluginCount(); i++)
+    {
+        pPlugin = m_pPlugins->GetPlugin(i);
+        if (pPlugin->pPluginCalls->OnPickupStreamIn)
+            pPlugin->pPluginCalls->OnPickupStreamIn(wPickupId);
+    }
+}
+void CEvents::OnPickupDestroyed(uint16_t wPickupId)
+{
+    call_OnPickupDestroyed(wPickupId);
+    PluginPool_s* pPlugin;
+    for (DWORD i = 0; i < m_pPlugins->GetPluginCount(); i++)
+    {
+        pPlugin = m_pPlugins->GetPlugin(i);
+        if (pPlugin->pPluginCalls->OnPickupDestroyed)
+            pPlugin->pPluginCalls->OnPickupDestroyed(wPickupId);
+    }
+}
 void CEvents::OnPlayerDeath(uint8_t bytePlayerId)
 {
     call_OnPlayerDeath(bytePlayerId);

@@ -112,6 +112,16 @@ public:
 	funcError GetLastError();
 	static funcError RequestClass(uint8_t relativeindex);
 	static funcError RequestSpawn();
+
+	static void SetFPS(double fps);
+	//Success
+	static bool IsPickupStreamedIn(uint16_t wPickupID);
+	//GetLastError
+	static uint16_t GetPickupModel(uint16_t wPickupID);
+	static funcError GetPickupPosition(uint16_t wPickupID, VECTOR* vecPos);
+	static uint8_t GetPickupAlpha(uint16_t wPickupID);
+	static uint32_t GetPickupQuantity(uint16_t wPickupID);
+	static uint32_t GetStreamedPickupCount();
 };
 
 #endif

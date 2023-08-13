@@ -25,6 +25,7 @@ RakNet::SystemAddress systemAddress;
 CPlayerPool* m_pPlayerPool = NULL;
 CEvents* m_pEvents;
 CVehiclePool* m_pVehiclePool = NULL;
+CPickupPool* m_pPickupPool = NULL;
 extern CFunctions* m_pFunctions;
 CPlayer* npc = NULL;
 #define CAR_HEALTH_MAX 1000
@@ -62,6 +63,22 @@ void ApplyRotationFlags(QUATERNION* quatRotation, uint8_t flag)
 	if (flag & 8)
 		quatRotation->W > 0 ? quatRotation->W *= -1 : 0;
 }
+bool ReadPickup(uint32_t* dwSerialNoOut, uint16_t* wPickupIDOut, RakNet::BitStream* bsIn)
+{
+	//t1,t2,t3 for reading serial no and pickup id
+	uint16_t t1=0;
+	bsIn->Read(t1);
+	uint8_t t2=0;
+	bsIn->Read(t2);
+	*dwSerialNoOut = t1 + (t2 >> 3);
+	uint8_t t3;
+	if (bsIn->Read(t3))
+	{
+		*wPickupIDOut = (t2 & 7) * 256 + t3;
+		return true;
+	}
+	return false;
+}
 int ConnectToServer(std::string hostname, int port, std::string npcname,std::string password)
 {
 	peer = RakNet::RakPeerInterface::GetInstance();
@@ -79,6 +96,8 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 		m_pEvents = new CEvents();
 	if (!m_pVehiclePool)
 		m_pVehiclePool = new CVehiclePool();
+	if (!m_pPickupPool)
+		m_pPickupPool = new CPickupPool();
 	
 #ifndef WIN32
 	std::setvbuf(stdout, NULL, _IONBF, 0);
@@ -407,13 +426,11 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE, 0, packet->systemAddress, false);
 					npc->m_byteHealth = 100;
 					npc->SetState(PLAYER_STATE_SPAWNED);
-					//send a packet
 					npc->SetCurrentWeapon(0);
 					npc->m_byteArmour = 0;
-					//npc->m_ = VECTOR(0, 0, 0);
-
+					
 					iNPC->SetSpawnStatus(true);
-					if (iNPC->bSpawnAtXYZ)
+					if (iNPC->AltSpawnStatus==AltSpawn::ON)
 					{
 						npc->m_vecPos.X = iNPC->fSpawnLocX;
 						npc->m_vecPos.Y = iNPC->fSpawnLocY;
@@ -421,7 +438,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 						npc->m_fAngle = iNPC->fSpawnAngle;
 						
 						iNPC->StoreFirstSpawnedTime();//for removing lock
-						iNPC->bSpawnAtXYZ = false; //turn off
+						iNPC->AltSpawnStatus = AltSpawn::SPAWNED; //turn off
 					}
 					if (iNPC->SpecialSkin != NOT_DEFINED )
 					{
@@ -834,6 +851,14 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 			{
 				RakNet::BitStream bsIn(packet->data, packet->length, false);
 				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				if (iNPC->IsSpawned()&&iNPC->AltSpawnStatus!=AltSpawn::OFF &&
+					(iNPC->AltSpawnStatus & AltSpawn::SetPosFromServerRecvd)
+					== 0)
+				{
+					//This is the command from server to set pos. avoid it.
+					iNPC->AltSpawnStatus |= AltSpawn::SetPosFromServerRecvd;
+					break;
+				}
 				if (!iNPC->IsSyncPaused())
 				{
 					bsIn.Read(npc->m_vecPos.Z);
@@ -857,7 +882,12 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				RakNet::BitStream bsIn(packet->data, packet->length, false);
 				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
 				//NPC has spawn position or spawn angle set. don't read this
-				if (!iNPC->IsSyncPaused())
+				if (iNPC->IsSpawned()&&iNPC->AltSpawnStatus != AltSpawn::OFF && (iNPC->AltSpawnStatus & AltSpawn::SetAngleFromServerRecd)
+					== 0)
+				{
+					//This is the command from server to set angle. avoid it.
+					iNPC->AltSpawnStatus |= AltSpawn::SetAngleFromServerRecd;
+				}else if (!iNPC->IsSyncPaused())
 				{
 					bsIn.Read(npc->m_fAngle);
 				}
@@ -1069,16 +1099,136 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				}
 			}
 			break;
+			
+			case ID_GAME_MESSAGE_PICKUP_CREATED:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint32_t dwSerialNo; uint16_t wPickupID;
+				bool s = ReadPickup(&dwSerialNo, &wPickupID, &bsIn);
+				if (!s)
+				{
+					printf("Error reading pickup data\n");
+					break;
+				}
+				uint16_t wModel;
+				bsIn.Read(wModel);
+				uint32_t dwQuantity;
+				bsIn.Read(dwQuantity);
+				VECTOR vecPos;
+				bsIn.Read(vecPos.Z);bsIn.Read(vecPos.Y);bsIn.Read(vecPos.X);
+				uint8_t bAlpha;
+				bsIn.Read(bAlpha);
+				
+				if (!m_pPickupPool->GetByID(wPickupID))
+				{
+					//Pickup with this id does not exists
+					bool success=m_pPickupPool->New(wPickupID, dwSerialNo, wModel, dwQuantity, vecPos, bAlpha);
+					m_pEvents->OnPickupStreamIn(wPickupID);
+				}
+				else
+				{
+					//Special case shown by vito
+					//Pickup with ID already exists. What to do?
+					//Overwrite
+					PICKUP* pickup = m_pPickupPool->GetByID(wPickupID);
+					pickup->dwSerialNo = dwSerialNo;
+					pickup->bAlpha = bAlpha;
+					pickup->dwQuantity = dwQuantity;
+					pickup->vecPos = vecPos;
+					pickup->wModel = wModel;
+				}
+			}
+			break;
+
+			case ID_GAME_MESSAGE_PICKUP_DESTROYED:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint32_t dwSerialNo; uint16_t wPickupID;
+				bool s = ReadPickup(&dwSerialNo, &wPickupID, &bsIn);
+				if (!s)
+				{
+					printf("Error reading pickup data\n");
+					break;
+				}
+				//Check it on pool
+				PICKUP* pickup = m_pPickupPool->GetByID(wPickupID);
+				if (pickup)
+				{
+					//It exists, destroy it after calling event.
+					m_pEvents->OnPickupDestroyed(wPickupID);
+					m_pPickupPool->Destroy(wPickupID);
+				}
+			}break;
+			case ID_GAME_MESSAGE_PICKUP_CHANGE_ALPHA:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint32_t dwSerialNo; uint16_t wPickupID;
+				bool s = ReadPickup(&dwSerialNo, &wPickupID, &bsIn);
+				if (!s)
+				{
+					printf("Error reading pickup data\n");
+					break;
+				}
+				uint8_t bAlpha;
+				bsIn.Read(bAlpha);
+				PICKUP* pickup = m_pPickupPool->GetByID(wPickupID);
+				if(pickup)
+				{
+					m_pPickupPool->GetByID(wPickupID)->bAlpha = bAlpha;
+				}
+			}break;
+			
+			case ID_GAME_MESSAGE_PICKUP_CHANGE_POS:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint32_t dwSerialNo; uint16_t wPickupID;
+				bool s = ReadPickup(&dwSerialNo, &wPickupID, &bsIn);
+				if (!s)
+				{
+					printf("Error reading pickup data\n");
+					break;
+				}
+				VECTOR vecPos;
+				bsIn.Read(vecPos.X); bsIn.Read(vecPos.Y);
+				bsIn.Read(vecPos.Z);
+				PICKUP* pickup = m_pPickupPool->GetByID(wPickupID);
+				if (pickup)
+				{
+					m_pPickupPool->GetByID(wPickupID)->vecPos = vecPos;
+				}
+			}break;
+			
 			//Every 5 seconds, server sends below packet
 			case ID_GAME_MESSAGE_TICK:
 			{
 				RakNet::BitStream bsIn(packet->data, packet->length, false);
 				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
-				unsigned int tickcount;
-				bsIn.Read(tickcount);
+				unsigned int tickcount; 
+				bsIn.Read(tickcount); 
 				m_pEvents->OnServerShareTick(tickcount);
 			}
 			break;
+
+			//Every 10 seconds, server sends below packet 
+			case ID_GAME_MESSAGE_TIMEWEATHER_SYNC:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				unsigned short timerate=0;
+				bsIn.Read(timerate);
+				uint8_t minute=0, hour=0, weather=0;
+				bsIn.Read(minute);
+				bsIn.Read(hour);
+				bsIn.Read(weather);
+				m_pEvents->OnTimeWeatherSync(timerate,minute,hour,weather);
+			}
+			break;
+			
+
 			}
 		}
 		OnCycle();
@@ -1311,10 +1461,10 @@ void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncD
 	uint8_t action;
 	bsIn->ReadAlignedBytes(&action, 1);
 	uint8_t nibble = 0;
-	if (action & OF_FLAG_CROUCHING)
+	if (action & OF_FLAG_EXTRA_NIBBLE)
 	{
 		//This means a nibble is there to read
-		ReadNibble(&nibble, bsIn);//This may not be of anyuse in particular
+		ReadNibble(&nibble, bsIn);//This is used to find player is crouching and/or reloading 
 	}
 	float x, y, z;
 	bsIn->Read(x); bsIn->Read(y); bsIn->Read(z);
@@ -1382,11 +1532,12 @@ void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncD
 	m_pOfSyncDataOut->dwKeys = dw_Keys;
 	m_pOfSyncDataOut->fAngle = fAngle;
 	m_pOfSyncDataOut->IsPlayerUpdateAiming = bIsAiming;
-	m_pOfSyncDataOut->IsCrouching = (action & 0x80) != 0 ? 1 : 0;
+	m_pOfSyncDataOut->IsCrouching = (nibble & OF_FLAG_NIBBLE_CROUCHING)==OF_FLAG_NIBBLE_CROUCHING;
 	m_pOfSyncDataOut->vecPos.X = x;
 	m_pOfSyncDataOut->vecPos.Y = y;
 	m_pOfSyncDataOut->vecPos.Z = z;
 	m_pOfSyncDataOut->vecSpeed = vecSpeed;
+	m_pOfSyncDataOut->bIsReloading = (nibble & OF_FLAG_NIBBLE_RELOADING) == OF_FLAG_NIBBLE_RELOADING;
 	/*printf("Data Arrived========\n \
 Player ID:%u, Position: (%f,%f,%f), Angle:%f, Speed:(%f,%f,%f) Weapon: %u, \
 Game Keys: %u, Health: %u, Armour: %u, AimDir: (%f,%f,%f), AimPos: (%f, %f %f)\

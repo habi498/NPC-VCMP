@@ -104,7 +104,14 @@ public:
 	{
 	}
 };
-
+enum AltSpawn
+{
+	OFF,
+	ON,
+	SPAWNED,
+	SetPosFromServerRecvd=4,
+	SetAngleFromServerRecd=8,
+};
 //used to store internal data
 class NPC
 {
@@ -119,7 +126,8 @@ private:
 	
 	
 public:
-	bool bSpawnAtXYZ = false;
+	uint8_t AltSpawnStatus = AltSpawn::OFF;
+	//bool bSpawnAtXYZ = false;
 	bool bIsClassRequested = false;
 	float fSpawnLocX = 0.0, fSpawnLocY = 0.0, fSpawnLocZ = 0.0;
 	float fSpawnAngle = 0.0;
@@ -157,7 +165,8 @@ public:
 	void SetSpawnStatus(bool status) {  isSpawned = status; }
 	void SetSpawnLocation(float x, float y, float z, float angle=0.0)
 	{
-		bSpawnAtXYZ = true;
+		//bSpawnAtXYZ = true;
+		AltSpawnStatus = AltSpawn::ON;
 		fSpawnLocX = x;
 		fSpawnLocY = y;
 		fSpawnLocZ = z;

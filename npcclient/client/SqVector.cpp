@@ -18,7 +18,7 @@
 SQInteger fn_Vector_constructor(HSQUIRRELVM v)
 {
     //we have four args. xfff for Vector(1,2,3) for example
-    SQFloat x, y, z; SQInteger X, Y, Z;
+    SQFloat x=0, y=0, z=0; SQInteger X, Y, Z;
     if (sq_gettype(v, 2) == OT_FLOAT)
         sq_getfloat(v, 2, &x);
     else if (sq_gettype(v, 2) == OT_INTEGER)
@@ -199,7 +199,7 @@ SQInteger fn_Vector_tostring(HSQUIRRELVM v)
     sq_get(v, -2); SQFloat z;
     sq_getfloat(v, -1, &z);
     sq_poptop(v);
-    char* buffer = (char*)malloc(10 * 3);//take 10 as size of x as string eg. 1000.33333
+    char* buffer = (char*)malloc(20 * 3);//take 10 as size of x as string eg. 1000.33333
     if (buffer)
     {
         sprintf(buffer, "(%f,%f,%f)", x, y, z);
@@ -354,18 +354,24 @@ SQRESULT sq_pushvector(HSQUIRRELVM v, SQFloat x, SQFloat y, SQFloat z)
     SQInteger top = sq_gettop(v);
     sq_pushroottable(v); //t
     sq_pushstring(v, "Vector", -1); //ts
-    sq_get(v, -2); //ty
-    sq_pushnull(v); //tyo
-    sq_pushfloat(v, x );//tyof
-    sq_pushfloat(v, y );//tyoff
-    sq_pushfloat(v, z );//ty offf
-    //call Vector
-    SQRESULT res = sq_call(v, 4, SQTrue, SQTrue); //ty x
-    if (SQ_SUCCEEDED(res))
+    if (SQ_SUCCEEDED(sq_get(v, -2))) //ty
     {
-        sq_remove(v, -2); //t x
-        sq_remove(v, -2); //x
-        return 1;
+        sq_pushnull(v); //tyo
+        sq_pushfloat(v, x);//tyof
+        sq_pushfloat(v, y);//tyoff
+        sq_pushfloat(v, z);//ty offf
+        //call Vector
+        SQRESULT res = sq_call(v, 4, SQTrue, SQTrue); //ty x
+        if (SQ_SUCCEEDED(res))
+        {
+            sq_remove(v, -2); //t x --constructor removed
+            sq_remove(v, -2); //x   --roottable removed
+            return 1;
+        }
+        else {
+            sq_settop(v, top);
+            return -1;
+        }
     }
     else {
         sq_settop(v, top);

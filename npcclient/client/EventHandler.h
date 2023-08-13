@@ -42,5 +42,13 @@ public:
         VECTOR vecPos, float r1, float r2, float r3, float r4, float r5, float r6, float r7);
     uint8_t OnNPCClassSelect();
     void OnServerShareTick(unsigned int tick);
+
+    void OnTimeWeatherSync(uint16_t timerate, uint8_t minute, uint8_t hour, uint8_t weather);
+    
+    //dwSerialNo is increasing when pickup is created and destroyed and created again
+    
+    void OnPickupStreamIn(uint16_t wPickupId);
+    void OnPickupDestroyed(uint16_t wPickupId);
+
 };
 #endif
