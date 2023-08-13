@@ -98,7 +98,7 @@ Where:
    --,  --ignore_rest
      Ignores the rest of the labeled arguments following this flag.
 
-   VCMP-Non Player Characters v1.6.1.29
+   VCMP-Non Player Characters v1.6 (6.27)
 ```
 
 ## Version Changes November 2022  
