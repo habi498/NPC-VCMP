@@ -1,5 +1,5 @@
 # npc-vcmp
-Implements Non Player Characters (NPC) in VC-MP 0.4 Servers
+Implements Non Player Characters (NPC)  also called bots in VC-MP 0.4 Servers
 
 # Instructions for building the project. 
 
@@ -7,7 +7,7 @@ This is a Visual Studio 'CMake Project'.
 ## Visual Studio -> File -> Clone Repository
 <img src="https://github.com/habi498/npc-vcmp/blob/master-1.6/picture.png" width="510"></img>
 ## Project Configurations
-1. WINODWS_32 
+1. WINDOWS_32 
 2. WINDOWS_64 
 3. WINDOWS_REL004 
 4. wsl_32
@@ -54,7 +54,7 @@ Both Windows 32 and 64 bit systems use npcclient.exe, which is 32 bit. It might 
 In linux, 32 bit systems and 64 bit systems use different executables. They are distinguished as by appending the bitness at the end of it.
 
 ## Binaries can be downloaded from sourceforge.net
-Select latest version( 1.6 beta 2 patch1 as on 16.Feb.2023) at the files over [here](https://sourceforge.net/projects/npc-for-vcmp/files/)
+Select latest version( 1.6 beta 5 as on July.2023) at the files over [here](https://sourceforge.net/projects/npc-for-vcmp/files/)
 
 ## NPC Application (npcclient.exe) Command-line arguments
 The tclap libary has been made use and hence the the application can be run with the following parameters:
@@ -114,14 +114,6 @@ Where:
 --Added boolean parameter for crouching in SendOnFootSyncData.  
 --Windows builds were made.  
 
-**Version 1.3** Changes (15.11.2022)
-Timer new implemented SetTimerEx
-Fixed npc running unwantedly due to an error while writing 4 bits through raknet.
-Fixed potential issue of not killing Timer if function not found at proper time.
-Added ability for npc to shoot through sniper rifle
-Added boolean parameter for crouching in SendOnFootSyncData
-Windows builds were made.
-
 **Version 1.5** ( 05.12.2022 )
 1. NPCs can be called with (l flag) -l "xPos yPos zPos aAngle sSkin wWeapon cClass" where
    Pos and Angle are floating points. The npc after connecting
@@ -163,3 +155,32 @@ F_CAR_HEALTH, I_CAR_DAMAGE, V_CAR_SPEED, F_CAR_TURRETX, F_CAR_TURRETY.
 --Plugin API v1.1  
 --New module which has inbuilt timer and other functions which
 enables npc to load ammo and shoot at any player. LibAction.
+
+**Version 1.6 beta 4** (05. May. 2023)  
+--fixed Q_CAR_ROTATION returning float instead of Quaternion.  
+--fixed SendInCarSyncData function not available.  
+--Earlier plugin npc04relxx do not work when some other plugins are loaded. It is fixed.  
+--New functions and events of sending Projectiles and Explosions.  
+--LibRPC now supports not only calling of functions of npcscripts from server, but reverse also provided npc is given admin status (for security reasons).  
+--Script will load after plugins are loaded. (patch1)  
+--API is updated to 1.3 (patch2) from 1.2 (patch1)  
+--New functions RequestClass, RequestSpawn and event OnNPCClassSelect  
+
+**Version 1.6 beta 5**( 27. June. 2023)  
+--ConnectNPCEx takes position as Vector instead of x,y,z.  
+--LibRPC functions extended to perform sq_get and sq_set on server vm from npcclient.  
+--Fixed bug when onPlayerRequestClass return 0 on server. 
+
+**Version 1.7** ( T.B.A ) 
+
+--Pickup Support 
+
+--Bug fixes 
+
+  1. npc getting kicked if shooting another player and npc has armour 
+  2. npc crashing if Vector class tostring method used.
+  3. many more
+
+--Events added: OnTimeWeatherSync, OnPickupStreamIn, OnPickupDestroyed
+--Functions new: IsPickupStreamedIn, GetPickupModel, GetPickupAlpha, GetPickupQuantity, GetPickupPosition, GetPickupCount
+
