@@ -182,5 +182,5 @@ enables npc to load ammo and shoot at any player. LibAction.
   3. many more
 
 --Events added: OnTimeWeatherSync, OnPickupStreamIn, OnPickupDestroyed  
---Functions new: IsPickupStreamedIn, GetPickupModel, GetPickupAlpha, GetPickupQuantity, GetPickupPosition, GetPickupCount
+--Functions new: IsPickupStreamedIn, GetPickupModel, GetPickupAlpha, GetPickupQuantity, GetPickupPos, GetPickupCount
 
