@@ -40,6 +40,7 @@ enum class bodyPart {
 	RightLeg=5,
 	Head=6
 };
+
 struct PluginInfo {
 	uint32_t structSize;
 	uint32_t pluginId;
@@ -133,6 +134,25 @@ struct PluginFuncs {
 	uint8_t(*GetPickupAlpha)(uint16_t wPickupID) {};
 	uint32_t(*GetPickupQuantity)(uint16_t wPickupID) {};
 	uint32_t(*GetStreamedPickupCount)() {};
+	funcError(*ClaimPickup)(uint16_t wPickupID) {};
+	funcError(*ClaimEnterCheckpoint)(uint16_t wCheckpointID) {};
+	funcError(*ClaimExitCheckpoint)(uint16_t wCheckpointID) {};
+	bool (*IsCheckpointStreamedIn)(uint16_t wCheckpointID) {};
+	funcError(*GetCheckpointRadius)(uint16_t wCheckpointID, float* fRadius) {};
+	funcError(*GetCheckpointColor)(uint16_t wCheckpointID, uint8_t* Red, uint8_t* Green, uint8_t* Blue, uint8_t* Alpha) {};
+	funcError(*GetCheckpointPos)(uint16_t wCheckpointID, VECTOR* vecPos) {};
+	funcError(*IsCheckpointSphere)(uint16_t wCheckpointID, uint8_t* isSphere) {};
+	bool (*IsObjectStreamedIn)(uint16_t wObjectID) {};
+	funcError(*GetObjectModel)(uint16_t wObjectID, uint16_t* wModel) {};
+	funcError(*GetObjectPos)(uint16_t wObjectID, VECTOR* vecPos) {};
+	funcError(*GetObjectRotation)(uint16_t wObjectID, QUATERNION* quatRot) {};
+	funcError(*GetObjectAlpha)(uint16_t wObjectID, uint8_t* byteAlpha) {};
+	bool (*IsObjectTouchReportEnabled)(uint16_t wObjectID) {};
+	bool (*IsObjectShotReportEnabled)(uint16_t wObjectID) {};
+	funcError(*ClaimObjectTouch)(uint16_t wObjectID) {};
+	funcError(*ClaimObjectShot)(uint16_t wObjectID, uint8_t byteWeaponID) {};
+	uint32_t (*GetStreamedCheckpointCount)() {};
+	uint32_t (*GetStreamedObjectCount)() {};
 };
 
 struct PluginCallbacks {
@@ -164,4 +184,11 @@ struct PluginCallbacks {
 	void (*OnTimeWeatherSync)(uint16_t timerate, uint8_t minute, uint8_t hour, uint8_t weather) {};
 	void (*OnPickupStreamIn)(uint16_t wPickupId) {};
 	void (*OnPickupDestroyed)(uint16_t wPickupId) {};
+	void (*OnPickupUpdate)(uint16_t wPickupId, pickupUpdate update) {};
+	void (*OnCheckpointStreamIn)(uint16_t wCheckpointId) {};
+	void (*OnCheckpointDestroyed)(uint16_t wCheckpointId) {};
+	void (*OnCheckpointUpdate)(uint16_t wCheckpointId, checkpointUpdate update){};
+	void (*OnObjectStreamIn)(uint16_t wObjectId) {};
+	void (*OnObjectDestroyed)(uint16_t wObjectId) {};
+	void (*OnObjectUpdate)(uint16_t wObjectId, objectUpdate update) {};
 };

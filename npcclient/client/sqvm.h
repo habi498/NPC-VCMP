@@ -50,6 +50,23 @@ typedef enum {
     vcmpPlayerUpdatePassenger = 3,
     forceSizeVcmpPlayerUpdate = INT32_MAX
 } vcmpPlayerUpdate;
+enum class pickupUpdate {
+    AlphaUpdate = 0,
+    PositionUpdate = 1,
+    pickupRefreshed = 2
+};
+enum class checkpointUpdate {
+    RadiusUpdate = 0,
+    PositionUpdate = 1,
+    ColourUpdate = 2
+};
+enum class objectUpdate {
+    AlphaUpdate=0,
+    PositionUpdate=1,
+    RotationToUpdate=2,
+    MoveToUpdate=3,
+    TrackingBumpsShots=4
+};
 void printfunc(HSQUIRRELVM v, const SQChar* s, ...);
 bool StartSquirrel(std::string file, std::string location, std::vector<std::string>params);
 int StopSquirrel();
@@ -72,6 +89,13 @@ void call_OnVehicleStreamIn(uint16_t vehicleid);
 void call_OnVehicleStreamOut(uint16_t vehicleid);
 void call_OnPickupStreamIn(uint16_t wPickupId);
 void call_OnPickupDestroyed(uint16_t wPickupId);
+void call_OnPickupUpdate(uint16_t wPickupId, pickupUpdate update);
+void call_OnCheckpointStreamIn(uint16_t wCheckpointID);
+void call_OnCheckpointDestroyed(uint16_t wCheckpointID);
+void call_OnCheckpointUpdate(uint16_t wCheckpointID, checkpointUpdate update);
+void call_OnObjectStreamIn(uint16_t wObjectID);
+void call_OnObjectDestroyed(uint16_t wObjectID);
+void call_OnObjectUpdate(uint16_t wObjectID, objectUpdate update);
 void call_OnRecordingPlaybackEnd();
 void call_OnPlayerUpdate(uint8_t bytePlayerId, vcmpPlayerUpdate updateType );
 void call_OnSniperRifleFired(uint8_t bytePlayerID, uint8_t byteWeaponId, float x, float y, float z, float dx, float dy, float dz);

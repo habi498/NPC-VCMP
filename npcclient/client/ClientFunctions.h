@@ -122,6 +122,28 @@ public:
 	static uint8_t GetPickupAlpha(uint16_t wPickupID);
 	static uint32_t GetPickupQuantity(uint16_t wPickupID);
 	static uint32_t GetStreamedPickupCount();
+	//static void SendModuleList(const char* message, uint16_t len);
+	static funcError ClaimPickup(uint16_t wPickupID);
+	static funcError ClaimEnterCheckpoint(uint16_t wCheckpointID);
+	static funcError ClaimExitCheckpoint(uint16_t wCheckpointID);
+	
+	static bool IsCheckpointStreamedIn(uint16_t wCheckpointID);
+	static funcError GetCheckpointRadius(uint16_t wCheckpointID, float* fRadius);
+	static funcError GetCheckpointColor(uint16_t wCheckpointID, uint8_t* Red, uint8_t* Green, uint8_t* Blue, uint8_t* Alpha);
+	static funcError GetCheckpointPos(uint16_t wCheckpointID, VECTOR* vecPos);
+	static funcError IsCheckpointSphere(uint16_t wCheckpointID, uint8_t* isSphere);
+
+	static bool IsObjectStreamedIn(uint16_t wObjectID);
+	static funcError GetObjectModel(uint16_t wObjectID, uint16_t* wModel);
+	static funcError GetObjectPos(uint16_t wObjectID, VECTOR* vecPos);
+	static funcError GetObjectRotation(uint16_t wObjectID, QUATERNION* quatRot);
+	static funcError GetObjectAlpha(uint16_t wObjectID, uint8_t* byteAlpha);
+	static bool IsObjectTouchReportEnabled(uint16_t wObjectID);
+	static bool IsObjectShotReportEnabled(uint16_t wObjectID);
+	static funcError ClaimObjectTouch(uint16_t wObjectID);
+	static funcError ClaimObjectShot(uint16_t wObjectID, uint8_t byteWeaponID);
+	static uint32_t GetStreamedCheckpointCount();
+	static uint32_t GetStreamedObjectCount();
 };
 
 #endif

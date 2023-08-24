@@ -25,7 +25,7 @@ private:
 public:
 	CPlugins();
 	~CPlugins();
-	void LoadPlugins(char* szSearchPath, std::string PluginsList);
+	void LoadPlugins(const char* szSearchPath, std::string PluginsList);
 	DWORD GetPluginCount();
 	PluginPool_s* GetPlugin(DWORD index);
 };

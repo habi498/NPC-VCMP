@@ -11,7 +11,7 @@ void NPC04_OnClientScriptData(int32_t playerId, const uint8_t* data, size_t size
 	{
 		if (VCMP->IsPlayerAdmin(playerId))
 		{
-			int top = sq->gettop(v);
+			SQInteger top = sq->gettop(v);
 			SQRESULT res = CallFunctionAdvanced(data + 4, size - 4);
 			if (SQ_SUCCEEDED(res))
 			{
@@ -187,7 +187,7 @@ SQRESULT ReadBuffer(HSQUIRRELVM v, const uint8_t*& buffer, const size_t& size, s
 			uint32_t StreamLen = swap4(*(uint32_t*)(buffer + index));
 			if (StreamLen + 5 > size)return -1;
 			index += 4;
-			uint32_t i = index + StreamLen;
+			size_t i = index + StreamLen;
 			SQRESULT res0 = ReadBuffer(v, buffer, size, index);//this will push something into the stack
 			if (SQ_FAILED(res0))
 			{
@@ -356,7 +356,7 @@ SQRESULT CallFunctionAdvanced(const uint8_t* data, size_t size)
 {
 	SQRESULT res0; size_t index;
 	bool bFunctionPushed = false;
-	int top = sq->gettop(v); uint16_t nparams = 0;
+	SQInteger top = sq->gettop(v); uint16_t nparams = 0;
 	if (*data == 'G' && size >= 5)
 	{
 		uint32_t GfuncStreamLen = swap4(*(uint32_t*)(data + 1));
@@ -419,7 +419,7 @@ SQRESULT CallFunctionAdvanced(const uint8_t* data, size_t size)
 	}
 	else if (*data == 'h' && size >=5)
 	{
-		int top = sq->gettop(v);
+		SQInteger top = sq->gettop(v);
 		uint32_t StreamLen = swap4(*(uint32_t*)(data + 1));
 		if (StreamLen + 5 > size)return -1;
 		index = 5;
@@ -551,7 +551,7 @@ SQRESULT CallFunction(const uint8_t* data, size_t size)
 	uint32_t funcStreamLen = swap4(*(uint32_t*)(data + 1));
 	if (funcStreamLen + 5 > size)return -1;
 	uint16_t lenfuncname = swap2(*(uint16_t*)(data + 5));
-	int top = sq->gettop(v);
+	SQInteger top = sq->gettop(v);
 	sq->pushroottable(v);
 	sq->pushstring(v, (char*)(data + 7), lenfuncname);
 	if (SQ_FAILED(sq->get(v, -2)))return -1;

@@ -23,6 +23,8 @@ extern CPlayer* npc;
 extern CPlayerPool* m_pPlayerPool;
 extern CVehiclePool* m_pVehiclePool;
 extern CPickupPool* m_pPickupPool;
+extern CCheckpointPool* m_pCheckpointPool;
+extern CObjectPool* m_pObjectPool;
 extern RakNet::RakPeerInterface* peer;
 extern RakNet::SystemAddress systemAddress;
 uint8_t GetSlotId(uint8_t byteWeapon);
@@ -139,7 +141,234 @@ uint32_t CFunctions::GetPickupQuantity(uint16_t wPickupID)
 }
 uint32_t CFunctions::GetStreamedPickupCount()
 {
-   return m_pPickupPool->GetCount();
+    ClearLastError();
+    return m_pPickupPool->GetCount();
+}
+funcError CFunctions::ClaimPickup(uint16_t wPickupID)
+{
+    ClearLastError();
+    RakNet::BitStream bsOut;
+    bsOut.Write((RakNet::MessageID)(ID_GAME_MESSAGE_CLAIM_PICKUP));
+    PICKUP* pickup = m_pPickupPool->GetByID(wPickupID);
+    if (pickup)
+    {
+        unsigned int dwSerialNo = pickup->dwSerialNo;
+        uint16_t wPickupID = pickup->wID;
+        uint16_t word; uint8_t byte, byte2;
+        word = (uint16_t)(dwSerialNo >> 5);
+        byte = (dwSerialNo << 3) & 0xFF;
+        byte |= (uint8_t)(wPickupID >> 8);
+
+        byte2 = (wPickupID & 0xFF);
+        bsOut.Write(word); bsOut.Write(byte); bsOut.Write(byte2);
+        peer->Send(&bsOut, HIGH_PRIORITY, RELIABLE, 0, systemAddress, false);
+        return funcError::NoError;
+    }
+    else return SetLastError(funcError::EntityNotFound);
+
+}
+funcError CFunctions::ClaimEnterCheckpoint(uint16_t wCheckpointID)
+{
+    ClearLastError();
+    RakNet::BitStream bsOut;
+    bsOut.Write((RakNet::MessageID)(ID_GAME_MESSAGE_CHECKPOINT_ENTER_EXIT));
+    CHECKPOINT* cp = m_pCheckpointPool->GetByID(wCheckpointID);
+    if (cp)
+    {
+        bsOut.Write(cp->wID);
+        bsOut.Write((uint8_t)0x80);//0x80 for entering and 0x00 for exiting
+        peer->Send(&bsOut, HIGH_PRIORITY, RELIABLE_ORDERED, CHECKPOINT_ENTER_ORDERING_CHANNEL, systemAddress, false);
+        return funcError::NoError;
+    }
+    else return SetLastError(funcError::EntityNotFound);
+
+}
+funcError CFunctions::ClaimExitCheckpoint(uint16_t wCheckpointID)
+{
+    ClearLastError();
+    RakNet::BitStream bsOut;
+    bsOut.Write((RakNet::MessageID)(ID_GAME_MESSAGE_CHECKPOINT_ENTER_EXIT));
+    CHECKPOINT* cp = m_pCheckpointPool->GetByID(wCheckpointID);
+    if (cp)
+    {
+        bsOut.Write(cp->wID);
+        bsOut.Write((uint8_t)0x00);
+        peer->Send(&bsOut, HIGH_PRIORITY, RELIABLE_ORDERED, CHECKPOINT_ENTER_ORDERING_CHANNEL, systemAddress, false);
+        return funcError::NoError;
+    }
+    else return SetLastError(funcError::EntityNotFound);
+}
+bool CFunctions::IsCheckpointStreamedIn(uint16_t wCheckpointID)
+{
+    ClearLastError();
+    CHECKPOINT* cp = m_pCheckpointPool->GetByID(wCheckpointID);
+    if (cp)
+    {
+        return true;
+    }
+    else return false;
+}
+funcError CFunctions::GetCheckpointColor(uint16_t wCheckpointID, uint8_t* Red, uint8_t* Green, uint8_t* Blue, uint8_t* Alpha)
+{
+    ClearLastError();
+    CHECKPOINT* cp = m_pCheckpointPool->GetByID(wCheckpointID);
+    if (cp)
+    {
+        *Red = cp->byteRed;
+        *Green = cp->byteGreen;
+        *Blue = cp->byteBlue;
+        *Alpha = cp->byteAlpha;
+        return funcError::NoError;
+    }
+    else return SetLastError(funcError::EntityNotFound);
+}
+funcError CFunctions::GetCheckpointPos(uint16_t wCheckpointID, VECTOR* vecPos)
+{
+    ClearLastError();
+    CHECKPOINT* cp = m_pCheckpointPool->GetByID(wCheckpointID);
+    if (cp)
+    {
+        *vecPos = cp->vecPos;
+        return funcError::NoError;
+    }
+    else return SetLastError(funcError::EntityNotFound);
+}
+funcError CFunctions::IsCheckpointSphere(uint16_t wCheckpointID, uint8_t* isSphere)
+{
+    ClearLastError();
+    CHECKPOINT* cp = m_pCheckpointPool->GetByID(wCheckpointID);
+    if (cp)
+    {
+        *isSphere = cp->byteIsSphere;
+        return funcError::NoError;
+    }
+    else return SetLastError(funcError::EntityNotFound);
+}
+funcError CFunctions::GetCheckpointRadius(uint16_t wCheckpointID, float* fRadius)
+{
+    ClearLastError();
+    CHECKPOINT* cp = m_pCheckpointPool->GetByID(wCheckpointID);
+    if (cp)
+    {
+        *fRadius = cp->fRadius;
+        return funcError::NoError;
+    }
+    else return SetLastError(funcError::EntityNotFound);
+}
+bool CFunctions::IsObjectStreamedIn(uint16_t wObjectID)
+{
+    ClearLastError();
+    OBJECT* obj = m_pObjectPool->GetByID(wObjectID);
+    if (obj)
+    {
+        return true;
+    }
+    else return false;
+}
+funcError CFunctions::GetObjectModel(uint16_t wObjectID, uint16_t* wModel)
+{
+    ClearLastError();
+    OBJECT* obj = m_pObjectPool->GetByID(wObjectID);
+    if (obj)
+    {
+        *wModel = obj->wModel;
+        return funcError::NoError;
+    }
+    else return funcError::EntityNotFound;
+}
+funcError CFunctions::GetObjectPos(uint16_t wObjectID, VECTOR* vecPos)
+{
+    ClearLastError();
+    OBJECT* obj = m_pObjectPool->GetByID(wObjectID);
+    if (obj)
+    {
+        *vecPos = obj->vecPos;
+        return funcError::NoError;
+    }
+    else return funcError::EntityNotFound;
+}
+funcError CFunctions::GetObjectRotation(uint16_t wObjectID, QUATERNION* quatRot)
+{
+    ClearLastError();
+    OBJECT* obj = m_pObjectPool->GetByID(wObjectID);
+    if (obj)
+    {
+        *quatRot = obj->quatRot;
+        return funcError::NoError;
+    }
+    else return funcError::EntityNotFound;
+}
+funcError CFunctions::GetObjectAlpha(uint16_t wObjectID, uint8_t* byteAlpha)
+{
+    ClearLastError();
+    OBJECT* obj = m_pObjectPool->GetByID(wObjectID);
+    if (obj)
+    {
+        *byteAlpha = obj->byteAlpha;
+        return funcError::NoError;
+    }
+    else return funcError::EntityNotFound;
+}
+bool CFunctions::IsObjectTouchReportEnabled(uint16_t wObjectID)
+{
+    ClearLastError();
+    OBJECT* obj = m_pObjectPool->GetByID(wObjectID);
+    if (obj)
+    {
+        return obj->IsTouchReportEnabled();
+    }
+    else {
+        SetLastError(funcError::EntityNotFound);
+        return false;
+    }
+}
+bool CFunctions::IsObjectShotReportEnabled(uint16_t wObjectID)
+{
+    ClearLastError();
+    OBJECT* obj = m_pObjectPool->GetByID(wObjectID);
+    if (obj)
+    {
+        return obj->IsShotReportEnabled();
+    }
+    else {
+        SetLastError(funcError::EntityNotFound);
+        return false;
+    }
+}
+funcError CFunctions::ClaimObjectTouch(uint16_t wObjectID)
+{
+    RakNet::BitStream bsOut;
+    bsOut.Write((RakNet::MessageID)(ID_GAME_MESSAGE_CLAIM_OBJECT_TOUCH));
+    if (IsObjectStreamedIn(wObjectID))
+    {
+        bsOut.Write(wObjectID);
+        peer->Send(&bsOut, HIGH_PRIORITY, RELIABLE, 0, systemAddress, false);
+        return funcError::NoError;
+    }
+    else return funcError::EntityNotFound;
+}
+funcError CFunctions::ClaimObjectShot(uint16_t wObjectID, uint8_t byteWeaponID)
+{
+    RakNet::BitStream bsOut;
+    bsOut.Write((RakNet::MessageID)(ID_GAME_MESSAGE_CLAIM_OBJECT_SHOT));
+    if (IsObjectStreamedIn(wObjectID))
+    {
+        bsOut.Write(wObjectID);
+        bsOut.Write(byteWeaponID);
+        peer->Send(&bsOut, HIGH_PRIORITY, RELIABLE, 0, systemAddress, false);
+        return funcError::NoError;
+    }
+    else return funcError::EntityNotFound;
+}
+uint32_t CFunctions::GetStreamedCheckpointCount()
+{
+    ClearLastError();
+    return m_pCheckpointPool->GetCount();
+}
+uint32_t CFunctions::GetStreamedObjectCount()
+{
+    ClearLastError();
+    return m_pObjectPool->GetCount();
 }
 void CFunctions::SendChatMessage(const char* message)
 {
@@ -669,6 +898,7 @@ void CFunctions::SendServerData(const void* data, size_t size)
     bsOut.Write((char*)data, size);
     peer->Send(&bsOut, HIGH_PRIORITY, RELIABLE_ORDERED, 0, systemAddress, false);
 }
+
 funcError CFunctions::SetWeapon(uint8_t byteWeaponId, bool sync)
 {
     SetLastError(funcError::NoError); 

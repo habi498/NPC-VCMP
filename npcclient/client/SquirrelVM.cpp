@@ -66,6 +66,7 @@ void call_OnServerScriptData(const uint8_t* data, size_t size)
     
     sq_settop(v, top); //restores the original stack size
 }
+
 void call_OnClientMessage(uint8_t r, uint8_t g, uint8_t b, char* message, uint16_t len)
 {
     int top = sq_gettop(v); //saves the stack size before the call
@@ -255,6 +256,93 @@ void call_OnPickupDestroyed(uint16_t wPickupId)
         sq_pushroottable(v); //push the 'this' (in this case is the global table)
         sq_pushinteger(v, wPickupId);
         sq_call(v, 2, 0, 1); //calls the function 
+    }
+    sq_settop(v, top); //restores the original stack size
+}
+void call_OnPickupUpdate(uint16_t wPickupId, pickupUpdate update)
+{
+    int top = sq_gettop(v); //saves the stack size before the call
+    sq_pushroottable(v); //pushes the global table
+    sq_pushstring(v, _SC("OnPickupUpdate"), -1);
+    if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
+        sq_pushroottable(v); //push the 'this' (in this case is the global table)
+        sq_pushinteger(v, wPickupId);
+        sq_pushinteger(v, static_cast<uint8_t>(update));
+        sq_call(v, 3, 0, 1); //calls the function 
+    }
+    sq_settop(v, top); //restores the original stack size
+}
+void call_OnCheckpointStreamIn(uint16_t wCheckpointID)
+{
+    int top = sq_gettop(v); //saves the stack size before the call
+    sq_pushroottable(v); //pushes the global table
+    sq_pushstring(v, _SC("OnCheckpointStreamIn"), -1);
+    if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
+        sq_pushroottable(v); //push the 'this' (in this case is the global table)
+        sq_pushinteger(v, wCheckpointID);
+        sq_call(v, 2, 0, 1); //calls the function 
+    }
+    sq_settop(v, top); //restores the original stack size
+}
+void call_OnCheckpointDestroyed(uint16_t wCheckpointID)
+{
+    int top = sq_gettop(v); //saves the stack size before the call
+    sq_pushroottable(v); //pushes the global table
+    sq_pushstring(v, _SC("OnCheckpointDestroyed"), -1);
+    if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
+        sq_pushroottable(v); //push the 'this' (in this case is the global table)
+        sq_pushinteger(v, wCheckpointID);
+        sq_call(v, 2, 0, 1); //calls the function 
+    }
+    sq_settop(v, top); //restores the original stack size
+}
+void call_OnCheckpointUpdate(uint16_t wCheckpointID, checkpointUpdate update)
+{
+    int top = sq_gettop(v); //saves the stack size before the call
+    sq_pushroottable(v); //pushes the global table
+    sq_pushstring(v, _SC("OnCheckpointUpdate"), -1);
+    if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
+        sq_pushroottable(v); //push the 'this' (in this case is the global table)
+        sq_pushinteger(v, wCheckpointID);
+        sq_pushinteger(v, static_cast<uint8_t>(update));
+        sq_call(v, 3, 0, 1); //calls the function 
+    }
+    sq_settop(v, top); //restores the original stack size
+}
+void call_OnObjectStreamIn(uint16_t wObjectID)
+{
+    int top = sq_gettop(v); //saves the stack size before the call
+    sq_pushroottable(v); //pushes the global table
+    sq_pushstring(v, _SC("OnObjectStreamIn"), -1);
+    if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
+        sq_pushroottable(v); //push the 'this' (in this case is the global table)
+        sq_pushinteger(v, wObjectID);
+        sq_call(v, 2, 0, 1); //calls the function 
+    }
+    sq_settop(v, top); //restores the original stack size
+}
+void call_OnObjectDestroyed(uint16_t wObjectID)
+{
+    int top = sq_gettop(v); //saves the stack size before the call
+    sq_pushroottable(v); //pushes the global table
+    sq_pushstring(v, _SC("OnObjectDestroyed"), -1);
+    if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
+        sq_pushroottable(v); //push the 'this' (in this case is the global table)
+        sq_pushinteger(v, wObjectID);
+        sq_call(v, 2, 0, 1); //calls the function 
+    }
+    sq_settop(v, top); //restores the original stack size
+}
+void call_OnObjectUpdate(uint16_t wObjectID, objectUpdate update)
+{
+    int top = sq_gettop(v); //saves the stack size before the call
+    sq_pushroottable(v); //pushes the global table
+    sq_pushstring(v, _SC("OnObjectUpdate"), -1);
+    if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
+        sq_pushroottable(v); //push the 'this' (in this case is the global table)
+        sq_pushinteger(v, wObjectID);
+        sq_pushinteger(v, static_cast<uint16_t>(update));
+        sq_call(v, 3, 0, 1); //calls the function 
     }
     sq_settop(v, top); //restores the original stack size
 }

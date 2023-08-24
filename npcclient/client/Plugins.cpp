@@ -28,7 +28,7 @@ CPlugins::~CPlugins()
         delete pPlugin;
     }
 }
-void CPlugins::LoadPlugins(char* szSearchPath, std::string PluginsList)
+void CPlugins::LoadPlugins(const char* szSearchPath, std::string PluginsList)
 {
     char szPath[MAX_PATH];
     char szFullPath[MAX_PATH];
@@ -168,21 +168,40 @@ BOOL CPlugins::LoadSinglePlugin(char* szPluginPath)
         
         pPlugin->pPluginFuncs->SetFPS = m_pFunctions->SetFPS;
         pPlugin->pPluginFuncs->IsPickupStreamedIn = m_pFunctions->IsPickupStreamedIn;
-#define PLUGIN_CALLBACK(event) (pPlugin->pPluginFuncs->event = m_pFunctions->event)
-        PLUGIN_CALLBACK(GetPickupModel);
-        PLUGIN_CALLBACK(GetPickupPosition);
-        PLUGIN_CALLBACK(GetPickupAlpha);
-        PLUGIN_CALLBACK(GetPickupQuantity);
-        PLUGIN_CALLBACK(GetStreamedPickupCount);
+#define PLUGIN_ADD_CALLBACK(event) (pPlugin->pPluginFuncs->event = m_pFunctions->event)
+        PLUGIN_ADD_CALLBACK(GetPickupModel);
+        PLUGIN_ADD_CALLBACK(GetPickupPosition);
+        PLUGIN_ADD_CALLBACK(GetPickupAlpha);
+        PLUGIN_ADD_CALLBACK(GetPickupQuantity);
+        PLUGIN_ADD_CALLBACK(GetStreamedPickupCount);
+        //PLUGIN_ADD_CALLBACK(SendModuleList);
 
-        
+        PLUGIN_ADD_CALLBACK(ClaimPickup);
+        PLUGIN_ADD_CALLBACK(ClaimEnterCheckpoint);
+        PLUGIN_ADD_CALLBACK(ClaimExitCheckpoint);
+        PLUGIN_ADD_CALLBACK(IsCheckpointStreamedIn);
+        PLUGIN_ADD_CALLBACK(GetCheckpointRadius);
+        PLUGIN_ADD_CALLBACK(GetCheckpointColor);
+        PLUGIN_ADD_CALLBACK(GetCheckpointPos);
+        PLUGIN_ADD_CALLBACK(IsCheckpointSphere);
+        PLUGIN_ADD_CALLBACK(IsObjectStreamedIn);
+        PLUGIN_ADD_CALLBACK(GetObjectModel);
+        PLUGIN_ADD_CALLBACK(GetObjectPos);
+        PLUGIN_ADD_CALLBACK(GetObjectRotation);
+        PLUGIN_ADD_CALLBACK(GetObjectAlpha);
+        PLUGIN_ADD_CALLBACK(IsObjectTouchReportEnabled);
+        PLUGIN_ADD_CALLBACK(IsObjectShotReportEnabled);
+        PLUGIN_ADD_CALLBACK(ClaimObjectTouch);
+        PLUGIN_ADD_CALLBACK(ClaimObjectShot);        
+        PLUGIN_ADD_CALLBACK(GetStreamedCheckpointCount);
+        PLUGIN_ADD_CALLBACK(GetStreamedObjectCount);
     }
     else return FALSE;
     pPlugin->pPluginInfo->structSize = sizeof(PluginInfo);
     pPlugin->pPluginInfo->pluginId = GetPluginCount();
     pPlugin->pPluginInfo->apiMajorVersion = API_MAJOR;
     pPlugin->pPluginInfo->apiMinorVersion = API_MINOR;
-    pPlugin->pPluginInfo->pluginVersion = NULL;
+    pPlugin->pPluginInfo->pluginVersion = 0;
     pPlugin->pPluginInfo->name[0] = 0;
 
     if (!pPlugin->Init(pPlugin->pPluginFuncs, pPlugin->pPluginCalls, pPlugin->pPluginInfo))

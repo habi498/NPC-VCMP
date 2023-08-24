@@ -47,6 +47,8 @@
 #include "Playerpool.h"
 #include "VehiclePool.h"
 #include "pickuppool.h"
+#include "checkpointpool.h"
+#include "objectpool.h"
 #include "npc32.h"
 #include "CTimer.h"
 #include "Plugins.h"
@@ -78,6 +80,7 @@ uint32_t bytes_swap_u32(uint32_t i);
 #define IC_TFLAG_CARHEALTH 0x04
 #define IC_TFLAG_DAMAGE 0x02
 #define CHAT_MESSAGE_ORDERING_CHANNEL 3
+#define CHECKPOINT_ENTER_ORDERING_CHANNEL 1
 #define NPC_RECFILE_IDENTIFIER_V1 1000
 #define NPC_RECFILE_IDENTIFIER_V2 1001
 #define NPC_RECFILE_IDENTIFIER_V3 1002 //From Nov 2022 onwards

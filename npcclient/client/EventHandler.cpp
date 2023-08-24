@@ -27,6 +27,73 @@ void CEvents::OnServerData(const uint8_t* data, size_t size)
             pPlugin->pPluginCalls->OnServerData(data, size);
     }
 }
+
+void CEvents::OnCheckpointStreamIn(uint16_t wCheckpointId)
+{
+    call_OnCheckpointStreamIn(wCheckpointId);
+    PluginPool_s* pPlugin;
+    for (DWORD i = 0; i < m_pPlugins->GetPluginCount(); i++)
+    {
+        pPlugin = m_pPlugins->GetPlugin(i);
+        if (pPlugin->pPluginCalls->OnCheckpointStreamIn)
+            pPlugin->pPluginCalls->OnCheckpointStreamIn(wCheckpointId);
+    }
+}
+void CEvents::OnCheckpointDestroyed(uint16_t wCheckpointId)
+{
+    call_OnCheckpointDestroyed(wCheckpointId);
+    PluginPool_s* pPlugin;
+    for (DWORD i = 0; i < m_pPlugins->GetPluginCount(); i++)
+    {
+        pPlugin = m_pPlugins->GetPlugin(i);
+        if (pPlugin->pPluginCalls->OnCheckpointDestroyed)
+            pPlugin->pPluginCalls->OnCheckpointDestroyed(wCheckpointId);
+    }
+}
+void CEvents::OnCheckpointUpdate(uint16_t wCheckpointId, checkpointUpdate update)
+{
+    call_OnCheckpointUpdate(wCheckpointId, update);
+    PluginPool_s* pPlugin;
+    for (DWORD i = 0; i < m_pPlugins->GetPluginCount(); i++)
+    {
+        pPlugin = m_pPlugins->GetPlugin(i);
+        if (pPlugin->pPluginCalls->OnCheckpointUpdate)
+            pPlugin->pPluginCalls->OnCheckpointUpdate(wCheckpointId, update);
+    }
+}
+void CEvents::OnObjectStreamIn(uint16_t wObjectId)
+{
+    call_OnObjectStreamIn(wObjectId);
+    PluginPool_s* pPlugin;
+    for (DWORD i = 0; i < m_pPlugins->GetPluginCount(); i++)
+    {
+        pPlugin = m_pPlugins->GetPlugin(i);
+        if (pPlugin->pPluginCalls->OnObjectStreamIn)
+            pPlugin->pPluginCalls->OnObjectStreamIn(wObjectId);
+    }
+}
+void CEvents::OnObjectDestroyed(uint16_t wObjectId)
+{
+    call_OnObjectDestroyed(wObjectId);
+    PluginPool_s* pPlugin;
+    for (DWORD i = 0; i < m_pPlugins->GetPluginCount(); i++)
+    {
+        pPlugin = m_pPlugins->GetPlugin(i);
+        if (pPlugin->pPluginCalls->OnObjectDestroyed)
+            pPlugin->pPluginCalls->OnObjectDestroyed(wObjectId);
+    }
+}
+void CEvents::OnObjectUpdate(uint16_t wObjectId, objectUpdate update)
+{
+    call_OnObjectUpdate(wObjectId, update);
+    PluginPool_s* pPlugin;
+    for (DWORD i = 0; i < m_pPlugins->GetPluginCount(); i++)
+    {
+        pPlugin = m_pPlugins->GetPlugin(i);
+        if (pPlugin->pPluginCalls->OnObjectUpdate)
+            pPlugin->pPluginCalls->OnObjectUpdate(wObjectId, update);
+    }
+}
 void CEvents::OnExplosion(uint8_t byteExplosionType, VECTOR vecPos, uint8_t bytePlayerCaused, bool bIsOnGround)
 {
     call_OnExplosion(byteExplosionType, vecPos, bytePlayerCaused, bIsOnGround);
@@ -111,6 +178,17 @@ void CEvents::OnPickupDestroyed(uint16_t wPickupId)
         pPlugin = m_pPlugins->GetPlugin(i);
         if (pPlugin->pPluginCalls->OnPickupDestroyed)
             pPlugin->pPluginCalls->OnPickupDestroyed(wPickupId);
+    }
+}
+void CEvents::OnPickupUpdate(uint16_t wPickupId, pickupUpdate update)
+{
+    call_OnPickupUpdate(wPickupId, update);
+    PluginPool_s* pPlugin;
+    for (DWORD i = 0; i < m_pPlugins->GetPluginCount(); i++)
+    {
+        pPlugin = m_pPlugins->GetPlugin(i);
+        if (pPlugin->pPluginCalls->OnPickupUpdate)
+            pPlugin->pPluginCalls->OnPickupUpdate(wPickupId, update);
     }
 }
 void CEvents::OnPlayerDeath(uint8_t bytePlayerId)

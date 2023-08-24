@@ -49,6 +49,13 @@ public:
     
     void OnPickupStreamIn(uint16_t wPickupId);
     void OnPickupDestroyed(uint16_t wPickupId);
-
+    void OnPickupUpdate(uint16_t wPickupId, pickupUpdate update);
+    //void OnModuleListRequest();
+    void OnCheckpointStreamIn(uint16_t wCheckpointId);
+    void OnCheckpointDestroyed(uint16_t wCheckpointId);
+    void OnCheckpointUpdate(uint16_t wCheckpointId, checkpointUpdate update);
+    void OnObjectStreamIn(uint16_t wObjectId);
+    void OnObjectDestroyed(uint16_t wObjectId);
+    void OnObjectUpdate(uint16_t wObjectId, objectUpdate update);
 };
 #endif

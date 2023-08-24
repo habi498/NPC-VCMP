@@ -5,9 +5,7 @@
 #include <windows.h>
 #else
 #include <time.h>
-long getTick() {
-	
-}
+
 long GetTickCount()
 {
 	struct timespec ts;

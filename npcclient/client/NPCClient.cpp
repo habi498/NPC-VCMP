@@ -26,6 +26,8 @@ CPlayerPool* m_pPlayerPool = NULL;
 CEvents* m_pEvents;
 CVehiclePool* m_pVehiclePool = NULL;
 CPickupPool* m_pPickupPool = NULL;
+CCheckpointPool* m_pCheckpointPool = NULL;
+CObjectPool* m_pObjectPool = NULL;
 extern CFunctions* m_pFunctions;
 CPlayer* npc = NULL;
 #define CAR_HEALTH_MAX 1000
@@ -98,6 +100,10 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 		m_pVehiclePool = new CVehiclePool();
 	if (!m_pPickupPool)
 		m_pPickupPool = new CPickupPool();
+	if (!m_pCheckpointPool)
+		m_pCheckpointPool = new CCheckpointPool();
+	if (!m_pObjectPool)
+		m_pObjectPool = new CObjectPool();
 	
 #ifndef WIN32
 	std::setvbuf(stdout, NULL, _IONBF, 0);
@@ -1178,6 +1184,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				if(pickup)
 				{
 					m_pPickupPool->GetByID(wPickupID)->bAlpha = bAlpha;
+					m_pEvents->OnPickupUpdate(wPickupID, pickupUpdate::AlphaUpdate);
 				}
 			}break;
 			
@@ -1199,9 +1206,29 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				if (pickup)
 				{
 					m_pPickupPool->GetByID(wPickupID)->vecPos = vecPos;
+					m_pEvents->OnPickupUpdate(wPickupID, pickupUpdate::PositionUpdate);
 				}
 			}break;
-			
+			case ID_GAME_MESSAGE_REFRESH_PICKUP:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint32_t dwSerialNo; uint16_t wPickupID;
+				bool s = ReadPickup(&dwSerialNo, &wPickupID, &bsIn);
+				if (!s)
+				{
+					printf("Error reading pickup data\n");
+					break;
+				}
+				PICKUP* pickup = m_pPickupPool->GetByID(wPickupID);
+				if (pickup)
+				{
+					//update to new serial number
+					pickup->dwSerialNo = dwSerialNo;
+					m_pEvents->OnPickupUpdate(wPickupID, pickupUpdate::pickupRefreshed);
+				}
+			}
+			break;
 			//Every 5 seconds, server sends below packet
 			case ID_GAME_MESSAGE_TICK:
 			{
@@ -1227,8 +1254,220 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				m_pEvents->OnTimeWeatherSync(timerate,minute,hour,weather);
 			}
 			break;
-			
 
+			case ID_GAME_MESSAGE_CREATE_CHECKPOINT:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				CHECKPOINT cp;
+				bsIn.Read(cp.wID);
+				bsIn.Read(cp.byteIsSphere);
+				bsIn.Read(cp.vecPos.Z);
+				bsIn.Read(cp.vecPos.Y);
+				bsIn.Read(cp.vecPos.X);
+				bsIn.Read(cp.byteRed);
+				bsIn.Read(cp.byteGreen);
+				bsIn.Read(cp.byteBlue);
+				bsIn.Read(cp.byteAlpha);
+				bsIn.Read(cp.fRadius);
+				if (!m_pCheckpointPool->GetByID(cp.wID))
+				{
+					bool success = m_pCheckpointPool->New(cp);
+					if(success)
+						m_pEvents->OnPickupStreamIn(cp.wID);
+				}
+			}
+			break;
+			case ID_GAME_MESSAGE_DESTROY_CHECKPOINT:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint16_t wCheckpointID;
+				bsIn.Read(wCheckpointID);
+				CHECKPOINT* cp = m_pCheckpointPool->GetByID(wCheckpointID);
+				if (cp)
+				{
+					m_pEvents->OnCheckpointDestroyed(wCheckpointID);
+					m_pCheckpointPool->Destroy(wCheckpointID);
+				}
+			}break;
+			case ID_GAME_MESSAGE_CHECKPOINT_CHANGE_RADIUS:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint16_t wCheckpointID; float fRadius;
+				bsIn.Read(wCheckpointID);
+				bsIn.Read(fRadius);
+				CHECKPOINT* cp = m_pCheckpointPool->GetByID(wCheckpointID);
+				if (cp)
+				{
+					cp->fRadius = fRadius;
+					m_pEvents->OnCheckpointUpdate(wCheckpointID, checkpointUpdate::RadiusUpdate);
+				}
+			}break;
+			case ID_GAME_MESSAGE_CHECKPOINT_CHANGE_POS:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint16_t wCheckpointID; VECTOR vecPos;
+				bsIn.Read(wCheckpointID);
+				bsIn.Read(vecPos.X);
+				bsIn.Read(vecPos.Y);
+				bsIn.Read(vecPos.Z);
+				CHECKPOINT* cp = m_pCheckpointPool->GetByID(wCheckpointID);
+				if (cp)
+				{
+					cp->vecPos = vecPos;
+					m_pEvents->OnCheckpointUpdate(wCheckpointID, checkpointUpdate::PositionUpdate);
+				}
+			}break;
+			case ID_GAME_MESSAGE_CHECKPOINT_CHANGE_COLOUR:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint16_t wCheckpointID; 
+				bsIn.Read(wCheckpointID);
+				
+				CHECKPOINT* cp = m_pCheckpointPool->GetByID(wCheckpointID);
+				if (cp)
+				{
+					bsIn.Read(cp->byteRed);
+					bsIn.Read(cp->byteGreen);
+					bsIn.Read(cp->byteBlue);
+					bsIn.Read(cp->byteAlpha);
+					m_pEvents->OnCheckpointUpdate(wCheckpointID, checkpointUpdate::ColourUpdate);
+				}
+			}break;
+
+			case ID_GAME_MESSAGE_OBJECT_CREATED:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				OBJECT obj;
+				bsIn.Read(obj.wID);
+				bsIn.Read(obj.wModel);
+				bsIn.Read(obj.byteAlpha);
+				bsIn.Read(obj.vecPos.Z);
+				bsIn.Read(obj.vecPos.Y);
+				bsIn.Read(obj.vecPos.X);
+				bsIn.Read(obj.quatRot.W);
+				bsIn.Read(obj.quatRot.Z);
+				bsIn.Read(obj.quatRot.Y);
+				bsIn.Read(obj.quatRot.X);
+				bsIn.Read(obj.byteMaskTrackingShotsBumps);
+				//one more byte=00 is there. don't know what it is
+				if (!m_pObjectPool->GetByID(obj.wID))
+				{
+					bool success = m_pObjectPool->New(obj);
+					if (success)
+						m_pEvents->OnObjectStreamIn(obj.wID);
+				}
+			}
+			break;
+			case ID_GAME_MESSAGE_OBJECT_DESTROYED:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint16_t wObjectId;
+				bsIn.Read(wObjectId);
+				OBJECT* obj = m_pObjectPool->GetByID(wObjectId);
+				if (obj)
+				{
+					m_pEvents->OnObjectDestroyed(wObjectId);
+					m_pObjectPool->Destroy(wObjectId);
+				}
+			}
+			break;
+			case ID_GAME_MESSAGE_OBJECT_CHANGE_ALPHA:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint16_t wObjectId, wFadeInTime; uint8_t byteAlpha;
+				bsIn.Read(wObjectId);
+				bsIn.Read(byteAlpha);
+				bsIn.Read(wFadeInTime);
+				OBJECT* obj = m_pObjectPool->GetByID(wObjectId);
+				if (obj)
+				{
+					obj->byteAlpha = byteAlpha;
+					m_pEvents->OnObjectUpdate(wObjectId, objectUpdate::AlphaUpdate);
+				}
+			}
+			break;
+			case ID_GAME_MESSAGE_OBJECT_CHANGE_SHOTS_BUMPS:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint16_t wObjectId;
+				bsIn.Read(wObjectId);
+				OBJECT* obj = m_pObjectPool->GetByID(wObjectId);
+				if (obj)
+				{
+					bsIn.Read(obj->byteMaskTrackingShotsBumps);
+					m_pEvents->OnObjectUpdate(wObjectId, objectUpdate::TrackingBumpsShots);
+				}
+			}
+			break;
+			case ID_GAME_MESSAGE_OBJECT_SETPOSITION:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint16_t wObjectId;
+				bsIn.Read(wObjectId);
+				OBJECT* obj = m_pObjectPool->GetByID(wObjectId);
+				if (obj)
+				{
+					bsIn.Read(obj->vecPos.Z);
+					bsIn.Read(obj->vecPos.Y);
+					bsIn.Read(obj->vecPos.X);
+					m_pEvents->OnObjectUpdate(wObjectId, objectUpdate::PositionUpdate);
+				}
+			}
+			break;
+			case ID_GAME_MESSAGE_OBJECT_MOVEDTO:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint16_t wObjectId; uint16_t time;
+				bsIn.Read(wObjectId); bsIn.Read(time);
+				OBJECT* obj = m_pObjectPool->GetByID(wObjectId);
+				if (obj)
+				{
+					VECTOR vecCurrentPos, newPos;
+					bsIn.Read(vecCurrentPos.Z);
+					bsIn.Read(vecCurrentPos.Y);
+					bsIn.Read(vecCurrentPos.X);
+					bsIn.Read(newPos.Z);
+					bsIn.Read(newPos.Y);
+					bsIn.Read(newPos.X);
+					obj->vecPos = newPos;//set obj's position to new one!
+					m_pEvents->OnObjectUpdate(wObjectId, objectUpdate::MoveToUpdate);
+				}
+			}
+			break;
+			case ID_GAME_MESSAGE_OBJECT_ROTATE_TO:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint16_t wObjectId; uint16_t time;
+				bsIn.Read(wObjectId); bsIn.Read(time);
+				OBJECT* obj = m_pObjectPool->GetByID(wObjectId);
+				if (obj)
+				{
+					QUATERNION quatCurRot, quatNewRot;
+					bsIn.Read(quatCurRot.W);
+					bsIn.Read(quatCurRot.Z);
+					bsIn.Read(quatCurRot.Y);
+					bsIn.Read(quatCurRot.X);
+					bsIn.Read(quatNewRot.W);
+					bsIn.Read(quatNewRot.Z);
+					bsIn.Read(quatNewRot.Y);
+					bsIn.Read(quatNewRot.X);
+					obj->quatRot = quatNewRot;//set obj's rotation to new one!
+					m_pEvents->OnObjectUpdate(wObjectId, objectUpdate::RotationToUpdate);
+				}
+			}
+			break;
 			}
 		}
 		OnCycle();
