@@ -62,8 +62,11 @@ typedef struct _ONFOOT_SYNC_DATA_V1
 } ONFOOT_SYNC_DATA_V1;
 //61+ 4 =65 datablock
 //65+8=73 size taken by header+first datablock
+
+
+//The following is used in recupdate v2 and v3
 #pragma pack(1)
-typedef struct _ONFOOT_SYNC_DATA_V2
+typedef struct _ONFOOT_SYNC_DATA_V2ANDV3
 {
 	uint32_t dwKeys;
 	VECTOR vecPos;
@@ -78,9 +81,12 @@ typedef struct _ONFOOT_SYNC_DATA_V2
 	VECTOR vecAimPos;
 	bool bIsReloading; //1 byte
 	uint16_t wAmmo; // 2 byte
-} ONFOOT_SYNC_DATA_V2;
+} ONFOOT_SYNC_DATA_V2ANDV3;
+
+
+//Used by recupdate version prior to 3.0
 #pragma pack(1)
-typedef struct _INCAR_SYNC_DATA
+typedef struct _INCAR_SYNC_DATA_BEFOREV3
 {
 	uint16_t VehicleID;
 	uint32_t dwKeys;
@@ -94,7 +100,25 @@ typedef struct _INCAR_SYNC_DATA
 	uint32_t dDamage;
 	float Turretx;
 	float Turrety;
-} INCAR_SYNC_DATA;
+} INCAR_SYNC_DATA_BEFOREV3;
+
+//Recupdate data out in v3.0
+typedef struct _INCAR_SYNC_DATA_V3
+{
+	uint16_t VehicleID;
+	uint32_t dwKeys;
+	QUATERNION quatRotation;
+	VECTOR vecPos;
+	VECTOR vecMoveSpeed;
+	float fCarHealth;
+	uint8_t bytePlayerHealth;
+	uint8_t bytePlayerArmour;
+	uint8_t byteCurrentWeapon;
+	uint32_t dDamage;
+	float Turretx;
+	float Turrety;
+	uint16_t wAmmo;
+} INCAR_SYNC_DATA_V3;
 
 /*Used to save to .rec file*/
 #pragma pack(1)
@@ -104,15 +128,22 @@ typedef struct _ONFOOT_DATABLOCK_V1
 	ONFOOT_SYNC_DATA_V1  m_pOfSyncData;
 } ONFOOT_DATABLOCK_V1;
 #pragma pack(1)
-typedef struct _ONFOOT_DATABLOCK_V2
+typedef struct _ONFOOT_DATABLOCK_V2ANDV3
 {
 	DWORD time;
-	ONFOOT_SYNC_DATA_V2  m_pOfSyncData;
-} ONFOOT_DATABLOCK_V2;
+	ONFOOT_SYNC_DATA_V2ANDV3  m_pOfSyncData;
+} ONFOOT_DATABLOCK_V2ANDV3;
 
 #pragma pack(1)
-typedef struct _INCAR_DATABLOCK
+typedef struct _INCAR_DATABLOCK_BEFOREV3
 {
 	DWORD time;
-	INCAR_SYNC_DATA  m_pIcSyncData;
-} INCAR_DATABLOCK;
+	INCAR_SYNC_DATA_BEFOREV3  m_pIcSyncData;
+} INCAR_DATABLOCK_BEFOREV3;
+
+#pragma pack(1)
+typedef struct _INCAR_DATABLOCK_V3
+{
+	DWORD time;
+	INCAR_SYNC_DATA_V3  m_pIcSyncData;
+} INCAR_DATABLOCK_V3;

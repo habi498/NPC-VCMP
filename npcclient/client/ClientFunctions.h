@@ -144,6 +144,10 @@ public:
 	static funcError ClaimObjectShot(uint16_t wObjectID, uint8_t byteWeaponID);
 	static uint32_t GetStreamedCheckpointCount();
 	static uint32_t GetStreamedObjectCount();
+	//1.6
+	static funcError ExitVehicle();
+	static funcError ExitVehicleEx(bool fosd=false, uint8_t style=1, uint8_t byte1=0,uint8_t byte2=0);
+	static uint8_t GetPlayerAction(uint8_t bytePlayerId);
 };
 
 #endif

@@ -23,6 +23,7 @@ using namespace std;
 void start_consoleinput();
 CFunctions* m_pFunctions;
 CPlugins* m_pPlugins;
+
 #define NPC_DIR "npcscripts"
 #define NPC_PLUGINS_DIR "npcscripts/plugins"
 #ifdef LINUX
@@ -38,13 +39,16 @@ long GetTickCount()
 }
 #endif
 
-//static BOOL WINAPI console_ctrl_handler(DWORD dwCtrlType);
+#ifdef WIN32
+    bool bShutdownSignal = false;
+    static BOOL WINAPI console_ctrl_handler(DWORD dwCtrlType);
+#endif
 int main(int argc, char** argv) {
     // Wrap everything in a try block.  Do this every time,
     // because exceptions will be thrown for problems.
     try {
         // Define the command line object.
-        CmdLine cmd("VCMP-Non Player Characters v1.6 (6.27)", ' ', "0.1b",false);
+        CmdLine cmd("VCMP-Non Player Characters v1.7 (8.27)", ' ', "0.1b",false);
 
         // Define a value argument and add it to the command line.
         ValueArg<string> hostnameArg("h", "hostname", "IP address of host", false, "127.0.0.1",
@@ -91,7 +95,9 @@ int main(int argc, char** argv) {
         bool success = StartSquirrel(scriptpath.c_str(), location, params);
         if (success)
         {
-             //SetConsoleCtrlHandler(console_ctrl_handler, TRUE);
+#if WIN32
+            SetConsoleCtrlHandler(console_ctrl_handler, TRUE);
+#endif
             bool bUseConsoleInput = consoleInputSwitch.getValue();
             if (bUseConsoleInput)
                 start_consoleinput();
@@ -132,9 +138,10 @@ int main(int argc, char** argv) {
         cerr << "error: " << e.error() << " for arg " << e.argId() << endl;
     }
 }
+#ifdef WIN32
 // Handler function will be called on separate thread!
 /*Function Credit: https://asawicki.info/news_1465_handling_ctrlc_in_windows_console_application*/
-/*static BOOL WINAPI console_ctrl_handler(DWORD dwCtrlType)
+static BOOL WINAPI console_ctrl_handler(DWORD dwCtrlType)
 {
    switch (dwCtrlType)
     {
@@ -143,10 +150,12 @@ int main(int argc, char** argv) {
     case CTRL_CLOSE_EVENT: // Closing the console window
     case CTRL_LOGOFF_EVENT: // User logs off. Passed only to services!
     case CTRL_SHUTDOWN_EVENT: // System is shutting down. Passed only to services!
-    StopSquirrel();
+        bShutdownSignal = true;
+        Sleep(CYCLE_SLEEP*3);//for wait time oncycle.
     }
 
     // Return TRUE if handled this message, further handler functions won't be called.
     // Return FALSE to pass this message to further handlers until default handler calls ExitProcess().
     return FALSE;
-}*/
+}
+#endif

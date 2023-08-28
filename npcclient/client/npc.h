@@ -142,6 +142,10 @@ public:
 	DWORD PSLastSyncedTick = 0;
 	DWORD TimeShotInfoSend = 0;
 	bool WaitingToRemoveBody = false;
+	//Something to help send foot sync after exiting vehicle
+	bool WaitingForVEOnFootSync = false;
+	DWORD VETickCount = 0;
+
 public:
 	NPC()
 	{
@@ -206,7 +210,7 @@ public:
 };
 typedef enum tagNPCFIELDS
 {
-	I_KEYS, 
+	I_KEYS,
 	F_POSX,
 	F_POSY,
 	F_POSZ,
@@ -229,5 +233,6 @@ typedef enum tagNPCFIELDS
 	F_CAR_ROTATIONY,
 	F_CAR_ROTATIONZ,
 	F_CAR_ROTATIONW,
+	I_ACTION
 }NPCFIELDS;
 #endif

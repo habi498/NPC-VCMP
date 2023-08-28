@@ -329,6 +329,8 @@ SQInteger fn_GetLocalValue(HSQUIRRELVM v)
         break;
     case F_ANGLE: sq_pushfloat(v, npc->m_fAngle);
         break;
+    case I_ACTION: sq_pushinteger(v, npc->GetONFOOT_SYNC_DATA()->byteAction);
+        break;
     case F_CAR_ROTATIONX:
     if (npc->m_wVehicleId)
     {
@@ -538,6 +540,12 @@ SQInteger fn_SetLocalValue(HSQUIRRELVM v)
         }
         else return sq_throwerror(v, "The value corresponding to this field must be a quaternion");
         break;
+    case I_ACTION:
+        if (sq_gettype(v, 3) == OT_INTEGER )
+        {
+            npc->GetONFOOT_SYNC_DATA()->byteAction = static_cast<uint8_t> (fvalue); break;
+        }
+        else return sq_throwerror(v, "The value corresponding to this field must be a quaternion");
     
     default: return 0;
     }
@@ -676,6 +684,31 @@ SQInteger fn_EnterVehicle(HSQUIRRELVM v)
     else sq_pushbool(v, SQFalse);
     return 1;
 }
+SQInteger fn_ExitVehicle(HSQUIRRELVM v)
+{
+    funcError e = m_pFunctions->ExitVehicleEx(true, 1,0,0);
+    if (e == funcError::NoError)
+    {
+        sq_pushbool(v, SQTrue);
+    }
+    else sq_pushbool(v, SQFalse);
+    return 1;
+}
+SQInteger fn_ExitVehicleEx(HSQUIRRELVM v)
+{
+    SQBool ofsd; SQInteger style, byte1, byte2;
+    sq_getbool(v, 2, &ofsd);
+    sq_getinteger(v, 3, &style);
+    sq_getinteger(v, 4, &byte1);
+    sq_getinteger(v, 5, &byte2);
+    funcError e = m_pFunctions->ExitVehicleEx(ofsd, (uint8_t)style, (uint8_t)byte1,(uint8_t)byte2);
+    if (e == funcError::NoError)
+    {
+        sq_pushbool(v, SQTrue);
+    }
+    else sq_pushbool(v, SQFalse);
+    return 1;
+}
 SQInteger fn_SendServerData(HSQUIRRELVM v)
 {
     SQUserPointer blob; size_t size;
@@ -766,6 +799,8 @@ void RegisterNPCFunctions3()
     register_global_func(v, ::fn_SendIcSyncDataEx, "SendInCarSyncDataEx",13 , "tiiiiif|iixxxf|if|i");
     register_global_func(v, ::fn_SendInCarSyncDataLV, "SendInCarSyncDataLV", 1, "t");
     register_global_func(v, ::fn_EnterVehicle, "EnterVehicle", 3, "tii");
+    register_global_func(v, ::fn_ExitVehicle, "ExitVehicle", 1, "t");
+    register_global_func(v, ::fn_ExitVehicleEx, "ExitVehicleEx", 5, "tbiii");
     register_global_func(v, ::fn_SendServerData, "SendServerData", 2, "tx");
 
     register_global_func(v, ::fn_FireProjectile, "FireProjectile", 10, "tixf|if|if|if|if|if|if|i");

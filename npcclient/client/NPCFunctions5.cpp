@@ -277,6 +277,21 @@ SQInteger fn_GetPlayerSpeed(HSQUIRRELVM v)
     }
     else return sq_throwerror(v, "error getting player id");
 }
+SQInteger fn_GetPlayerAction(HSQUIRRELVM v)
+{
+    SQInteger bytePlayerId;
+    if (SQ_SUCCEEDED(sq_getinteger(v, 2, &bytePlayerId)))
+    {
+        uint8_t byteAction = m_pFunctions->GetPlayerAction(bytePlayerId);
+        if (m_pFunctions->GetLastError() == funcError::NoError)
+        {
+            sq_pushinteger(v, byteAction);
+        }
+        else sq_pushinteger(v, 0);
+        return 1;
+    }
+    else return sq_throwerror(v, "error getting player id");
+}
 SQInteger fn_IsCheckpointStreamedIn(HSQUIRRELVM v)
 {
     SQInteger cpId;
@@ -522,6 +537,7 @@ void RegisterNPCFunctions5()
     register_global_func(v, ::fn_GetVehicleHealth, "GetVehicleHealth", 2, "ti");
     register_global_func(v, ::fn_GetVehicleDamage, "GetVehicleDamage", 2, "ti");
     register_global_func(v, ::fn_GetPlayerSpeed, "GetPlayerSpeed", 2, "ti");
+    register_global_func(v, ::fn_GetPlayerAction, "GetPlayerAction", 2, "ti");
     register_global_func(v, ::fn_IsCheckpointStreamedIn, "IsCheckpointStreamedIn", 2, "ti");
     register_global_func(v, ::fn_GetCheckpointRadius, "GetCheckpointRadius", 2, "ti");
     register_global_func(v, ::fn_GetCheckpointPosition, "GetCheckpointPos", 2, "ti");

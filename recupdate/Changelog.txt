@@ -1,0 +1,9 @@
+
+Version 2
+Added byte bIsReloading and WORD wAmmo in ONFOOT_SYNC_DATA
+
+Version 3
+Added wAmmo in INCAR_SYNC_DATA
+
+Version 4 (latest)
+Added byteAction and byteReserved in ONFOOT_SYNC_DATA

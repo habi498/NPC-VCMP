@@ -15,6 +15,9 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 #include "main.h"
+#ifdef WIN32
+extern bool bShutdownSignal;
+#endif
 HSQUIRRELVM v; 
 HSQAPI sq = NULL;
 SquirrelExports* pExp;
@@ -23,7 +26,7 @@ NPC* iNPC = new NPC();
 RakNet::RakPeerInterface* peer;
 RakNet::SystemAddress systemAddress;
 CPlayerPool* m_pPlayerPool = NULL;
-CEvents* m_pEvents;
+CEvents* m_pEvents = NULL;
 CVehiclePool* m_pVehiclePool = NULL;
 CPickupPool* m_pPickupPool = NULL;
 CCheckpointPool* m_pCheckpointPool = NULL;
@@ -591,7 +594,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				}
 			}
 			break;
-			case ID_GAME_MESSAGE_VEHICLE_EXIT:
+			case ID_GAME_MESSAGE_VEHICLE_EXIT_EVENT:
 			{
 				RakNet::BitStream bsIn(packet->data, packet->length, false);
 				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
@@ -1632,8 +1635,8 @@ void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncD
 	uint8_t byteWeaponId;
 	bsIn->Read(byteWeaponId);
 	m_pOfSyncDataOut->byteCurrentWeapon = byteWeaponId;
-	uint8_t byte1, byte2;
-	bsIn->Read(byte1); bsIn->Read(byte2);
+	uint8_t byte1;
+	bsIn->Read(byte1); bsIn->Read(m_pOfSyncDataOut->byteAction);
 	if (bIsAiming == false)
 	{
 		bool bLookBehind;
@@ -1727,16 +1730,20 @@ void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncD
 		if (byteWeapon > 11)
 			bsIn->Read(ammo);//ammo
 	}
-	uint32_t dw_Keys = 0;
-	if (action & OF_FLAG_KEYS)
+	uint32_t dw_Keys = 0; uint8_t byteAction = 1;
+	if (action & OF_FLAG_KEYS_OR_ACTION)
 	{
-		uint8_t keybyte1, keybyte2, msb; //bool bReloading = 0;
+		uint8_t keybyte1, keybyte2;
 		bsIn->Read(keybyte1); bsIn->Read(keybyte2);
-		bsIn->Read(msb);
+		uint8_t byte, nib; uint16_t value;
+		bsIn->Read(byte);
+		ReadNibble(&nib, bsIn);
+		value = (byte << 4) | nib;
+		byteAction = (value & ~0x80);
 		dw_Keys |= keybyte1;
 		dw_Keys |= (keybyte2 << 8);
-		if (msb & 0x8)dw_Keys |= 65536;//look behind keycode
-		bsIn->IgnoreBits(4);//related to reloading weapon
+		if (value & 0x80)
+				dw_Keys |= 65536;
 	}
 	uint8_t byteHealth;
 	bsIn->Read(byteHealth);
@@ -1769,6 +1776,7 @@ void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncD
 	m_pOfSyncDataOut->wAmmo = ammo;
 	m_pOfSyncDataOut->byteHealth = byteHealth;
 	m_pOfSyncDataOut->dwKeys = dw_Keys;
+	m_pOfSyncDataOut->byteAction = byteAction;
 	m_pOfSyncDataOut->fAngle = fAngle;
 	m_pOfSyncDataOut->IsPlayerUpdateAiming = bIsAiming;
 	m_pOfSyncDataOut->IsCrouching = (nibble & OF_FLAG_NIBBLE_CROUCHING)==OF_FLAG_NIBBLE_CROUCHING;
@@ -1910,11 +1918,33 @@ void CheckRemoveDeadBody()
 		}
 	}
 }
+void CheckSendOnFootSyncVE()
+{
+	if (iNPC && iNPC->Initialized()
+		&& iNPC->WaitingForVEOnFootSync)
+	{
+		DWORD t = iNPC->VETickCount;
+		DWORD n = GetTickCount();
+		if (n - t > 650 || n - t < 0) //650 ms, after exit vehicle, send ofsyncdata
+		{
+			SendNPCOfSyncDataLV();
+			iNPC->WaitingForVEOnFootSync = false;
+			return;
+		}
+	}
+}
 void OnCycle()
 {
+#ifdef WIN32
+	if (bShutdownSignal)
+	{
+		peer->CloseConnection(systemAddress, true);
+	}
+#endif
 	DWORD dwSleepTime = ProcessPlaybacks();
 	DWORD dw_TickOne = GetTickCount();
-	ProcessTimers(dw_TickOne);
+	ProcessTimers(dw_TickOne);//SetTimerEx, SetTimer
+	CheckSendOnFootSyncVE();
 	CheckPassengerSync();
 	if (bConsoleInputEnabled)
 		CheckForConsoleInput();

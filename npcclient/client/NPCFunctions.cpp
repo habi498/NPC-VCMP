@@ -81,10 +81,11 @@ SQInteger fn_StartRecordingPlayback(HSQUIRRELVM v)
     int identifier;
     size_t m=fread(&identifier, sizeof(int), 1, mPlayback.pFile);
     if (m != 1)return 0;
-    if (identifier != NPC_RECFILE_IDENTIFIER_V3)
+    if (identifier != NPC_RECFILE_IDENTIFIER_V4)
     {
         if (identifier == NPC_RECFILE_IDENTIFIER_V1||
-            identifier== NPC_RECFILE_IDENTIFIER_V2)
+        identifier == NPC_RECFILE_IDENTIFIER_V2||
+            identifier== NPC_RECFILE_IDENTIFIER_V3)
         {
             printf("This rec file cannot be played by this version of program. Use program recupdate.exe to convert playback recordings automatically.\n");
             return 0;
@@ -468,7 +469,8 @@ void RegisterConsts() {
     NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_BACKWARD", 16384);
     NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_LEFT", 8192);
     NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_RIGHT", 4096);
-    NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_JUMP", 2176);
+    //NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_JUMP", 2176);
+    NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_JUMP", 2048);
     NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_SPRINT", 1024);
     NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_FIRE", 576);
     NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_CROUCH", 288);
@@ -510,6 +512,7 @@ void RegisterConsts() {
     NPC04_RegisterSquirrelConst(v, "V_CAR_SPEED", V_CAR_SPEED);
     NPC04_RegisterSquirrelConst(v, "F_CAR_TURRETX", F_CAR_TURRETX);
     NPC04_RegisterSquirrelConst(v, "F_CAR_TURRETY", F_CAR_TURRETY);
+    NPC04_RegisterSquirrelConst(v, "I_ACTION", I_ACTION);
 
 
     NPC04_RegisterSquirrelConst(v, "PLAYERUPDATE_NORMAL", vcmpPlayerUpdateNormal);

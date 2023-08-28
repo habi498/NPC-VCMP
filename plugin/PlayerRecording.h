@@ -22,7 +22,7 @@ github https://github.com/dashr9230/SA-MP just for fun*/
 #include <stdio.h>
 #include <string>
 #define RECDIR "recordings"
-#define NPC_RECFILE_IDENTIFIER_V3 1001 //From Nov 2022 onwards
+#define NPC_RECFILE_IDENTIFIER_V4 1004 //ref 25.August 2023
 #define MAX_PLAYERS 100
 #define PLAYER_RECORDING_TYPE_DRIVER	2
 #define PLAYER_RECORDING_TYPE_ONFOOT	1
@@ -82,7 +82,7 @@ public:
 		if (!success)return 0;
 		this->m_RecordingType = recordtype;
 		this->init = true;
-		bool s = WriteHeader(NPC_RECFILE_IDENTIFIER_V3);
+		bool s = WriteHeader(NPC_RECFILE_IDENTIFIER_V4);
 		if (!s) { this->Abort(); return 0; }
 		return 1;
 	}

@@ -44,6 +44,73 @@ bool StopRecordingPlayerData(int32_t playerId)
 	}
 	return false;
 }
+uint8_t GetSlotId(uint8_t byteWeapon)
+{
+	uint8_t byteWeaponSlot;
+	switch (byteWeapon)
+	{
+	case 0:
+	case 1:
+		byteWeaponSlot = 0;
+		break;
+	case 2:
+	case 3:
+	case 4:
+	case 5:
+	case 6:
+	case 7:
+	case 8:
+	case 9:
+	case 10:
+	case 11:
+		byteWeaponSlot = 1;
+		break;
+	case 12:
+	case 13:
+	case 14:
+	case 15:
+	case 16:
+		byteWeaponSlot = 2;
+		break;
+	case 17:
+	case 18:
+		byteWeaponSlot = 3;
+		break;
+	case 19:
+	case 20:
+	case 21:
+		byteWeaponSlot = 4;
+		break;
+	case 22:
+	case 23:
+	case 24:
+	case 25:
+		byteWeaponSlot = 5;
+		break;
+
+	case 26:
+	case 27:
+		byteWeaponSlot = 6;
+		break;
+	case 28:
+	case 29:
+		byteWeaponSlot = 8;
+		break;
+	case 30:
+	case 31:
+	case 32:
+	case 33:
+		byteWeaponSlot = 7;
+		break;
+
+	default:
+		// If invalid weapon then set fists as weapon
+		byteWeaponSlot = 0;
+		break;
+	}
+	return byteWeaponSlot;
+}
+
 void CPlayer::ProcessUpdate2(PluginFuncs* VCMP, vcmpPlayerUpdate updateType)
 {
 	uint8_t playerId = this->m_PlayerID;
@@ -72,6 +139,15 @@ void CPlayer::ProcessUpdate2(PluginFuncs* VCMP, vcmpPlayerUpdate updateType)
 		m_pOfSynDat.IsCrouching = (BOOL)VCMP->IsPlayerCrouching(playerId);
 		m_pOfSynDat.byteHealth = (BYTE)VCMP->GetPlayerHealth(playerId);
 		m_pOfSynDat.fAngle = (FLOAT)VCMP->GetPlayerHeading(playerId);
+		/* rec file v 4.0 start*/
+		m_pOfSynDat.byteAction = (BYTE)VCMP->GetPlayerAction(playerId);
+		uint8_t slotId = GetSlotId(m_pOfSynDat.byteCurrentWeapon);
+		m_pOfSynDat.wAmmo = (BYTE)VCMP->GetPlayerAmmoAtSlot(playerId, slotId);
+		uint32_t keys = m_pOfSynDat.dwKeys;
+		//Check for reloading weapon
+		if (keys & 64 && !(keys & 512) && m_pOfSynDat.byteCurrentWeapon > 11)
+			m_pOfSynDat.bIsReloading = true;
+		/* rec file v 4.0 end*/
 		VCMP->GetPlayerPosition(playerId, &m_pOfSynDat.vecPos.X,
 			&m_pOfSynDat.vecPos.Y, &m_pOfSynDat.vecPos.Z);
 		VCMP->GetPlayerAimDirection(playerId, &m_pOfSynDat.vecAimDir.X,

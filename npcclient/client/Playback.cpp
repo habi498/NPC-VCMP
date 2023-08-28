@@ -22,7 +22,7 @@ extern NPC* iNPC;
 extern CPlayer* npc;
 
 uint8_t ReadAndSendDataBlock();
-#define CYCLE_SLEEP 30//30 ms sleep between cycles. 
+
 
 float ConvertUINT16_TtoFloat(uint16_t compressedFloat, float base)
 {

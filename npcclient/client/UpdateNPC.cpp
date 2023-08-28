@@ -27,6 +27,7 @@ void SetTypeFlags(INCAR_SYNC_DATA* m_InSyncData, uint8_t* type);
 void SetRotationFlags(INCAR_SYNC_DATA* m_InSyncData, uint8_t* flag);
 void SetVehicleIDFlag(INCAR_SYNC_DATA* m_pIcSyncData, uint8_t* nibble, uint8_t* byte);
 uint8_t GetSlotId(uint8_t byteWeapon);
+void CheckAction(ONFOOT_SYNC_DATA* m_pOfSyncData);
 float ConvertFromUINT16_T(uint16_t compressedFloat, float base)
 {
 	if (base != -1)
@@ -189,24 +190,23 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData, PacketPriority priority)
 		byteCrouching = 2;
 	bsOut.Write(byteCrouching);
 	bsOut.Write(m_pOfSyncData->byteCurrentWeapon);
+	CheckAction(m_pOfSyncData);
 	if (m_pOfSyncData->IsPlayerUpdateAiming)
 	{
 		if (m_pOfSyncData->bIsReloading)
 		{
 			bsOut.Write((uint8_t)0x27);
-			bsOut.Write((uint8_t)0x01);
 		}
 		else
 		{
 			bsOut.Write((uint8_t)0xa7);
-			bsOut.Write((uint8_t)0x10);//magic
 		}
 	}
 	else
 	{
 		bsOut.Write((uint8_t)0x03);//magic. 0x33 for look behind
-		bsOut.Write((uint8_t)0x01);//magic
 	}
+	bsOut.Write(m_pOfSyncData->byteAction);
 	bsOut.Write(m_pOfSyncData->byteArmour);
 	bsOut.Write(m_pOfSyncData->byteHealth);
 	bsOut.Write(m_pOfSyncData->wAmmo);
@@ -280,11 +280,25 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData, PacketPriority priority)
 	if (action & OF_FLAG_WEAPON)
 	{
 		bsOut.Write(m_pOfSyncData->byteCurrentWeapon);
-		if (m_pOfSyncData->byteCurrentWeapon > 11)
+		if (m_pOfSyncData->byteCurrentWeapon > 11)	
 			bsOut.Write((WORD)(m_pOfSyncData->wAmmo));//ammo
 	}
-	if (action & OF_FLAG_KEYS)
+	if (action & OF_FLAG_KEYS_OR_ACTION)
 	{
+		CheckAction(m_pOfSyncData);
+		uint8_t keybyte1 = m_pOfSyncData->dwKeys & 0xFF;
+		uint8_t keybyte2 = (m_pOfSyncData->dwKeys >> 8) & 0xFF;
+		bsOut.Write(keybyte1);
+		bsOut.Write(keybyte2);
+		uint16_t value = 0;
+		if (m_pOfSyncData->dwKeys > 0xFFFF)
+			value |= 0x80;
+		value |= m_pOfSyncData->byteAction;
+		
+		WriteNibble((value >> 8) & 15, &bsOut);
+		bsOut.Write((uint8_t)(value & 0xFF));
+
+		/*
 		uint8_t msb = 0x1;//most significant byte
 		if (m_pOfSyncData->dwKeys & 0x01) //aiming
 			msb = 0;
@@ -295,13 +309,10 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData, PacketPriority priority)
 		{
 			msb |= 0x8;
 		}
-		uint8_t keybyte1 = m_pOfSyncData->dwKeys & 0xFF;
-		uint8_t keybyte2 = (m_pOfSyncData->dwKeys >> 8) & 0xFF;
-		bsOut.Write(keybyte1);
-		bsOut.Write(keybyte2);
+		
 		bsOut.Write(msb);
 		#ifdef NPC_SHOOTING_ENABLED
-			uint8_t byteVal = 0;
+		uint8_t byteVal = 0; uint8_t bytePlayerAction = 0;
 			if ((m_pOfSyncData->dwKeys & 1) && !reloading_weapon)//key_aim=1
 				byteVal = uint8_t(0xc);
 			else if (reloading_weapon)
@@ -309,7 +320,8 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData, PacketPriority priority)
 			WriteNibble(byteVal, &bsOut);
 		#else	
 			WriteNibble(1, &bsOut);
-		#endif	
+		#endif
+		*/
 	}
 	if (!(action & OF_FLAG_NOHEALTH))
 	{
@@ -354,7 +366,7 @@ void SetActionFlags(ONFOOT_SYNC_DATA* m_pOfSyncData, uint8_t* action, uint8_t* n
 	if (m_pOfSyncData->byteArmour)(*action) |= OF_FLAG_ARMOUR;
 	if (m_pOfSyncData->vecSpeed.X != 0 || m_pOfSyncData->vecSpeed.Y != 0 ||
 		m_pOfSyncData->vecSpeed.Z != 0)(*action) |= OF_FLAG_SPEED;
-	if (m_pOfSyncData->dwKeys)(*action) |= OF_FLAG_KEYS;
+	if (m_pOfSyncData->dwKeys || m_pOfSyncData->byteAction>1)(*action) |= OF_FLAG_KEYS_OR_ACTION;
 	if (m_pOfSyncData->IsCrouching)
 	{
 
@@ -395,7 +407,45 @@ void SetVehicleIDFlag(INCAR_SYNC_DATA* m_pIcSyncData, uint8_t* nibble, uint8_t* 
 	(*byte)=m_pIcSyncData->VehicleID >> 2;
 	if (m_pIcSyncData->dwKeys > 0xFFFF)(*byte) = (*byte) | (0x40);
 }
+//For npc.Action
+void CheckAction(ONFOOT_SYNC_DATA* m_pOfSyncData)
+{
+	/*v1.7 beta 2. setting npc.Action .*/
+		//new model(most probably work)
+		/*First Calculate byteAction if not provided.*/
+		//If reloading, aiming or attacking (0x10 and 0x11), set byteAction
+	if ((m_pOfSyncData->dwKeys & 64) && !(m_pOfSyncData->dwKeys & 512))
+		m_pOfSyncData->byteAction = 0x01; //when reloading keys=64, firing 572
+	else
+	{
+		if ((m_pOfSyncData->byteCurrentWeapon == 26
+			|| m_pOfSyncData->byteCurrentWeapon == 27
+			|| m_pOfSyncData->byteCurrentWeapon == 28
+			|| m_pOfSyncData->byteCurrentWeapon == 29
+			|| m_pOfSyncData->byteCurrentWeapon == 30
+			|| m_pOfSyncData->byteCurrentWeapon == 32) &&
+			m_pOfSyncData->dwKeys & 0x01) //aiming
+		{
+			m_pOfSyncData->byteAction = 0x0c;
+		}
+		else if (m_pOfSyncData->dwKeys & 0x40) //attacking
+		{
+			if (m_pOfSyncData->byteCurrentWeapon <= 10)//melee weapons
+				m_pOfSyncData->byteAction = 0x11;
+			else
+				m_pOfSyncData->byteAction = 0x10;
+		}
+		else
+		{
+			//If byteAction <=1, then OF_FLAG_KEYS_OR_ACTION will not be set 
+			//unless dwKeys is not 0. And when OF_FLAG_KEYS_OR_ACTION is not set,
+			//server will take action to be 0x1 (normal).
+			if (m_pOfSyncData->dwKeys && m_pOfSyncData->byteAction == 0)
+				m_pOfSyncData->byteAction = 0x01;//set it to normal.
+		}
+	}
 
+}
 
 void SendNPCOfSyncDataLV(PacketPriority prioty) //with existing values, send a packet. Normally to update health or angle
 {

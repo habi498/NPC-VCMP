@@ -15,9 +15,18 @@ bool ConvertRecFile( string ifile, string ofile );
 #endif
 #define NPC_RECFILE_IDENTIFIER_V1 1000
 #define NPC_RECFILE_IDENTIFIER_V2 1001
-#define NPC_RECFILE_IDENTIFIER_NEW 1002
+#define NPC_RECFILE_IDENTIFIER_V3 1002
+#define NPC_RECFILE_IDENTIFIER_V4 1004 //v4==1004
 #define PLAYER_RECORDING_TYPE_DRIVER	2
 #define PLAYER_RECORDING_TYPE_ONFOOT	1
+
+/* Action IDs Credits: vito https ://forum.vc-mp.org/index.php?msg=53263*/
+#define ACTION_NONE 0x00
+#define ACTION_NORMAL 0x01
+#define ACTION_AIMING 0x0c
+#define ACTION_FIRE 0x10
+#define ACTION_MELEE_ATTACK 0x11
+
 bool FileExists( const std::string &Filename )
 {
     return access( Filename.c_str(), 0 ) == 0;
@@ -26,7 +35,7 @@ int main(int argc, char** argv)
 {
 	try{
 		// Define the command line object.
-        CmdLine cmd("npcclient rec-file updater ", ' ', "3.0");
+        CmdLine cmd("npcclient rec-file updater ", ' ', "4.0");
 
         // Define a value argument and add it to the command line.
         ValueArg<string> fileNameArg("i", "file", "The input file with .rec file", true, "" ,
@@ -69,9 +78,10 @@ bool ConvertRecFile( string ifile, string ofile )
     if (m != 1)
 		return false;
 	if (identifier == NPC_RECFILE_IDENTIFIER_V1
-		|| identifier==NPC_RECFILE_IDENTIFIER_V2)
+		|| identifier==NPC_RECFILE_IDENTIFIER_V2
+		||identifier==NPC_RECFILE_IDENTIFIER_V3)
 	{
-		int newidentifier = NPC_RECFILE_IDENTIFIER_NEW;
+		int newidentifier = NPC_RECFILE_IDENTIFIER_V4;
 		int rectype;
 		m = fread(&rectype, sizeof(int), 1, pFile);
 		if (m != 1)
@@ -90,19 +100,38 @@ bool ConvertRecFile( string ifile, string ofile )
 			if (count != 1)return 0;
 			do
 			{
-				INCAR_DATABLOCK m_pIcDatablock;
-				count = fread(&m_pIcDatablock, sizeof(m_pIcDatablock), 1, pFile);
-				if (count != 1)
+				if (identifier == NPC_RECFILE_IDENTIFIER_V1 ||
+					identifier == NPC_RECFILE_IDENTIFIER_V2)
 				{
-					if (feof(pFile))return true; //end of file reached.
-					return false;
-				}
+					INCAR_DATABLOCK_BEFOREV3 m_pIcDatablock;
+					count = fread(&m_pIcDatablock, sizeof(m_pIcDatablock), 1, pFile);
+					if (count != 1)
+					{
+						if (feof(pFile))return true; //end of file reached.
+						return false;
+					}
 
-				size_t t = fwrite((void*)&m_pIcDatablock, sizeof(m_pIcDatablock), 1, oFile);
-				if (t != 1)return 0;
-				uint16_t wAmmo = 1; // 2 byte
-				size_t count = fwrite(&wAmmo, sizeof(wAmmo), 1, oFile);
-				if (count != 1)return 0;
+					size_t t = fwrite((void*)&m_pIcDatablock, sizeof(m_pIcDatablock), 1, oFile);
+					if (t != 1)return 0;
+					uint16_t wAmmo = 1; // 2 byte
+					size_t count = fwrite(&wAmmo, sizeof(wAmmo), 1, oFile);
+					if (count != 1)return 0;
+				}
+				else if (identifier == NPC_RECFILE_IDENTIFIER_V3)
+				{
+					//do nothing new
+					INCAR_DATABLOCK_V3 m_pIcDatablock;
+					count = fread(&m_pIcDatablock, sizeof(m_pIcDatablock), 1, pFile);
+					if (count != 1)
+					{
+						if (feof(pFile))return true; //end of file reached.
+						return false;
+					}
+
+					size_t t = fwrite((void*)&m_pIcDatablock, sizeof(m_pIcDatablock), 1, oFile);
+					if (t != 1)return 0;
+					//no new fields
+				}
 			} while (true);
 
 		}
@@ -136,10 +165,42 @@ bool ConvertRecFile( string ifile, string ofile )
 					uint16_t wAmmo = 1; // 2 byte
 					count = fwrite(&wAmmo, sizeof(wAmmo), 1, oFile);
 					if (count != 1)return 0;
+					//No reloading ability
+					uint8_t byteAction = ACTION_NONE;
+					ONFOOT_SYNC_DATA_V1 m_pOfSyncData = m_pOfDatablock.m_pOfSyncData;
+					if ((m_pOfSyncData.dwKeys&64)&&!(m_pOfSyncData.dwKeys&512))
+						byteAction = ACTION_NORMAL; //when reloading keys=64, firing 572
+					else
+					{
+						if ((m_pOfSyncData.byteCurrentWeapon == 26
+							|| m_pOfSyncData.byteCurrentWeapon == 27
+							|| m_pOfSyncData.byteCurrentWeapon == 28
+							|| m_pOfSyncData.byteCurrentWeapon == 29
+							|| m_pOfSyncData.byteCurrentWeapon == 30
+							|| m_pOfSyncData.byteCurrentWeapon == 32) &&
+							m_pOfSyncData.dwKeys & 0x01) //aiming
+						{
+							byteAction = ACTION_AIMING;
+						}
+						else if (m_pOfSyncData.dwKeys & 0x40) //attacking
+						{
+							if (m_pOfSyncData.byteCurrentWeapon <= 10)//melee weapons
+								byteAction = ACTION_MELEE_ATTACK;
+							else
+								byteAction = ACTION_FIRE;
+						}
+					}
+
+					count = fwrite(&byteAction, sizeof(byteAction), 1, oFile);
+					if (count != 1)return 0;
+					uint8_t byteReserved = 0; //1 byte
+					count = fwrite(&byteReserved, sizeof(byteReserved), 1, oFile);
+					if (count != 1)return 0;
+
 				}
-				else if(identifier==NPC_RECFILE_IDENTIFIER_V2)
+				else if(identifier==NPC_RECFILE_IDENTIFIER_V2||identifier==NPC_RECFILE_IDENTIFIER_V3)
 				{
-					ONFOOT_DATABLOCK_V2 m_pOfDatablock;
+					ONFOOT_DATABLOCK_V2ANDV3 m_pOfDatablock;
 
 					count = fread(&m_pOfDatablock, sizeof(m_pOfDatablock), 1, pFile);
 					if (count != 1)
@@ -147,17 +208,51 @@ bool ConvertRecFile( string ifile, string ofile )
 						if (feof(pFile))return true; //end of file reached.
 						return false;
 					}
-
 					size_t t = fwrite((void*)&m_pOfDatablock, sizeof(m_pOfDatablock), 1, oFile);
 					if (t != 1)return 0;
+					//Now write byteAction and byteReserved. If we write both as 0, then
+					//when playback, it cause weapons not to fire 
+
+					//Determining actual player action using player keys
+					uint8_t byteAction = ACTION_NONE;
+					ONFOOT_SYNC_DATA_V2ANDV3 m_pOfSyncData = m_pOfDatablock.m_pOfSyncData;
+					if (m_pOfSyncData.bIsReloading)
+						byteAction = ACTION_NORMAL;
+					else
+					{
+						if ((m_pOfSyncData.byteCurrentWeapon == 26
+							|| m_pOfSyncData.byteCurrentWeapon == 27
+							|| m_pOfSyncData.byteCurrentWeapon == 28
+							|| m_pOfSyncData.byteCurrentWeapon == 29
+							|| m_pOfSyncData.byteCurrentWeapon == 30
+							|| m_pOfSyncData.byteCurrentWeapon == 32)&&
+							m_pOfSyncData.dwKeys & 0x01) //aiming
+						{
+							byteAction = ACTION_AIMING;
+						}
+						else if (m_pOfSyncData.dwKeys & 0x40) //attacking
+						{
+							if (m_pOfSyncData.byteCurrentWeapon <= 10)//melee weapons
+								byteAction = ACTION_MELEE_ATTACK;
+							else
+								byteAction = ACTION_FIRE;
+						}
+					}
+					
+					count = fwrite(&byteAction, sizeof(byteAction), 1, oFile);
+					if (count != 1)return 0;
+					uint8_t byteReserved = 0; //1 byte
+					count = fwrite(&byteReserved, sizeof(byteReserved), 1, oFile);
+					if (count != 1)return 0;
 				}
+				
 			} while (true);
 		}
 		
 	}
 	else {
         //NOT NPC first version recording
-        cout<< "This file does not belong to old npc .rec files viz ( npcclient v.1.1 or v1.5) \n"<<endl;
+        cout<< "This file does not belong to old npc .rec files) \n"<<endl;
         return 0;
     }
 	return true;

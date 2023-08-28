@@ -67,7 +67,7 @@ uint32_t bytes_swap_u32(uint32_t i);
 #define OF_FLAG_WEAPON 0x40
 #define OF_FLAG_ARMOUR 0x04
 #define OF_FLAG_SPEED 0x01
-#define OF_FLAG_KEYS 0x10
+#define OF_FLAG_KEYS_OR_ACTION 0x10
 //#define OF_FLAG_CROUCHING 0x80
 #define OF_FLAG_EXTRA_NIBBLE 0x80
 #define OF_FLAG_NOHEALTH 0x08
@@ -84,6 +84,8 @@ uint32_t bytes_swap_u32(uint32_t i);
 #define NPC_RECFILE_IDENTIFIER_V1 1000
 #define NPC_RECFILE_IDENTIFIER_V2 1001
 #define NPC_RECFILE_IDENTIFIER_V3 1002 //From Nov 2022 onwards
+#define NPC_RECFILE_IDENTIFIER_V4 1004 //From August 2023 onwards
+#define CYCLE_SLEEP 30//30 ms sleep between cycles. 
 int ConnectToServer(std::string hostname, int port, std::string npcname, std::string password);
 void OnCycle();//in Playback.cpp
 //void SendNPCUpdate();//in UpdateNPC.cpp

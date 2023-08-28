@@ -115,6 +115,8 @@ typedef struct _ONFOOT_SYNC_DATA
 	VECTOR vecAimPos;
 	bool bIsReloading; //1 byte
 	uint16_t wAmmo; // 2 byte
+	uint8_t byteAction;//added v1.7 beta 2
+	uint8_t byteReserved;//for future use
 	_ONFOOT_SYNC_DATA()
 	{
 		dwKeys = 0; vecPos = VECTOR(0, 0, 0);
@@ -126,11 +128,12 @@ typedef struct _ONFOOT_SYNC_DATA
 		vecAimDir = VECTOR(0, 0, 0);
 		vecAimPos = VECTOR(0, 0, 0);
 		bIsReloading = false;
-		wAmmo = 0;
+		wAmmo = 0; byteAction = 1; byteReserved = 0;
 	}
-} ONFOOT_SYNC_DATA;
-//64+ 4 =68 datablock
-//68+8=76 size taken by header+first datablock
+} ONFOOT_SYNC_DATA; 
+//--new
+// 66+ 4 =70 datablock
+//70+8=78 size taken by header+first datablock
 
 #pragma pack(1)
 typedef struct _INCAR_SYNC_DATA

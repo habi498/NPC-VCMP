@@ -365,6 +365,78 @@ uint32_t CFunctions::GetStreamedCheckpointCount()
     ClearLastError();
     return m_pCheckpointPool->GetCount();
 }
+VECTOR move(VECTOR vecCurPos, float fDistance, float fAngle)
+{
+    float newx = vecCurPos.X - (float)sin(fAngle) * fDistance;
+    float newy = vecCurPos.Y + (float)cos(fAngle) * fDistance;
+    return VECTOR(newx, newy, vecCurPos.Z);//assuming z more or less same.
+}
+VECTOR move2(VECTOR vecCurPos, float fCurAngle, float fDistance, float fAngle)
+{
+    return move(vecCurPos, fDistance, fCurAngle + fAngle);
+}
+
+funcError CFunctions::ExitVehicleEx(bool fosd,uint8_t style , uint8_t byte1, uint8_t byte2)
+{
+    ClearLastError();
+    if (npc->m_wVehicleId)
+    {
+        RakNet::BitStream bsOut;
+        bsOut.Write((RakNet::MessageID)(ID_GAME_MESSAGE_VEHICLE_EXIT));
+        /*
+        ad 01 00 00  normal
+        ad 02 00 00 jump from vehicle
+        ad 03 27 01 fall from bike hitting wall
+        ad 03 27 03 fall from bike upside down
+        ad 03 27 00 fall from bike while jumping*/
+        bsOut.Write(style); bsOut.Write(byte1); bsOut.Write(byte2);
+        peer->Send(&bsOut, HIGH_PRIORITY, RELIABLE, 0, systemAddress, false);
+        if (fosd) //follow onfoot sync data
+        {
+            VECTOR vecPos;
+            GetVehiclePosition(npc->m_wVehicleId, &vecPos);
+            uint8_t seatid = npc->m_byteSeatId;
+            QUATERNION quatRotation;
+            GetVehicleRotation(npc->m_wVehicleId, &quatRotation);
+            float fCurAngle=(float)asin((double)quatRotation.Z) * 2;
+            //print(move2(Vector(-362.514, -528.351, 12.5124), 0.0465442, 1.5, PI / 2))
+            float fDistance = 1.5;
+            float fTarAngle = (float)PI / 2;
+            switch (seatid)
+            {
+            case 1: fTarAngle *= -1;//right side door
+                break;
+            case 2: fTarAngle = 3 * (float)PI / 4; fDistance = 2; break;
+            case 3: fTarAngle= -3 * (float)PI / 4; fDistance = 2; break;
+            default:break;
+            }
+            npc->m_vecPos=move2(vecPos, fCurAngle, fDistance, fTarAngle);
+            iNPC->VETickCount = GetTickCount();
+            iNPC->WaitingForVEOnFootSync = true;
+        }
+        return SetLastError(funcError::NoError);
+    }
+    else return SetLastError(funcError::VehicleNotEntered);
+}
+funcError CFunctions::ExitVehicle()
+{
+    ClearLastError();
+    if (npc->m_wVehicleId)
+    {
+        RakNet::BitStream bsOut;
+        bsOut.Write((RakNet::MessageID)(ID_GAME_MESSAGE_VEHICLE_EXIT));
+        /*
+        ad 01 00 00  normal
+        ad 02 00 00 jump from vehicle
+        ad 03 27 01 fall from bike hitting wall
+        ad 03 27 03 fall from bike upside down
+        ad 03 27 00 fall from bike while jumping*/
+        bsOut.Write((uint8_t)0x01); bsOut.Write((uint16_t)0);//normal
+        peer->Send(&bsOut, HIGH_PRIORITY, RELIABLE, 0, systemAddress, false);
+        return SetLastError(funcError::NoError);
+    }
+    else return SetLastError(funcError::VehicleNotEntered);
+}
 uint32_t CFunctions::GetStreamedObjectCount()
 {
     ClearLastError();
@@ -530,7 +602,19 @@ funcError CFunctions::GetPlayerSpeed(uint8_t bytePlayerId, VECTOR* vecSpeedOut)
     }
     else return SetLastError(funcError::EntityNotFound);
 }
-
+uint8_t CFunctions::GetPlayerAction(uint8_t bytePlayerId)
+{
+    ClearLastError();
+    CPlayer* player = m_pPlayerPool->GetAt(bytePlayerId);
+    if (player)
+    {
+        return player->GetONFOOT_SYNC_DATA()->byteAction;
+    }
+    else {
+        SetLastError(funcError::EntityNotFound);
+        return 0;
+    }
+}
 funcError CFunctions::GetPlayerAimDir(uint8_t bytePlayerId, VECTOR* vecAimDirOut)
 {
     ClearLastError();
