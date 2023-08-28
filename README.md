@@ -171,7 +171,7 @@ enables npc to load ammo and shoot at any player. LibAction.
 --LibRPC functions extended to perform sq_get and sq_set on server vm from npcclient.  
 --Fixed bug when onPlayerRequestClass return 0 on server. 
 
-**Version 1.7** ( T.B.A ) 
+**Version 1.7** ( 24. August. 2023 ) 
 
 --Pickup Support 
 
