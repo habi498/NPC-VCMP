@@ -1,3 +1,0 @@
-libreadline version 8.0
-libtinfo version 6.2
-libhistory version 8.0

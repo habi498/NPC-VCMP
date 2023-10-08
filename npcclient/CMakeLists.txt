@@ -1,4 +1,5 @@
-﻿cmake_minimum_required (VERSION 3.8)
+﻿cmake_minimum_required (VERSION 3.15)
+
 # Add source to this project's executable.
 add_executable (npcclient 
 "client/main.cpp"
@@ -126,55 +127,67 @@ add_executable (npcclient
 "client/ConsoleInput.cpp"
 "client/EventHandler.cpp" 
 "client/Plugins.cpp"
- "client/sqVector.cpp"  
+ "client/SqVector.cpp"  
 "client/VehiclePool.cpp"  
-"client/sqQuaternion.cpp"
+"client/SqQuaternion.cpp"
 "client/Exports.cpp"
 "client/NPCFunctions4.cpp" 
 "client/NPCFunctions5.cpp" )
+
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	set(OUTPUT_BITNESS 64)
 else()
 	set(OUTPUT_BITNESS 32)
 endif()
+
 if(FORCE_32)
 	set_target_properties(npcclient PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
 	set(OUTPUT_BITNESS 32)
 endif()
+
 if(REL004)
 	message(STATUS "You are building for rel004")
     add_definitions(-D_REL004)
 	set_target_properties(npcclient PROPERTIES OUTPUT_NAME "npcclient_r004") 
 endif()
+
 target_include_directories(npcclient PRIVATE "${PROJECT_SOURCE_DIR}/npcclient")
 target_include_directories(npcclient PRIVATE "${PROJECT_SOURCE_DIR}/include")
 
-if(WIN32)
-    target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/squirrel_static.lib")
-    target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/sqstdlib_static.lib")
-    target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/npc_static.lib")
-    target_link_libraries(npcclient wsock32 ws2_32)
+if(with-squirrel AND WIN32)
+	message(STATUS "with-squirrel is disabled for windows. It will be compiled from source, which is included")
+endif()
+
+if(with-squirrel AND NOT WIN32)
+	#only on linux, use squirrel, sqstdlib. In windows /MT problems, etc
+	target_link_libraries(npcclient  ${with-squirrel}/lib/libsquirrel_static.a)
+	target_link_libraries(npcclient  ${with-squirrel}/lib/libsqstdlib_static.a)
+	target_include_directories(npcclient PRIVATE ${with-squirrel}/include)
+else()
+#First build squirrel libs
+option(DISABLE_DYNAMIC "Disable building squirrel-dynamic libraries" ON)
+#No need to include squirrel include directory, because in building squirrel, those will be included
+add_subdirectory("dependencies/squirrel-master" "dependencies/squirrel-master")
+target_link_libraries(npcclient squirrel_static)
+target_link_libraries(npcclient sqstdlib_static)
+endif()
+
+   
+if(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 4)
+   target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/npc_static.lib")
+   target_link_libraries(npcclient ws2_32)
 else(WIN32)
 	
     if(OUTPUT_BITNESS EQUAL 32)    
-        target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/libsquirrel_static.a")
-        target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/libsqstdlib_static.a")
         target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/libnpc_static.a")
-		target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/libreadline.a")
-		  target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/libhistory.a")
-target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/libtinfo.a") 
 else()
-        target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x64/libsquirrel_static.a")
-        target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x64/libsqstdlib_static.a")
         target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x64/libnpc_static.a")
-	     target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x64/libreadline.a")
-		  target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x64/libhistory.a")
-target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x64/libncurses.a")
-    endif()
+
+ endif()
     set(CMAKE_CXX_FLAGS "-pthread")
     add_definitions(-DLINUX)
 	target_link_libraries(npcclient ${CMAKE_DL_LIBS})
-    if(FORCE_32)
+    if(FORCE_32 OR OUTPUT_BITNESS EQUAL 32)
         if(REL004)
             set_target_properties(npcclient PROPERTIES OUTPUT_NAME "npcclient32_r004")
         else()
@@ -199,3 +212,39 @@ endif()
 set_target_properties(npcclient PROPERTIES LINK_FLAGS_RELEASE -s)
 
 set(CMAKE_BUILD_TYPE Release)
+#build readline
+if(NOT WIN32)
+include(ExternalProject)
+if(with-libreadline)
+	target_link_libraries(npcclient ${with-libreadline}/lib/libhistory.a)
+	target_link_libraries(npcclient ${with-libreadline}/lib/libreadline.a)
+	target_include_directories(npcclient PRIVATE ${with-libreadline}/include)
+else()
+message(STATUS "libreadline libraries not specified(-Dwith-libreadline=path). So it will be compiled")
+ExternalProject_Add(libreadline
+    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/readline-8.2
+    CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/readline-8.2/configure --prefix=<INSTALL_DIR> --enable-shared=false --enable-install-examples=false --with-curses
+    INSTALL_DIR ${CMAKE_BINARY_DIR}/npcclient/dependencies/libreadline
+    BINARY_DIR ${CMAKE_BINARY_DIR}/npcclient/dependencies/libreadline-out
+    BUILD_COMMAND ${MAKE})
+target_include_directories(npcclient PRIVATE ${CMAKE_BINARY_DIR}/npcclient/dependencies/libreadline/include)
+target_link_libraries(npcclient ${CMAKE_BINARY_DIR}/npcclient/dependencies/libreadline/lib/libhistory.a)
+target_link_libraries(npcclient ${CMAKE_BINARY_DIR}/npcclient/dependencies/libreadline/lib/libreadline.a)
+add_dependencies(npcclient libreadline)
+endif()
+
+if(with-ncurses)
+target_link_libraries(npcclient ${with-ncurses}/lib/libncurses.a)
+else()
+message(STATUS "ncurses libraries not specified.(-Dwith-ncurses=path). So it will be compiled")
+ExternalProject_Add(libncurses
+    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/ncurses-6.4
+    CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/ncurses-6.4/configure --prefix=<INSTALL_DIR> 
+    INSTALL_DIR ${CMAKE_BINARY_DIR}/npcclient/dependencies/libncurses
+    BINARY_DIR ${CMAKE_BINARY_DIR}/npcclient/dependencies/libncurses-out
+    BUILD_COMMAND ${MAKE})
+target_link_libraries(npcclient ${CMAKE_BINARY_DIR}/npcclient/dependencies/libncurses/lib/libncurses.a)
+add_dependencies(npcclient libncurses)
+endif()
+
+endif()

@@ -19,13 +19,13 @@
 #include <stdarg.h> 
 #include <string>
 #include <vector>
-#include "Squirrel/squirrel.h"
-#include "Squirrel/sqstdio.h"
-#include "Squirrel/sqstdaux.h"
-#include "Squirrel/sqstdsystem.h"
-#include "Squirrel/sqstdmath.h"
-#include "Squirrel/sqstdstring.h"
-#include "Squirrel/sqstdblob.h"
+#include "squirrel.h"
+#include "sqstdio.h"
+#include "sqstdaux.h"
+#include "sqstdsystem.h"
+#include "sqstdmath.h"
+#include "sqstdstring.h"
+#include "sqstdblob.h"
 #include "SqVector.h"
 #define PLAYER_RECORDING_TYPE_DRIVER	2
 #define PLAYER_RECORDING_TYPE_ONFOOT	1

@@ -1,55 +1,24 @@
 # npc-vcmp
 Implements Non Player Characters (NPC)  also called bots in VC-MP 0.4 Servers
 
-# Instructions for building the project. 
+# Instructions for building the project. For Visual Studio 
+Open a command prompt in the directory containing this README.md
+mkdir out
+cd out
+cmake ../ -A Win32
+Now you can see visual studio project in out directory. Edit it and you can build it also.
 
-This is a Visual Studio 'CMake Project'.
-## Visual Studio -> File -> Clone Repository
-<img src="https://github.com/habi498/npc-vcmp/blob/master-1.6/picture.png" width="510"></img>
-## Project Configurations
-1. WINDOWS_32 
-2. WINDOWS_64 
-3. WINDOWS_REL004 
-4. wsl_32
-5. wsl_32-rel004
-6. wsl_64
-7. wsl_64-rel004
-8. LINUX_32 (Remote machine)
-9. LINUX_64 (Remote machine)
-## Building on windows
-As you can see below (section titled "There are two sub projects"), we have to build two binaries: npcclient.exe (The application which runs NPCs as client) and npc04relxx.dll (the VC-MP Server plugin).
-The bitness of npcclient.exe is currently 32 bit always. This is made in view of the idea that 64 bit machines can run 32 bit applications in windows. Since, the bitness of **npcclient.exe is 32 bit**, it can be built only on the configuration WINDOWS_32.  
+But the above process will not build 64-bit plugin called npc04rel64.dll.
+To do so, again open a command prompt in the directory containing this README.md
+mkdir out-64
+cd out-64
+cmake ../
 
-  Building on WINDOWS_**64** will produce the npc04rel64.dll in _out\build\WINDOWS_64\plugin_ folder.
-  
-  Building after selecting WINDOWS_32 will produce both npcclient.exe and the plugin npc04rel32.dll in _out\build\WINDOWS_32\npcclient_ folder and _out\build\WINDOWS_32\plugin_ folder respectively.
-  
-  This can be summarised on the following table:
-  <img src="https://github.com/habi498/npc-vcmp/blob/master-1.6/binaries.png" width="510"></img>
-## Building for LINUX on windows
-You must have **Linux-development-workload** installed on Visual Studio.( See "Visual Studio Setup" and "Ubuntu on remote Linux systems" at [this](https://docs.microsoft.com/en-us/cpp/linux/download-install-and-setup-the-linux-development-workload?view=msvc-170) page.
+#Instructions for building the project. For VSCode
 
-For building binaries for the linux, you have to have login information for a linux system running remotely. On Visual Studio, go to Tools->Options->Cross Platform and Add or Edit your "connection information".
-After this step, select "LINUX_32" or "LINUX_64" as the case may be and Build. This will first copy the files to remote machine after you selet configuration. Then when it is ready, and you click on build, it will build the binaries on the remote machine and copy them back to your computer. If you have selected "LINUX_32", you will have binaries (npc04rel32.so and npcclient32) on "out\build\LINUX_32". If you have selected "LINUX_64", the binaries will be npc04rel64.so and npcclient64 located on "out\build\LINUX_64".
-(Note: On Linux, unlike windows the bitness problem of application npcclient does not arise, since the application can have 32 or 64 bitness )
-## There are two sub projects. 
-### 1. npcclient
-This is the executable which uses Raknet to connect to a VC-MP Server.
-### 2. plugin
-This is a vc-mp server plugin - npc04relxx.dll/so
-This plugin searches for another plugin squirrel04relxx.dll/so and connects with it, so that 
- 1. Through squirrel scripts,  the NPCs can be created.
- 2. Player actions can be recorded and written to recordings folder. This files are later copied to the recordings folder of npcscripts and they use it.
- 3. Checks if a player is an NPC.
-
-## Prebuilt static libraries
-The sub project npcclient uses three pre-built static libraries - libsquirrel, libsqstd and libnpc.
-All libraries are included with the project. And first two libraries can be built again from [here](https://github.com/albertodemichelis/squirrel)
-
-The third library 'libnpc' contains a function to connect to server. It is made so not to expose some properties of vc-mp public.
 
 ## Difference in name of executables across platforms 
-Both Windows 32 and 64 bit systems use npcclient.exe, which is 32 bit. It might need vc_redist.x86
+Both Windows 32 and 64 bit systems use npcclient.exe, which is 32 bit. 
 
 In linux, 32 bit systems and 64 bit systems use different executables. They are distinguished as by appending the bitness at the end of it.
 
@@ -101,7 +70,7 @@ Where:
    VCMP-Non Player Characters v1.6 (6.27)
 ```
 
-## Version Changes November 2022  
+## Version Changes since November 2022  
 **1.2**  
 --Implemented function SendOnFootSyncData through which NPCs can shoot by normal weapons.  
 --Only windows builds were made  
@@ -171,7 +140,7 @@ enables npc to load ammo and shoot at any player. LibAction.
 --LibRPC functions extended to perform sq_get and sq_set on server vm from npcclient.  
 --Fixed bug when onPlayerRequestClass return 0 on server. 
 
-**Version 1.7** ( 24. August. 2023 ) 
+**Version 1.7** 
 
 --Pickup Support 
 

@@ -1,12 +1,14 @@
 #CMake for server plugin npc04relxx
-cmake_minimum_required (VERSION 3.8)
+cmake_minimum_required (VERSION 3.15)
 add_library(npc04 MODULE
 "SQMain.cpp"
 "SQFuncs.cpp"
 "ConsoleUtils.cpp"
 "PlayerRecording.cpp"
 "SQConsts.cpp"
- "RPC.cpp"  "ClientScriptData.cpp" "ClientScriptData.h")
+ "RPC.cpp"  "ClientScriptData.cpp" )
+
+
 target_include_directories(npc04 PRIVATE "${PROJECT_SOURCE_DIR}/include")
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	set(OUTPUT_BITNESS 64)
@@ -22,21 +24,17 @@ set_target_properties(npc04 PROPERTIES PREFIX "")
 if(WIN32)
 	if(OUTPUT_BITNESS EQUAL 64)
 		set_target_properties(npc04 PROPERTIES OUTPUT_NAME "npc04rel64")
-		#target_link_libraries(npc04 "${PROJECT_SOURCE_DIR}/plugin/libs/sqstdlib_static_x64.lib")
 		message("WIN32 x64")
 	else()
 		set_target_properties(npc04 PROPERTIES OUTPUT_NAME "npc04rel32")
-		#target_link_libraries(npc04 "${PROJECT_SOURCE_DIR}/plugin/libs/sqstdlib_static_x86.lib")
 		message("WIN32 x32")
 	endif()
 else(WIN32)
 	if(OUTPUT_BITNESS EQUAL 64)
 		set_target_properties(npc04 PROPERTIES OUTPUT_NAME "npc04rel64")
-		#target_link_libraries(npc04 "${PROJECT_SOURCE_DIR}/plugin/libs/libsqstdlib_static_x64.a")
 		message("LINUX x64")
 	else()
 		set_target_properties(npc04 PROPERTIES OUTPUT_NAME "npc04rel32")
-		#target_link_libraries(npc04 "${PROJECT_SOURCE_DIR}/plugin/libs/libsqstdlib_static_x32.a")
 		message("LINUX x32")
 	endif()
 endif(WIN32)

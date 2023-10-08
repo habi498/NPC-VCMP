@@ -149,8 +149,7 @@ public:
 public:
 	NPC()
 	{
-		
-
+		anticheatID = 0;
 	}
 	~NPC() {};
 	uint32_t anticheatID;//Every time server sets health, armour position or anything of npc, this count is increased by one.
