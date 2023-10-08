@@ -183,5 +183,6 @@ enables npc to load ammo and shoot at any player. LibAction.
 
 --Events added: OnTimeWeatherSync, OnPickupStreamIn, OnPickupDestroyed  
 --Functions new: IsPickupStreamedIn, GetPickupModel, GetPickupAlpha, GetPickupQuantity, GetPickupPos, GetPickupCount  
+
 **Version 1.7 beta2**( 08 August 2023)  
 --Fixed npc getting kicked when adding armour/health/weapon from serverside  
