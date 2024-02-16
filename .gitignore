@@ -5,3 +5,8 @@
 /bin
 /.vs
 /compile.txt
+/out/build
+/out-lin-32
+/out-linux64
+/out-v141xp
+/bin.tar
