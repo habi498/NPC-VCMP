@@ -24,7 +24,7 @@ extern CFunctions* m_pFunctions;
 extern CPlayer* npc;
 extern RakNet::RakPeerInterface* peer;
 extern RakNet::SystemAddress systemAddress;
-uint8_t GetSlotId(uint8_t byteWeapon);
+uint8_t GetSlotIdFromWeaponId(uint8_t byteWeapon);
 
 SQInteger fn_SendIcSyncDataEx(HSQUIRRELVM v)
 {
@@ -273,10 +273,60 @@ SQInteger fn_SendShotInfo(HSQUIRRELVM v)
         return 0;
     SQInteger bodypart, animation;
     sq_getinteger(v, 2, &bodypart);
-    sq_getinteger(v, 3, &animation);
-    if(bodypart>=0 && bodypart<=6)
-        m_pFunctions->SendShotInfo(bodyPart(bodypart), animation);
-    return 0;
+    if (sq_gettype(v, 3) == OT_NULL)
+    {
+        switch (bodypart)
+        {
+        case static_cast<uint8_t>(bodyPart::Body): animation = 13; break;//13 KO_shot_front
+        case static_cast<uint8_t>(bodyPart::Torso): animation = 18; break;//18 KO_shot_stom
+        case static_cast<uint8_t>(bodyPart::LeftArm): animation = 19; break;//19 KO_shot_arml
+        case static_cast<uint8_t>(bodyPart::RightArm): animation = 20; break;
+        case static_cast<uint8_t>(bodyPart::LeftLeg): animation = 21; break;
+        case static_cast<uint8_t>(bodyPart::RightLeg): animation = 22; break;
+        case static_cast<uint8_t>(bodyPart::Head): animation = 17; break; //17 KO_shot_face
+        /*http://wiki.thijn.ovh/index.php?title=Animations*/
+        default:return sq_throwerror(v, "Invalid body part. Must be in range 0 - 6");
+        }
+    }
+    else if (sq_gettype(v, 3) == OT_INTEGER)
+        sq_getinteger(v, 3, &animation);
+    else return sq_throwerror(v, "Animation neither integer nor null");
+    SQBool Autodeath = SQFalse; SQInteger AutoDeathWep = 0, AutoDeathKiller = 255;
+    if (bodypart >= 0 && bodypart <= 6)
+    {
+        if (sq_gettop(v) >= 4)
+        {
+            if (sq_gettype(v, 4) == OT_BOOL)
+            {
+                sq_getbool(v, 4, &Autodeath);
+            }
+            else return sq_throwerror(v, "boolean value expected for autodeath parameter");
+        }
+        if (sq_gettop(v) >= 5)
+        {
+            if (sq_gettype(v, 5) == OT_INTEGER)
+            {
+                sq_getinteger(v, 5, &AutoDeathWep);
+            }
+            else return sq_throwerror(v, "integer value expected for autodeathweapon paramter");
+        }
+        if (sq_gettop(v) >= 6)
+        {
+            if (sq_gettype(v, 6) == OT_INTEGER)
+            {
+                sq_getinteger(v, 6, &AutoDeathKiller);
+            }
+            else return sq_throwerror(v, "integer value expected for autodeathkiller paramter");
+        }
+        m_pFunctions->SendShotInfo(bodyPart(bodypart), animation,Autodeath==SQTrue,(uint8_t)AutoDeathWep,(uint8_t)AutoDeathKiller);
+        if (m_pFunctions->GetLastError() == funcError::NoError)
+        {
+            sq_pushbool(v, SQTrue);
+        }
+        else sq_pushbool(v, SQFalse);
+    }
+    else return sq_throwerror(v, "Invalid body part. Must be in range 0 - 6");
+    return 1;
 }
 SQInteger fn_GetLocalValue(HSQUIRRELVM v)
 {
@@ -293,7 +343,7 @@ SQInteger fn_GetLocalValue(HSQUIRRELVM v)
         break;
     case I_CURWEP: sq_pushinteger(v, npc->GetCurrentWeapon());
         break;
-    case I_CURWEP_AMMO: sq_pushinteger(v, npc->GetSlotAmmo(GetSlotId(npc->GetCurrentWeapon())));
+    case I_CURWEP_AMMO: sq_pushinteger(v, npc->GetSlotAmmo(GetSlotIdFromWeaponId(npc->GetCurrentWeapon())));
         break;
     case F_POSX: sq_pushfloat(v, npc->m_vecPos.X);
         break;
@@ -437,7 +487,7 @@ SQInteger fn_SetLocalValue(HSQUIRRELVM v)
     case I_CURWEP:  if (sq_gettype(v, 3) == OT_INTEGER)
     {
         byteNewWeapon = static_cast<uint8_t>(fvalue);
-        byteSlot = GetSlotId(byteNewWeapon);
+        byteSlot = GetSlotIdFromWeaponId(byteNewWeapon);
         if (npc->GetSlotWeapon(byteSlot) == byteNewWeapon)
             npc->SetCurrentWeapon(byteNewWeapon);
         else return 0;
@@ -786,7 +836,7 @@ void RegisterNPCFunctions3()
     register_global_func(v, ::fn_FireSniperRifle, "FireSniperRifle", 8, "tif|if|if|if|if|if|i");
     register_global_func(v, ::fn_FireSniperRifleEx, "FireSniperRifleEx", 4, "tixx");
     //register_global_func(v, ::fn_FireProjectile, "FireProjectile", 7, "tifffff");
-    register_global_func(v, ::fn_SendShotInfo, "SendShotInfo", 3, "tii");
+    register_global_func(v, ::fn_SendShotInfo, "SendShotInfo", -3, "tii|o");
     register_global_func(v, ::fn_SetLocalValue, "SetLocalValue", 3, "tii|f|x");
     register_global_func(v, ::fn_GetLocalValue, "GetLocalValue", 2, "ti");
     register_global_func(v, ::fn_SendOnFootSyncDataLV, "SendOnFootSyncDataLV", 1, "t");

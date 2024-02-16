@@ -132,7 +132,8 @@ add_executable (npcclient
 "client/SqQuaternion.cpp"
 "client/Exports.cpp"
 "client/NPCFunctions4.cpp" 
-"client/NPCFunctions5.cpp" )
+"client/NPCFunctions5.cpp"  
+"client/NPCFunctions6.cpp" "client/app.rc")
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	set(OUTPUT_BITNESS 64)

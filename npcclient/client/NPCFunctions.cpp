@@ -25,7 +25,7 @@ extern CVehiclePool* m_pVehiclePool;
 extern RakNet::RakPeerInterface* peer;
 extern RakNet::SystemAddress systemAddress;
 extern CPlayerPool* m_pPlayerPool;
-uint8_t GetSlotId(uint8_t byteWeapon);
+uint8_t GetSlotIdFromWeaponId(uint8_t byteWeapon);
 Playback mPlayback;
 SQInteger register_global_func(HSQUIRRELVM v, SQFUNCTION f, const char* fname, SQInteger nparamscheck, const SQChar* typemask)
 {
@@ -70,7 +70,16 @@ SQInteger fn_StartRecordingPlayback(HSQUIRRELVM v)
     const SQChar* filename;
     sq_getinteger(v, 2, &type);
     sq_getstring(v, 3, &filename);
-    if (mPlayback.running == true)return 0;
+    SQInteger flags = 0;
+    if (sq_gettop(v) > 3 )
+    {
+        if (sq_gettype(v, 4) == OT_INTEGER)
+        {
+            sq_getinteger(v, 4, &flags);
+        }
+        else return sq_throwerror(v, "Flags parameter must be integer");
+    }
+    if (mPlayback.running == true)return sq_throwerror(v, "Playback already running");
     mPlayback.pFile = fopen(std::string(REC_DIR+ std::string("/") + std::string(filename)+std::string(".rec")).c_str(), "rb");
     if (mPlayback.pFile == NULL)
     {
@@ -81,7 +90,7 @@ SQInteger fn_StartRecordingPlayback(HSQUIRRELVM v)
     int identifier;
     size_t m=fread(&identifier, sizeof(int), 1, mPlayback.pFile);
     if (m != 1)return 0;
-    if (identifier != NPC_RECFILE_IDENTIFIER_V4)
+    if (identifier != NPC_RECFILE_IDENTIFIER_V4 && identifier!=NPC_RECFILE_IDENTIFIER_V5)
     {
         if (identifier == NPC_RECFILE_IDENTIFIER_V1||
         identifier == NPC_RECFILE_IDENTIFIER_V2||
@@ -95,6 +104,7 @@ SQInteger fn_StartRecordingPlayback(HSQUIRRELVM v)
         return 0;
     }
     mPlayback.identifier = identifier;
+    mPlayback.dw_Flags = (uint32_t)flags;
     int rectype;
     m = fread(&rectype, sizeof(int), 1, mPlayback.pFile);
     if (m != 1)return 0;
@@ -104,6 +114,21 @@ SQInteger fn_StartRecordingPlayback(HSQUIRRELVM v)
         return 0;
     }
     mPlayback.type = type;
+    if (identifier == NPC_RECFILE_IDENTIFIER_V5)
+    {
+        uint32_t flags;
+        //read flags
+        m = fread(&flags, sizeof(int), 1, mPlayback.pFile);
+        if (m != 1)return 0;
+        if (flags & 1)
+        {
+            //Name is present
+            char name[24];
+            m = fread(name, sizeof(char), sizeof(name), mPlayback.pFile);
+            if(m!=(sizeof(name)))return 0;
+            //what to do with name?
+        }
+    }
     mPlayback.nexttick = 0;
     DWORD tick;
     size_t result=fread(&tick, sizeof(tick), 1, mPlayback.pFile);
@@ -120,6 +145,26 @@ SQInteger fn_StartRecordingPlayback(HSQUIRRELVM v)
         sq_pushbool(v, SQTrue);
         return 1;
     }
+}
+SQInteger fn_IsPlaybackRunning(HSQUIRRELVM v)
+{
+    if (mPlayback.running == false)
+        sq_pushbool(v, SQFalse);
+    else if (mPlayback.IsPaused())
+        sq_pushbool(v, SQFalse);
+    else
+        sq_pushbool(v, SQTrue);
+    return 1;
+}
+SQInteger fn_IsPlaybackPaused(HSQUIRRELVM v)
+{
+    if (mPlayback.running == false)
+        sq_pushbool(v, SQFalse);
+    else if (mPlayback.IsPaused())
+        sq_pushbool(v, SQTrue);
+    else
+        sq_pushbool(v, SQFalse);
+    return 1;
 }
 SQInteger fn_SetMyFacingAngle(HSQUIRRELVM v)
 {
@@ -169,7 +214,7 @@ SQInteger fn_GetAmmoOfMyWeapon(HSQUIRRELVM v)
     }
     SQInteger weapon;
     sq_getinteger(v, 2, &weapon);
-    int slotid = GetSlotId(weapon);
+    int slotid = GetSlotIdFromWeaponId(weapon);
     if (slotid == 0)
     {
         sq_pushinteger(v, 0);
@@ -405,9 +450,10 @@ SQInteger fn_RequestClass(HSQUIRRELVM v)
         sq_pushbool(v, SQFalse);
     return 1;
 }
+
 void RegisterNPCFunctions()
 {
-    register_global_func(v, ::fn_StartRecordingPlayback,"StartRecordingPlayback",3,"tis");
+    register_global_func(v, ::fn_StartRecordingPlayback,"StartRecordingPlayback",-3,"tis");
     register_global_func(v, ::fn_IsPlayerStreamedIn,"IsPlayerStreamedIn",2,"ti");
     register_global_func(v, ::fn_IsVehicleStreamedIn,"IsVehicleStreamedIn",2,"ti");
     register_global_func(v, ::fn_SetMyFacingAngle,"SetMyFacingAngle",2,"tf|i");
@@ -434,6 +480,9 @@ void RegisterNPCFunctions()
     register_global_func(v, ::fn_Quit, "QuitServer", 1, "t");
     register_global_func(v, ::fn_RequestSpawn, "RequestSpawn", 1, "t");
     register_global_func(v, ::fn_RequestClass, "RequestClass", -1, "t");
+    register_global_func(v, ::fn_IsPlaybackRunning, "IsPlaybackRunning", 1, "t");
+    register_global_func(v, ::fn_IsPlaybackPaused, "IsPlaybackPaused", 1, "t");
+
 }
 SQInteger NPC04_RegisterSquirrelConst(HSQUIRRELVM v, const SQChar* cname, SQInteger cvalue) {
     sq_pushconsttable(v);
@@ -444,8 +493,9 @@ SQInteger NPC04_RegisterSquirrelConst(HSQUIRRELVM v, const SQChar* cname, SQInte
     return 0;
 }
 void RegisterConsts() {
-    NPC04_RegisterSquirrelConst(v, "PLAYER_RECORDING_TYPE_ONFOOT", 1);
-    NPC04_RegisterSquirrelConst(v, "PLAYER_RECORDING_TYPE_DRIVER", 2);
+    NPC04_RegisterSquirrelConst(v, "PLAYER_RECORDING_TYPE_ONFOOT", PLAYER_RECORDING_TYPE_ONFOOT);
+    NPC04_RegisterSquirrelConst(v, "PLAYER_RECORDING_TYPE_DRIVER", PLAYER_RECORDING_TYPE_DRIVER);
+    NPC04_RegisterSquirrelConst(v, "PLAYER_RECORDING_TYPE_ALL", PLAYER_RECORDING_TYPE_ALL);
 
     NPC04_RegisterSquirrelConst(v, "MAX_PLAYERS", 100);
     NPC04_RegisterSquirrelConst(v, "MAX_PLAYER_NAME", 24);
@@ -478,6 +528,7 @@ void RegisterConsts() {
     NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_PREVWEP", 4);
     NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_NEXTWEP", 2);
     NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_AIM", 1);
+    NPC04_RegisterSquirrelConst(v, "KEY_NONE", 0);
 #ifndef _REL004
     NPC04_RegisterSquirrelConst(v, "KEY_ONFOOT_LOOKBHND", 65536);
 #endif
@@ -520,15 +571,28 @@ void RegisterConsts() {
     NPC04_RegisterSquirrelConst(v, "PLAYERUPDATE_DRIVER", vcmpPlayerUpdateDriver);
     NPC04_RegisterSquirrelConst(v, "PLAYERUPDATE_PASSENGER", vcmpPlayerUpdatePassenger);
 
-    NPC04_RegisterSquirrelConst(v, "BODYPART_BODY", 0 );
-    NPC04_RegisterSquirrelConst(v, "BODYPART_TORSO", 1 );
-    NPC04_RegisterSquirrelConst(v, "BODYPART_LEFTARM", 2 );
-    NPC04_RegisterSquirrelConst(v, "BODYPART_RIGHTARM", 3);
-    NPC04_RegisterSquirrelConst(v, "BODYPART_LEFTLEG", 4 );
-    NPC04_RegisterSquirrelConst(v, "BODYPART_RIGHTLEG", 5 );
-    NPC04_RegisterSquirrelConst(v, "BODYPART_HEAD", 6 );    
+    NPC04_RegisterSquirrelConst(v, "BODYPART_BODY", static_cast<int>(bodyPart::Body));
+    NPC04_RegisterSquirrelConst(v, "BODYPART_TORSO", static_cast<int>(bodyPart::Torso));
+    NPC04_RegisterSquirrelConst(v, "BODYPART_LEFTARM", static_cast<int>(bodyPart::LeftArm));
+    NPC04_RegisterSquirrelConst(v, "BODYPART_RIGHTARM", static_cast<int>(bodyPart::RightArm));
+    NPC04_RegisterSquirrelConst(v, "BODYPART_LEFTLEG", static_cast<int>(bodyPart::LeftLeg));
+    NPC04_RegisterSquirrelConst(v, "BODYPART_RIGHTLEG", static_cast<int>(bodyPart::RightLeg));
+    NPC04_RegisterSquirrelConst(v, "BODYPART_HEAD", static_cast<int>(bodyPart::Head ));    
    
-    NPC04_RegisterSquirrelConst(v, "CLASS_PREVIOUS", -1 );    
-    NPC04_RegisterSquirrelConst(v, "CLASS_NEXT", 1 );    
-    NPC04_RegisterSquirrelConst(v, "CLASS_CURRENT", 0 );    
+    NPC04_RegisterSquirrelConst(v, "CLASS_PREVIOUS", CLASS_PREVIOUS );    
+    NPC04_RegisterSquirrelConst(v, "CLASS_NEXT", CLASS_NEXT );    
+    NPC04_RegisterSquirrelConst(v, "CLASS_CURRENT", CLASS_CURRENT );  
+
+    NPC04_RegisterSquirrelConst(v, "PLAY_IGNORE_PASSENGER_HEALTH", PLAY_IGNORE_PASSENGER_HEALTH);
+    NPC04_RegisterSquirrelConst(v, "PLAY_IGNORE_SEATID", PLAY_IGNORE_SEATID);
+    NPC04_RegisterSquirrelConst(v, "PLAY_IGNORE_VEHMODEL", PLAY_IGNORE_VEHMODEL);
+    NPC04_RegisterSquirrelConst(v, "PLAY_IGNORE_VEHICLEID", PLAY_IGNORE_VEHICLEID);
+    NPC04_RegisterSquirrelConst(v, "PLAY_IGNORE_CHECKPOINTS", PLAY_IGNORE_CHECKPOINTS);
+    NPC04_RegisterSquirrelConst(v, "PLAY_IGNORE_CHECKPOINT_POSITIONS", PLAY_IGNORE_CHECKPOINT_POSITIONS);
+    NPC04_RegisterSquirrelConst(v, "PLAY_IGNORE_UNSTREAMED_PICKUPS", PLAY_IGNORE_UNSTREAMED_PICKUPS);
+    NPC04_RegisterSquirrelConst(v, "PLAY_IGNORE_PICKUP_MODEL", PLAY_IGNORE_PICKUP_MODEL);
+    NPC04_RegisterSquirrelConst(v, "PLAY_IGNORE_UNSTREAMED_OBJECTS", PLAY_IGNORE_UNSTREAMED_OBJECTS);
+    NPC04_RegisterSquirrelConst(v, "PLAY_IGNORE_OBJECT_MODEL", PLAY_IGNORE_OBJECT_MODEL);
+    NPC04_RegisterSquirrelConst(v, "PLAY_AVOID_OBJECTSHOT_WEAPONCHECK", PLAY_AVOID_OBJECTSHOT_WEAPONCHECK);
+
 }

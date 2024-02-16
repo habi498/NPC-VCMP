@@ -6,7 +6,9 @@ add_library(npc04 MODULE
 "ConsoleUtils.cpp"
 "PlayerRecording.cpp"
 "SQConsts.cpp"
- "RPC.cpp"  "ClientScriptData.cpp" )
+ "RPC.cpp"  
+ "ClientScriptData.cpp" 
+"ReadCFG.cpp" "ServerRecording.cpp" "PlaybackMultiple.cpp")
 
 
 target_include_directories(npc04 PRIVATE "${PROJECT_SOURCE_DIR}/include")

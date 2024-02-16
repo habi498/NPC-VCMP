@@ -76,3 +76,18 @@ BOOL CPlayerPool::Delete(BYTE bytePlayerID)
 		return FALSE;
 	}
 }
+//Added
+BYTE CPlayerPool::GetPlayerId(PCHAR szPlayerNameString)
+{
+	PCHAR szPlayerName;
+	for (BYTE bytePlayerID = 0; bytePlayerID < MAX_PLAYERS; bytePlayerID++) {
+		if (m_bPlayerSlotState[bytePlayerID])
+		{
+			szPlayerName = GetPlayerName(bytePlayerID);
+			if (strcmp(szPlayerName, szPlayerNameString) == 0 &&
+				strcmp(szPlayerNameString, szPlayerName) == 0)
+				return bytePlayerID;
+		}
+	}
+	return INVALID_PLAYER_ID;
+}

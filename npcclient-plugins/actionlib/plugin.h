@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include "utils.h"
 #define API_MAJOR 1
-#define API_MINOR 5
+#define API_MINOR 6
 enum class funcError {
 	NoError = 0,
 	EntityNotFound = 1,
@@ -76,12 +76,13 @@ struct PluginInfo {
 };
 
 struct PluginFuncs {
-	uint32_t structSize;//48 functions
+	uint32_t structSize;
 	funcError(*GetLastError)() {};
 	void (*SendCommandToServer)(const char* message) {};
 	void (*SendChatMessage)(const char* message) {};
 	void (*FireSniperRifle)(uint8_t weapon, float x, float y, float z, float dx, float dy, float dz) {};
-	void (*SendShotInfo)(bodyPart bodypart, int animation) {};
+	//bool bAutoDeath=false,uint8_t AutoDeathWep=0, uint8_t AutoDeathKiller=255
+	void (*SendShotInfo)(bodyPart bodypart, int animation, bool bAutoDeath, uint8_t AutoDeathWep, uint8_t AutoDeathKiller) {};
 	funcError(*SendInCarSyncData)(uint32_t dwKeys, uint8_t byteHealth, uint8_t byteArmour, uint8_t byteWeapon, uint16_t wAmmo, float fCarHealth, uint32_t dwDamage, VECTOR vecPos, QUATERNION quatRotation, VECTOR vecSpeed, float fTurretx, float fTurrety) {};
 	void (*SendOnFootSyncDataEx)(uint32_t dwKeys, VECTOR vecPos, float fAngle, uint8_t byteHealth, uint8_t byteArmour, uint8_t byteCurrentWeapon, uint16_t wAmmo, VECTOR vecSpeed, VECTOR vecAimPos, VECTOR vecAimDir, bool bIsCrouching, bool bIsReloading) {};
 	void (*SendOnFootSyncData)(uint32_t dwKeys, float x, float y, float z,
@@ -145,7 +146,8 @@ struct PluginFuncs {
 	void (*SetAmmoAtSlot)(uint8_t byteSlotId, uint16_t wAmmo) {};
 	
 	void (*FireProjectile)(uint8_t byteWeapon, VECTOR vecPos, float r1, float r2, float r3, float r4, float r5, float r6, float r7) {};
-	funcError(*RequestClass)(uint8_t relativeindex) {};
+	// bool bIgnoreAbsoluteClass=true
+	funcError(*RequestClass)(uint8_t relativeindex, bool bIgnoreAbsoluteClass) {};
 	funcError(*RequestSpawn)() {};
 	void (*SetFPS)(double fps) {};
 	//Success
@@ -175,6 +177,18 @@ struct PluginFuncs {
 	funcError(*ClaimObjectShot)(uint16_t wObjectID, uint8_t byteWeaponID) {};
 	uint32_t (*GetStreamedCheckpointCount)() {};
 	uint32_t (*GetStreamedObjectCount)() {};
+	funcError(*ExitVehicle)() {};
+	funcError(*ExitVehicleEx)(bool fosd, uint8_t style, uint8_t byte1, uint8_t byte2) {};
+	uint8_t(*GetPlayerAction)(uint8_t bytePlayerId) {};
+	funcError(*Suicide)(uint8_t reason) {};
+	Color(*GetColor)() {};
+	Color(*GetPlayerColor)(uint8_t bytePlayerId) {};
+	void (*RequestAbsoluteClass)(uint8_t classID) {};
+	bool (*IsNpcSpawned)() {};
+	void (*SendPrivMessage)(uint8_t bytePlayerId, const char* message) {};
+	void (*QuitServer)() {};
+	bool (*IsWeaponAvailable)(uint8_t byteWeaponId) {};
+	void (*SetConfig)(uint32_t dw_value) {};
 };
 
 struct PluginCallbacks {

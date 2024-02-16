@@ -114,9 +114,22 @@ uint8_t call_OnNPCClassSelect()
     if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
         sq_pushroottable(v); //push the 'this' (in this case is the global table)
         sq_call(v, 1, 1, 1); //calls the function 
-        if (sq_gettype(v, -1) == OT_INTEGER)
+        if (sq_gettype(v, -1) == OT_INTEGER||sq_gettype(v,-1)==OT_FLOAT)
         {
-            sq_getinteger(v, -1, &retval);
+            HSQOBJECT obj;
+            if (SQ_SUCCEEDED(sq_getstackobj(v, -1, &obj)))
+            {
+                retval = sq_objtointeger(&obj);
+            }
+        }
+        else if (sq_gettype(v, -1) == OT_BOOL)
+        {
+            SQBool b;
+            if (SQ_SUCCEEDED(sq_getbool(v, -1, &b)))
+            {
+                retval = (uint8_t)b;
+            }
+
         }
     }
     
@@ -475,7 +488,7 @@ void call_OnProjectileFired(uint8_t bytePlayerId, uint8_t byteWeapon, VECTOR vec
     sq_settop(v, top); //restores the original stack size
 }
 
-bool StartSquirrel(std::string file, std::string location, std::vector<std::string> params)
+bool StartSquirrel(std::string file, std::string location, std::vector<std::string> params, std::string execstring)
 {
     v = sq_open(1024); // creates a VM with initial stack size 1024 
     RegisterNPCFunctions();
@@ -483,6 +496,8 @@ bool StartSquirrel(std::string file, std::string location, std::vector<std::stri
     RegisterNPCFunctions3();
     RegisterNPCFunctions4();
     RegisterNPCFunctions5();
+    RegisterNPCFunctions6();
+
     RegisterConsts();
     sqstd_seterrorhandlers(v);
     sq_setprintfunc(v, printfunc, printfunc); //sets the print function
@@ -500,6 +515,15 @@ bool StartSquirrel(std::string file, std::string location, std::vector<std::stri
         bDefaultScriptLoaded = false;
 
     bSquirrelVMRunning = true;
+    if (SQ_SUCCEEDED(sq_compilebuffer(v, execstring.c_str(), execstring.length(), "execArg", SQTrue)))
+    {
+        //function pushed in stack
+        sq_pushroottable(v);
+        if (SQ_SUCCEEDED(sq_call(v, 1, SQFalse, SQTrue)))
+        {
+        }
+        sq_pop(v, 1);//the compiled buffer as function
+    }
     if (location.length() > 0)
     {
         char* loc = (char*)malloc(sizeof(char) * location.length()+1);
@@ -551,7 +575,9 @@ bool StartSquirrel(std::string file, std::string location, std::vector<std::stri
             if (flag & 32)
                 iNPC->SpawnWeapon = weapon;
             if (flag & 64)
-                iNPC->SpawnClass = spawnclass;
+            {
+                iNPC->SetSpawnClass(spawnclass);
+            }
         }
     }
     return 1;

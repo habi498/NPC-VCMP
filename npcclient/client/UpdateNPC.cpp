@@ -26,7 +26,7 @@ void SetActionFlags(INCAR_SYNC_DATA* m_InSyncData, uint8_t* action);
 void SetTypeFlags(INCAR_SYNC_DATA* m_InSyncData, uint8_t* type);
 void SetRotationFlags(INCAR_SYNC_DATA* m_InSyncData, uint8_t* flag);
 void SetVehicleIDFlag(INCAR_SYNC_DATA* m_pIcSyncData, uint8_t* nibble, uint8_t* byte);
-uint8_t GetSlotId(uint8_t byteWeapon);
+uint8_t GetSlotIdFromWeaponId(uint8_t byteWeapon);
 void CheckAction(ONFOOT_SYNC_DATA* m_pOfSyncData);
 float ConvertFromUINT16_T(uint16_t compressedFloat, float base)
 {
@@ -298,30 +298,7 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData, PacketPriority priority)
 		WriteNibble((value >> 8) & 15, &bsOut);
 		bsOut.Write((uint8_t)(value & 0xFF));
 
-		/*
-		uint8_t msb = 0x1;//most significant byte
-		if (m_pOfSyncData->dwKeys & 0x01) //aiming
-			msb = 0;
-		#ifdef NPC_SHOOTING_ENABLED
-			msb = reloading_weapon ? 0 : msb;
-		#endif
-		if (m_pOfSyncData->dwKeys > 0xFFFF)
-		{
-			msb |= 0x8;
-		}
 		
-		bsOut.Write(msb);
-		#ifdef NPC_SHOOTING_ENABLED
-		uint8_t byteVal = 0; uint8_t bytePlayerAction = 0;
-			if ((m_pOfSyncData->dwKeys & 1) && !reloading_weapon)//key_aim=1
-				byteVal = uint8_t(0xc);
-			else if (reloading_weapon)
-				byteVal = uint8_t(0x1);
-			WriteNibble(byteVal, &bsOut);
-		#else	
-			WriteNibble(1, &bsOut);
-		#endif
-		*/
 	}
 	if (!(action & OF_FLAG_NOHEALTH))
 	{

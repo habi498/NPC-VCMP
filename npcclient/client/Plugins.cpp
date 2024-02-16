@@ -195,6 +195,18 @@ BOOL CPlugins::LoadSinglePlugin(char* szPluginPath)
         PLUGIN_ADD_CALLBACK(ClaimObjectShot);        
         PLUGIN_ADD_CALLBACK(GetStreamedCheckpointCount);
         PLUGIN_ADD_CALLBACK(GetStreamedObjectCount);
+        PLUGIN_ADD_CALLBACK(ExitVehicle);
+        PLUGIN_ADD_CALLBACK(ExitVehicleEx);
+        PLUGIN_ADD_CALLBACK(GetPlayerAction);
+        PLUGIN_ADD_CALLBACK(Suicide);
+        PLUGIN_ADD_CALLBACK(GetColor);
+        PLUGIN_ADD_CALLBACK(GetPlayerColor);
+        PLUGIN_ADD_CALLBACK(RequestAbsoluteClass);
+        PLUGIN_ADD_CALLBACK(IsNpcSpawned);
+        PLUGIN_ADD_CALLBACK(SendPrivMessage);
+        PLUGIN_ADD_CALLBACK(QuitServer);
+        PLUGIN_ADD_CALLBACK(IsWeaponAvailable);
+        PLUGIN_ADD_CALLBACK(SetConfig);
     }
     else return FALSE;
     pPlugin->pPluginInfo->structSize = sizeof(PluginInfo);

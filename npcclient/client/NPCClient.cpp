@@ -18,11 +18,12 @@
 #ifdef WIN32
 extern bool bShutdownSignal;
 #endif
+extern bool bStdoutRedirected;
+extern uint32_t configvalue;
 HSQUIRRELVM v; 
 HSQAPI sq = NULL;
 SquirrelExports* pExp;
 NPC* iNPC = new NPC();
-
 RakNet::RakPeerInterface* peer;
 RakNet::SystemAddress systemAddress;
 CPlayerPool* m_pPlayerPool = NULL;
@@ -32,16 +33,18 @@ CPickupPool* m_pPickupPool = NULL;
 CCheckpointPool* m_pCheckpointPool = NULL;
 CObjectPool* m_pObjectPool = NULL;
 extern CFunctions* m_pFunctions;
+CSpawnClassPool* m_pSpawnClassPool = NULL;
 CPlayer* npc = NULL;
 #define CAR_HEALTH_MAX 1000
 void ReceivePlayerSyncData(RakNet::BitStream* bsIn, INCAR_SYNC_DATA* m_pIcSyncDataOut, uint8_t* bytePlayerIdOut);
 void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncDataOut, uint8_t* bytePlayerIdOut);
 VECTOR ConvertFromUINT16_T(uint16_t w_ComponentX, uint16_t w_ComponentY, uint16_t w_ComponentZ, float base);
 float ConvertFromUINT16_T(uint16_t compressedFloat, float base);
-uint8_t GetSlotId(uint8_t byteWeapon); 
+uint8_t GetSlotIdFromWeaponId(uint8_t byteWeapon); 
 extern bool bConsoleInputEnabled;
 extern void CheckForConsoleInput();
 extern DWORD ProcessPlaybacks();
+extern Playback mPlayback;
 unsigned short calculate(unsigned char h, unsigned char t, unsigned char r)
 {
 	return h * 32 + t * 2 + (r >> 3);
@@ -107,6 +110,8 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 		m_pCheckpointPool = new CCheckpointPool();
 	if (!m_pObjectPool)
 		m_pObjectPool = new CObjectPool();
+	if (!m_pSpawnClassPool)
+		m_pSpawnClassPool = new CSpawnClassPool();
 	
 #ifndef WIN32
 	std::setvbuf(stdout, NULL, _IONBF, 0);
@@ -228,6 +233,11 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 						vehicle->CopyFromIcSyncData(bytePlayerId, &m_IcSyncData);
 					if (bytePlayerId != iNPC->GetID() && m_IcSyncData.VehicleID == npc->m_wVehicleId)
 					{
+						if (mPlayback.running && mPlayback.type == PLAYER_RECORDING_TYPE_ALL)
+						{
+							//do not do anything. rec file will handle passenger data, etc and position also
+							break;
+						}
 						//This is the vehicle in which npc is sitting as a passenger.
 						//Update position of npc locally (i.e. do not send to server, it comes from server )
 						npc->m_vecPos = m_IcSyncData.vecPos;
@@ -279,12 +289,16 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				m_pPlayerPool->Delete(iNPC->GetID());
 				StopSquirrel();
 				printf("Disconnect Notification\n");
+				if(bStdoutRedirected)
+					fclose(stdout);
 				exit(0);
 			case ID_CONNECTION_LOST:
 				m_pEvents->OnNPCDisconnect(0);
 				m_pPlayerPool->Delete(iNPC->GetID());
 				StopSquirrel();
 				printf("Connection Lost\n");
+				if (bStdoutRedirected)
+					fclose(stdout);
 				exit(0);
 			case ID_GAME_MESSAGE_JOIN:
 			{
@@ -294,7 +308,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				uint8_t npcid;//same as playerid
 				bsIn.ReadAlignedBytes(&npcid, 1);
 				iNPC->SetID(npcid);
-				printf("ID %d.\n", npcid);
+				printf("ID %d ", npcid);
 				char* name;
 				name = (char*)malloc(sizeof(char) * (npcname.length() + 1));
 				if (name)
@@ -308,6 +322,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					{
 						exit(1);
 					}
+					printf("%s\n", name);
 					free(name);
 				}
 				else {
@@ -326,25 +341,8 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				bsOut.Write(byteZero);
 				
 				peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 0, packet->systemAddress, false);
-				/*#ifndef _REL004
-				bsOut2.Write((RakNet::MessageID)0xbd);
-				bsOut2.Write((uint8_t)0);
-				bsOut2.Write((uint8_t)0);
-				bsOut2.Write((uint8_t)0);
-
-				bsOut2.Write((uint8_t)1);
-				bsOut2.Write((uint8_t)1);
-				peer->Send(&bsOut2, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 0, packet->systemAddress, false);
-				#endif
-				*/
-				//Not tested thouroughly
 				
-				/*RakNet::BitStream bsOut3;
-				bsOut3.Write((RakNet::MessageID)ID_GAME_MESSAGE_REQUEST_CLASS);
-				bsOut3.Write0();
-				peer->Send(&bsOut3, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, packet->systemAddress, false);
-				*/
-				m_pFunctions->RequestClass(0);
+				m_pFunctions->RequestClass(0,false);
 				
 				//Sometimes client sends an additional message which is omitted here: 0xbd. 
 			}	
@@ -378,21 +376,6 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				}
 			}
 			break;
-			/*case 0xa0:
-			{
-				RakNet::BitStream bsIn(packet->data, packet->length, false);
-				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
-				uint8_t playerid;
-				bsIn.ReadAlignedBytes(&playerid, 1);
-				if (iNPC && iNPC->Initialized() && playerid == iNPC->GetID() && iNPC->IsSpawned() == false)
-				{
-					RakNet::BitStream bsOut;
-					bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_REQUEST_SPAWN);
-					peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, packet->systemAddress, false);
-				}
-			}
-			break;
-			*/
 			case ID_GAME_MESSAGE_SPECIAL_SIGNAL:
 			{
 				//This is send along with class grant as well as spawn grant/not grant
@@ -402,22 +385,131 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					&& iNPC->bIsClassRequested==true)
 				{
 					iNPC->bIsClassRequested = false;
+					//Add class details send by server 
+					if(m_pSpawnClassPool)
+					{
+						uint8_t byteTeam = npc->m_byteTeamId;
+						uint8_t byteSkin = npc->m_byteSkinId;
+						Color color = npc->GetColor();
+						uint8_t byteMaxClass = m_pSpawnClassPool->GetCount();
+						SpawnClass* m_pSpawnClass; bool bClassFound = false;
+
+						//SEARCH if class with same skin,team and color(rgb) exists?
+						//class id can be negative. so looping all possible values.
+						for (int8_t i = -byteMaxClass; i < byteMaxClass; i++)
+						{
+							m_pSpawnClass = m_pSpawnClassPool->GetByID(i);
+							if (m_pSpawnClass == NULL)
+								continue;
+							if (m_pSpawnClass)
+							{
+								if (m_pSpawnClass->byteSkin == byteSkin &&
+									m_pSpawnClass->byteTeam == byteTeam &&
+									m_pSpawnClass->m_Color.r == color.r &&
+									m_pSpawnClass->m_Color.g == color.g &&
+									m_pSpawnClass->m_Color.b == color.b)
+								{
+									//this class id already exists
+									
+									bClassFound = true; 
+									if (i == 0)
+									{
+										//We have looped and came back.
+										if (iNPC->byteClassIndexRequested == CLASS_PREVIOUS)
+										{
+											//We have came back left arrow
+											if (iNPC->PotentialClassID < 0)
+											{
+												//time to change -ve values to +ve ones.
+												//-5,-4,-3,-2,-1,0. from -5 to 0
+												//total classes decrypted= -(-5) + 1 =6
+												//Add 6
+												//1,2,3,4,5,0
+												// Taking into account, server can add classes, but not remove
+												int8_t totalclasses = -iNPC->PotentialClassID + 1;
+												m_pSpawnClassPool->ChangeSignToPositive(totalclasses);
+											}
+										}
+									}
+									iNPC->PotentialClassID = i;
+									break;
+								}
+							}
+						}
+						if (!bClassFound)
+						{
+							//Create a new class
+							int8_t newclassid;
+							if (iNPC->byteClassIndexRequested == CLASS_PREVIOUS)
+							{
+								if (iNPC->PotentialClassID <= 0)
+								{
+									newclassid = iNPC->PotentialClassID - 1;
+								}
+								else
+								{
+									printf("Error solving class id. Requested CLASS_PREVIOUS, current: %d\n", iNPC->PotentialClassID);
+									exit(0);
+								}
+							}
+							else if (iNPC->byteClassIndexRequested == CLASS_NEXT)
+							{
+								if (iNPC->PotentialClassID < 0)
+								{
+									printf("Error solving class id. Requested CLASS_NEXT, current: %d\n", iNPC->PotentialClassID);
+									exit(0);
+								}
+								else
+								{
+									newclassid = iNPC->PotentialClassID + 1;
+								}
+							}
+							else if (iNPC->byteClassIndexRequested == CLASS_CURRENT)
+							{
+								if(byteMaxClass==0)
+									newclassid = iNPC->PotentialClassID;//happens in beginning
+								else
+								{
+									printf("Error solving class id. Requested CLASS_CURRENT, current: %d\n", iNPC->PotentialClassID);
+									exit(0);
+								}
+							}
+							//We have assigned negative class id. because client does not
+							//know how many classes in server, unless looped through
+							if (m_pSpawnClassPool->New(newclassid, byteTeam, byteSkin, color))
+							{
+								iNPC->PotentialClassID = newclassid;
+							}
+						}
+					}
 					if (m_pEvents->OnNPCClassSelect() == 0)
 					{
-						if ((iNPC->SpawnClass - iNPC->ClassSelectionCounter++) == 0)
+						if (!(mPlayback.running && mPlayback.type == PLAYER_RECORDING_TYPE_ALL))
 						{
-							iNPC->ClassSelectionCounter--;
-							RakNet::BitStream bsOut;
-							bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_REQUEST_SPAWN);
-							peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, packet->systemAddress, false);
-						}
-						else
-						{
-							/*RakNet::BitStream bsOut3;
-							bsOut3.Write((RakNet::MessageID)ID_GAME_MESSAGE_REQUEST_CLASS);
-							bsOut3.Write((uint8_t)1);
-							peer->Send(&bsOut3, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, packet->systemAddress, false);*/
-							m_pFunctions->RequestClass(1);
+							//Used to simulate arrow-right through the classes until the class got
+							if (iNPC->GetSpawnClass() == iNPC->PotentialClassID || iNPC->AbsClassNotSpecified)
+							{
+								RakNet::BitStream bsOut;
+								bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_REQUEST_SPAWN);
+								peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, packet->systemAddress, false);
+							}
+							else
+							{
+								//Absolute class like class 7 is specified.
+								//Scroll through classes until iNPC->GetSpawnClass()
+								//Danger of specifying invalid class like 26 by user. (instead of weapon)
+								//Check it
+								if (iNPC->GetClassRequestCounter() >= MAX_CLASSES_FOR_SPAWNING)
+								{
+									printf("Error. Invalid class id: %d. Visited %d classes\n",iNPC->GetSpawnClass(), iNPC->GetClassRequestCounter());
+									iNPC->UnsetSpawnClass();
+									break;
+								}
+								else {
+									m_pFunctions->RequestClass(CLASS_NEXT, false);//arrow-right
+									iNPC->IncrementClassRequestCounter();
+								}
+							}
 						}
 					}
 					
@@ -435,7 +527,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE, 0, packet->systemAddress, false);
 					npc->m_byteHealth = 100;
 					npc->SetState(PLAYER_STATE_SPAWNED);
-					npc->SetCurrentWeapon(0);
+					
 					npc->m_byteArmour = 0;
 					
 					iNPC->SetSpawnStatus(true);
@@ -458,8 +550,30 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					}
 					if (iNPC->SpawnWeapon != NOT_DEFINED )
 					{
-						npc->SetCurrentWeapon(iNPC->SpawnWeapon);
+						uint8_t slotId = GetSlotIdFromWeaponId(iNPC->SpawnWeapon);
+						if (slotId != 0 || iNPC->SpawnWeapon == 1)
+						{
+							if (npc->GetSlotWeapon(slotId) == iNPC->SpawnWeapon)
+							{
+								//npc have weapon
+								npc->SetCurrentWeapon(iNPC->SpawnWeapon);
+							}
+							else
+							{
+								char buffer[100];
+								sprintf(buffer, "_npc_weapon_request %d", iNPC->SpawnWeapon);
+								m_pFunctions->SendCommandToServer(buffer);
+							}
+						}
+						else
+							printf("Warning: Invalid Weapon %d to spawn specified when connecting\n", iNPC->SpawnWeapon);
+
 						iNPC->SpawnWeapon = 255;//turn off the feature.
+					}
+					else
+					{
+						//Set weapon to that of slot 0
+						npc->SetCurrentWeapon(npc->GetSlotWeapon(0));
 					}
 					m_pEvents->OnNPCSpawn();
 				}
@@ -699,7 +813,14 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					}
 				}
 				m_pEvents->OnPlayerStreamIn(bytePlayerId);
-				
+				if (iNPC&&iNPC->IsSpawned()&&(configvalue&CONFIG_SYNC_ON_PLAYER_STREAMIN))
+				{
+					if (npc->m_wVehicleId == 0)
+					{
+						//on foot
+						SendNPCOfSyncDataLV();
+					}
+				}
 			}
 			break;
 			case ID_GAME_MESSAGE_PLAYER_STREAM_OUT:
@@ -793,7 +914,18 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					player->m_byteSkinId = byteSkinId;
 					if (iNPC && iNPC->Initialized() && iNPC->GetID() == bytePlayerId)
 					{
-						npc->SetCurrentWeapon(0);//
+						if (configvalue & CONFIG_RESTORE_WEAPON_ON_SKIN_CHANGE)
+						{
+							if (iNPC->IsSpawned() && !npc->m_wVehicleId)
+								SendNPCOfSyncDataLV();
+						}
+						else
+						{
+							//Server sets the armed weapon of player to 0 (or 1). So for other players 
+						//npc will have weapon 0. We also sets this internally.
+							npc->SetCurrentWeapon(npc->GetSlotWeapon(0));//
+
+						}
 					}
 				}
 			}
@@ -812,7 +944,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				CPlayer* player = m_pPlayerPool->GetAt(bytePlayerId);
 				if (player)
 				{
-					//player->m_byteSkinId = byteSkinId;
+					player->SetColor(Color(byteRed, byteGreen, byteBlue));
 				}
 			}
 			break;
@@ -929,10 +1061,13 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				}
 				if (oldhealth > 0 && newhealth == 0)
 				{
-					m_pFunctions->SendShotInfo(bodyPart::Body, 0xd);
-					iNPC->TimeShotInfoSend = GetTickCount();
+					//m_pFunctions->SendShotInfo(bodyPart::Body, 0xd);
+					m_pFunctions->SendShotInfo(bodyPart::Body, 0xd,true,44,255);
+					/*iNPC->TimeShotInfoSend = GetTickCount();
 					iNPC->WaitingToRemoveBody = true;
-					//m_pFunctions->SendDeathInfo(0, 255, bodyPart::Body);
+					iNPC->ShotInfoWeapon = 44; //Fell to death
+					iNPC->KillerId = 255;//Server killed and not any player
+					iNPC->byteAutodeathBodyPart = static_cast<uint8_t>(bodyPart::Body);*/
 				}
 			}
 			break;
@@ -972,12 +1107,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				uint32_t anticheatid;
 				bsIn.Read(anticheatid);
 				iNPC->anticheatID = anticheatid;
-				BYTE i;
-				for (i = 0; i < 9; i++)
-				{
-					npc->m_byteSlotWeapon[i] = 0;
-					npc->m_wSlotAmmo[i] = 0;
-				}
+				npc->RemoveAllWeapons();
 				npc->SetCurrentWeapon(0);
 			}
 			break;
@@ -990,8 +1120,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				iNPC->anticheatID = anticheatid;
 				uint8_t weapon; 
 				bsIn.Read(weapon);
-				npc->m_byteSlotWeapon[GetSlotId(weapon)] = 0;
-				npc->m_wSlotAmmo[GetSlotId(weapon)] = 0;
+				npc->RemoveWeapon(weapon);
 				npc->SetCurrentWeapon(0);
 			}
 			break;
@@ -1005,19 +1134,21 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				uint8_t weapon; uint16_t ammo;
 				bsIn.Read(weapon);
 				bsIn.Read(ammo);
-				npc->SetWeaponSlot(GetSlotId(weapon), weapon, ammo);
-				if (!iNPC->IsSyncPaused())
+				uint8_t byte;
+				bsIn.Read(byte);
+				npc->SetWeaponSlot(GetSlotIdFromWeaponId(weapon), weapon, ammo);
+				if (iNPC->IsSpawned()&& byte==1) //when .SetWeapon is used byte=1. 
+					//it is 0 when three weapons are given at spawn.
 				{
 					//Set current weapon
 					//npc->SetCurrentWeaponAmmo( ammo );
 					if (npc->GetCurrentWeapon() != weapon)
 					{
 						npc->SetCurrentWeapon(weapon);
-						if (iNPC->IsSpawned() && !npc->m_wVehicleId)
+						if (!npc->m_wVehicleId)
 							SendNPCOfSyncDataLV();
 					}
 				}
-				//one more byte is there. it was 01 when i tested.
 			}
 			break;
 			case ID_GAME_MESSAGE_SNIPER_RIFLE_FIRED:
@@ -1795,7 +1926,7 @@ m_pOfSyncDataOut->vecAimDir.Z,m_pOfSyncDataOut->vecAimPos.X, \
 m_pOfSyncDataOut->vecAimPos.Y, m_pOfSyncDataOut->vecAimPos.Z);*/
 }
 #endif
-uint8_t GetSlotId(uint8_t byteWeapon)
+uint8_t GetSlotIdFromWeaponId(uint8_t byteWeapon)
 {
 	uint8_t byteWeaponSlot;
 	switch (byteWeapon)
@@ -1855,7 +1986,7 @@ uint8_t GetSlotId(uint8_t byteWeapon)
 		break;
 
 	default:
-		// If invalid weapon then set fists as weapon
+		// If invalid weapon then return 0
 		byteWeaponSlot = 0;
 		break;
 	}
@@ -1866,8 +1997,13 @@ It also stores the time in ms when it last send the packets.*/
 void HandlePassengerSync()
 {
 	if (iNPC && iNPC->Initialized()
-		&& iNPC->PSLimit != DISABLE_AUTO_PASSENGER_SYNC)
+		&& iNPC->PSLimit != DISABLE_AUTO_PASSENGER_SYNC )
 	{
+		if (mPlayback.running && mPlayback.type == PLAYER_RECORDING_TYPE_ALL)
+		{
+			//do not send sync data.
+			return;
+		}
 		if (npc->m_wVehicleId && npc->m_byteSeatId > 0)
 		{
 			//npc is sitting as passenger 
@@ -1911,7 +2047,7 @@ void CheckRemoveDeadBody()
 			DWORD n = GetTickCount();
 			if (n - t > 2100 || n - t < 0)
 			{
-				m_pFunctions->SendDeathInfo(44, 255, bodyPart::Body);
+				m_pFunctions->SendDeathInfo(iNPC->ShotInfoWeapon, iNPC->KillerId, static_cast<bodyPart>(iNPC->byteAutodeathBodyPart));
 				iNPC->WaitingToRemoveBody = false;
 				return;
 			}
@@ -1956,7 +2092,10 @@ void OnCycle()
 		 Sleep(0);
 	else if (dw_interval >= 0)
 	{
-		Sleep(dwSleepTime);
+		DWORD i3 = dwSleepTime - dw_interval;
+		//i3 will be non negative.
+		//Sleep(dwSleepTime);
+		Sleep(i3);
 	}
 	else Sleep(0);
 }

@@ -2,6 +2,7 @@
 extern HSQUIRRELVM v;
 extern HSQAPI sq;
 extern PluginFuncs* VCMP;
+extern CPlayerPool* m_pPlayerPool;
 SQRESULT CallFunction(const uint8_t* data, size_t size);
 SQRESULT CallFunctionAdvanced(const uint8_t* data, size_t size);
 void NPC04_OnClientScriptData(int32_t playerId, const uint8_t* data, size_t size)
@@ -23,7 +24,36 @@ void NPC04_OnClientScriptData(int32_t playerId, const uint8_t* data, size_t size
 		}
 		else VCMP->LogMessage("Remote Call: Player %d must be admin", playerId);
 	}
-	//else printf("header different.\n");
+	if (!m_pPlayerPool->GetSlotState(playerId))return;
+	CPlayer* m_pPlayer = m_pPlayerPool->GetAt(playerId);
+	if (!m_pPlayer->IsRecording())return;
+
+	if (m_pPlayer->m_RecordingType == PLAYER_RECORDING_TYPE_ALL &&
+		(
+			m_pPlayer->m_dwRecFlags & REC_CLIENTSCRIPT_DATA
+			))
+	{
+		GENERALDATABLOCK datablock;
+		datablock.time = GetTickCount();
+		datablock.bytePacketType = PACKET_CLIENTSCRIPT_DATA;
+		size_t count = fwrite(&datablock, sizeof(datablock), 1, m_pPlayer->pFile);
+		if (count != 1)
+		{
+			m_pPlayer->Abort(); return;
+		}
+		COMMANDDATA csdata;
+		csdata.len = (uint16_t)size;
+		count = fwrite(&csdata, sizeof(csdata), 1, m_pPlayer->pFile);
+		if (count != 1)
+		{
+			m_pPlayer->Abort(); return;
+		}
+		count = fwrite(&data, sizeof(uint8_t), csdata.len, m_pPlayer->pFile);
+		if (count != csdata.len)
+		{
+			m_pPlayer->Abort(); return;
+		}
+	}
 }
 uint32_t swap4(uint32_t i);
 uint16_t swap2(uint16_t i);

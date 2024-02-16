@@ -41,16 +41,20 @@ private:
 	INCAR_SYNC_DATA			m_icSync;
 	bool m_bIsStreamedIn;
 	uint8_t m_byteWeapon;
+	Color m_Color;
+	// Weapon data
+	WORD					m_wSlotAmmo[9];
+	BYTE					m_byteSlotWeapon[9];
+
 public:
 	uint16_t m_wVehicleId;
 	uint8_t m_byteSeatId;
 	uint8_t m_byteSkinId;
 	uint8_t m_byteTeamId;
+	void SetColor(Color color) { m_Color = color; }
+	Color GetColor() { return m_Color; }
 	bool IsStreamedIn() { return m_bIsStreamedIn; }
 	void SetStreamedIn(bool streamedIn) { m_bIsStreamedIn = streamedIn; }
-	// Weapon data
-	WORD					m_wSlotAmmo[9];
-	BYTE					m_byteSlotWeapon[9];
 	void SetState(uint8_t byteState);
 	uint8_t GetState() { return m_byteState; };
 	uint32_t GetKeys() { return m_dwLastKeys; };
@@ -92,11 +96,31 @@ public:
 	BYTE GetCurrentWeapon() { return m_byteWeapon; };
 	WORD GetCurrentWeaponAmmo();
 	void UpdateWeaponSlot(uint8_t byteWeapon, WORD wAmmo);
-	//only for npcs
+	//only for npcs SetCurrentWeaponAmmo
 	void SetCurrentWeaponAmmo(WORD wAmmo);
 
-	//only for npcs
+	//only for npcs SetCurrentWeapon
 	//----------------------------------------------------
 	void SetCurrentWeapon(BYTE byteWeapon);
+
+	void RemoveAllWeapons()
+	{
+		for (uint8_t i = 0; i < 9; i++)
+		{
+			m_byteSlotWeapon[i] = 0;
+			m_wSlotAmmo[i] = 0;
+		}
+	}
+
+	void RemoveWeaponAtSlot(uint8_t byteSlot)
+	{
+		SetWeaponSlot(byteSlot, 0, 0);
+	}
+
+	void RemoveWeapon(uint8_t byteWeapon)
+	{
+		BYTE slotId=GetSlotIdFromWeaponId(byteWeapon);
+		RemoveWeaponAtSlot(slotId);
+	}
 };
 #endif

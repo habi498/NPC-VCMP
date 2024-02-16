@@ -23,9 +23,11 @@ using namespace std;
 void start_consoleinput();
 CFunctions* m_pFunctions;
 CPlugins* m_pPlugins;
-
+bool bStdoutRedirected = false;
+uint32_t configvalue = CONFIG_RESTORE_WEAPON_ON_SKIN_CHANGE | CONFIG_SYNC_ON_PLAYER_STREAMIN;
 #define NPC_DIR "npcscripts"
 #define NPC_PLUGINS_DIR "npcscripts/plugins"
+#define NPC_LOGS_DIR "npcscripts/logs"
 #ifdef LINUX
 #include <time.h>
 long GetTickCount()
@@ -48,7 +50,7 @@ int main(int argc, char** argv) {
     // because exceptions will be thrown for problems.
     try {
         // Define the command line object.
-        CmdLine cmd("VCMP-Non Player Characters v1.7 (8.27)", ' ', "0.1b",false);
+        CmdLine cmd("VCMP-Non Player Characters v1.8 (Feb.2024)", ' ', "0.1b",false);
 
         // Define a value argument and add it to the command line.
         ValueArg<string> hostnameArg("h", "hostname", "IP address of host", false, "127.0.0.1",
@@ -63,36 +65,42 @@ int main(int argc, char** argv) {
             "string");
         ValueArg<string> pluginArg("q", "plugins", "List of plugins to be loaded", false, "",
             "string");
+        
+        ValueArg<string> LocationArg("l", "location", "The position(x,y,z), angle, skin, weapon and class to spawn \"x__ y__ z__ a__ s_ w_ c_\"", false, "",
+            "string");
+        MultiArg<string> scriptArg("w", "params", "The params to be passed to script", false, 
+            "string");
+        
+        SwitchArg consoleInputSwitch("c", "consoleinput", "Use Console Input", cmd, false);
+        ValueArg<string> execArg("e", "compilestring", "The string to be compiled by squirrel and executed on startup", false, "", "string");
+        SwitchArg logfileSwitch("f", "logfile", "Logs stdout to file",cmd,false);
         cmd.add(hostnameArg);
         cmd.add(portArg);
         cmd.add(npcnameArg);
         cmd.add(fileArg);
         cmd.add(passwdArg);
-        ValueArg<string> LocationArg("l", "location", "The location, skin, weapon and class to spawn eg. \"x__ y__ z__ s_ w_ c_\"", false, "",
-            "string");
-        MultiArg<string> scriptArg("w", "params", "The params to be passed to script", false, 
-            "string");
         cmd.add(LocationArg);
         cmd.add(scriptArg);
-        cmd.add(pluginArg);
-        SwitchArg consoleInputSwitch("c", "consoleinput", "Use Console Input", cmd, false);
-
+        cmd.add(pluginArg); 
+        cmd.add(execArg);
+        
         // Parse the args.
         cmd.parse(argc, argv);
         // Get the value parsed by each arg.
         string hostname = hostnameArg.getValue();
         int port = portArg.getValue();
         
-        std::string npcname = npcnameArg.getValue();
+        std::string npcname= npcnameArg.getValue();
         std::string npcscript = fileArg.getValue();
         std::string password = passwdArg.getValue();
         std::string location = LocationArg.getValue();
         std::vector<string> params=scriptArg.getValue();
+        std::string execstring = execArg.getValue();
         TimersInit();
         std::string scriptpath = "";
         if (npcscript.length() > 0)
             scriptpath = std::string(NPC_DIR + std::string("/") + npcscript);
-        bool success = StartSquirrel(scriptpath.c_str(), location, params);
+        bool success = StartSquirrel(scriptpath.c_str(), location, params, execstring);
         if (success)
         {
 #if WIN32
@@ -101,7 +109,27 @@ int main(int argc, char** argv) {
             bool bUseConsoleInput = consoleInputSwitch.getValue();
             if (bUseConsoleInput)
                 start_consoleinput();
-
+            bool bWriteLog=logfileSwitch.getValue();
+            if (bWriteLog)
+            {
+                time_t rawtime;
+                struct tm* timeinfo;
+                char buffer[100];
+                time(&rawtime);
+                timeinfo = localtime(&rawtime);//
+                size_t chars_copied=strftime(buffer, 50, "%F %I-%M-%S %p ", timeinfo); //2001-08-23 02-55-02 PM
+                if (chars_copied == 0)
+                {
+                    printf("Error in creating logfile\n");
+                    exit(0);
+                }
+                strcat(buffer, npcname.c_str());
+                strcat(buffer, "-log.txt"); //50+24=74 +7=81 
+                char filepath[140];
+                sprintf(filepath, "%s/%s", NPC_LOGS_DIR, buffer);
+                FILE* f=freopen(filepath, "w", stdout);
+                if (f)bStdoutRedirected = true;
+            }
             InitSquirrelExports();
             //Need to initialize CFunctions class, as CPlugins need it.
             

@@ -22,23 +22,30 @@ github https://github.com/dashr9230/SA-MP just for fun*/
 #include <stdio.h>
 #include <string>
 #define RECDIR "recordings"
+#define RECDIR_ALTERNATE "npcscripts/recordings"
+#define SERVER_REC_DIR "recordings/a_server"
+#define NPC_RECFILE_IDENTIFIER_V5 1005 //Dec 2023
 #define NPC_RECFILE_IDENTIFIER_V4 1004 //ref 25.August 2023
 #define MAX_PLAYERS 100
 #define PLAYER_RECORDING_TYPE_DRIVER	2
 #define PLAYER_RECORDING_TYPE_ONFOOT	1
+#define PLAYER_RECORDING_TYPE_ALL		3
+
+
 class CPlayer
 #define PI 3.1415926
 {
 private:
 	uint8_t m_PlayerID;
-	FILE* pFile;
-	uint32_t m_RecordingType;//uint32_t 4bytes 
 	bool init;
 	bool CreateRecordingFile(std::string file)
 	{
 		pFile = fopen(file.c_str(), "wb");
 		if (pFile == NULL)return 0;
-		else return 1;
+		else
+		{
+			return 1;
+		}
 	}
 	bool WriteHeader(uint32_t identifier)
 	{
@@ -48,7 +55,14 @@ private:
 		if (count != 1)return 0;
 		return 1;
 	}
+
 public:
+	FILE* pFile;
+	uint32_t m_dwRecFlags = 0;
+	uint32_t m_RecordingType;//uint32_t 4bytes 
+	bool SpawnDataWritten = false;//otherwise onfoot data gets written before
+	uint32_t sgbytePreviousClassID = 0;//the class of the player before death or {class selection screen previous}
+	std::string szFilename = "";
 	void ProcessUpdate(PluginFuncs* VCMP, vcmpPlayerUpdate updateType);
 	void ProcessUpdate2(PluginFuncs* VCMP, vcmpPlayerUpdate updateType);
 	void SetID(uint8_t playerId)
@@ -73,18 +87,14 @@ public:
 				fclose(pFile); pFile = NULL;
 			}
 			this->init = false;
+			this->SpawnDataWritten = false;
+			this->szFilename = "";
 		}
 	}
-	bool Start(uint32_t recordtype, std::string filename)
+	bool Start(uint32_t recordtype, std::string filename, uint32_t flags = 0);
+	std::string GetFileName()
 	{
-		if (IsRecording())return false;
-		bool success = this->CreateRecordingFile(filename);
-		if (!success)return 0;
-		this->m_RecordingType = recordtype;
-		this->init = true;
-		bool s = WriteHeader(NPC_RECFILE_IDENTIFIER_V4);
-		if (!s) { this->Abort(); return 0; }
-		return 1;
+		return szFilename;
 	}
 };
 class CPlayerPool
@@ -130,7 +140,10 @@ public:
 		return true;
 	}
 };
-bool StartRecordingPlayerData(int32_t playerId, uint8_t recordtype, std::string recordname);
+bool StartRecordingPlayerData(int32_t playerId, uint8_t recordtype=3, std::string recordname="", uint32_t flags=60);
+uint8_t StartRecordingAllPlayerData(uint8_t recordtype=3, uint32_t flags=60, bool bRecordNewPlayers = false);
 bool StopRecordingPlayerData(int32_t playerId);
+uint8_t StopRecordingAllPlayerData();
+bool IsPlayerRecording(uint8_t bytePlayerId);
 uint16_t ConvertToUINT16_T(float value, float base);
 #endif

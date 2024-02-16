@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.8)
 project("actionlib") 
 # Add source to this project's executable.
 add_library(actionlib MODULE
-"main.cpp"  "functions.cpp" "weapon.cpp" "weapon.h")
+"main.cpp"  "functions.cpp" "weapon.cpp" "weapon.h" )
 set_target_properties(actionlib PROPERTIES PREFIX "")
 if(MSVC)
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)

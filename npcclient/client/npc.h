@@ -25,6 +25,7 @@
 #define SPAWN_LOCK 4000  //amount in ms not to respond to server setting pos
 #define NOT_DEFINED 255
 #define DISABLE_AUTO_PASSENGER_SYNC -1
+#define MAX_CLASSES_FOR_SPAWNING 50  //actually 50
 class CVehicle
 {
 	VECTOR vecPos;
@@ -123,18 +124,26 @@ private:
 	//bool strmdplrs[MAX_PLAYERS];
 	bool bLockOnSync = false;//prevent server setting position
 	DWORD dw_SpawnedTick = 0;//dword to store tickcount of first spawn
-	
-	
+	uint8_t SpawnClass = 0;
+	uint8_t byteClassRequestCounter = 0;
 public:
 	uint8_t AltSpawnStatus = AltSpawn::OFF;
-	//bool bSpawnAtXYZ = false;
 	bool bIsClassRequested = false;
+	uint8_t byteClassIndexRequested = CLASS_CURRENT;
 	float fSpawnLocX = 0.0, fSpawnLocY = 0.0, fSpawnLocZ = 0.0;
 	float fSpawnAngle = 0.0;
 	uint8_t SpecialSkin = 255;
 	uint8_t SpawnWeapon = 255;
-	uint8_t SpawnClass = 0;
-	uint8_t ClassSelectionCounter = 0;
+	bool AbsClassNotSpecified = true;
+	uint8_t GetSpawnClass() { return SpawnClass; }
+	void SetSpawnClass(uint8_t classID) {
+		SpawnClass = classID; AbsClassNotSpecified = false;
+		byteClassRequestCounter = 0;
+	}
+	void UnsetSpawnClass(){  AbsClassNotSpecified = true; } //npc will not spawn at SpawnClass uint8_t
+	uint8_t GetClassRequestCounter() { return byteClassRequestCounter; }
+	void IncrementClassRequestCounter() { byteClassRequestCounter++; };
+	//uint8_t ClassSelectionCounter = 0;
 	uint16_t PSLimit = 2;//sync passenger packets per 2 In Car Sync Packets of driver
 	uint16_t PSCounter = 0;//PS for Passenger Sync
 	bool PSOnServerCycle = false;//Automatic Passenger Syncing when
@@ -142,10 +151,13 @@ public:
 	DWORD PSLastSyncedTick = 0;
 	DWORD TimeShotInfoSend = 0;
 	bool WaitingToRemoveBody = false;
+	uint8_t KillerId = 255;//assumming killer cannot quit and other player connect within 2100 ms
+	uint8_t ShotInfoWeapon = 44;//Fell to death
+	uint8_t byteAutodeathBodyPart = 0;
 	//Something to help send foot sync after exiting vehicle
 	bool WaitingForVEOnFootSync = false;
 	DWORD VETickCount = 0;
-
+	char PotentialClassID = 0;
 public:
 	NPC()
 	{
@@ -198,6 +210,7 @@ public:
 			}
 			else
 			{
+				//This will not be reached ordinary 
 				//one possibility with 49.7 days system wrap around zero
 				if (tick > SPAWN_LOCK) //wait for SPAWN_LOCK ms anyway
 					return false;

@@ -55,5 +55,6 @@ public:
 		strcpy(m_szPlayerName[bytePlayerID], szName);
 	}
 	int GetPlayerCount() { return m_iPlayerCount; };
+	BYTE GetPlayerId(PCHAR szPlayerName);
 };
 #endif

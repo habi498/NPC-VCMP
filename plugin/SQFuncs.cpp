@@ -23,6 +23,8 @@
 extern PluginFuncs* VCMP;
 extern HSQAPI sq;
 extern NPCHideImports* npchideFuncs;
+extern CServerRecording* pServerRecording;
+extern PlaybackMultiple* pPlaybackMultiple;
 extern bool npchideAvailable;
 #ifdef WIN32
 INT SW_STATUS = 0;
@@ -33,8 +35,8 @@ enum Version
 	REL006 = 67400
 };
 SQObject* ArrayIsNPC = NULL;
-bool CallNPCClient(const char* szName, const char* szScript, bool bConsoleInputEnabled=false,
-	const char* host="127.0.0.1", const char* plugins = "",const char* loc = "",  std::vector<const char*>params = {})
+bool CallNPCClient(const char* szName, const char* szScript, bool bConsoleInputEnabled,
+	const char* host, const char* plugins, const char* execArg, const char* loc, std::vector<const char*>params)
 {
 	CHAR szCmd[1024]; int iPort;
 	ServerSettings s;
@@ -71,14 +73,28 @@ bool CallNPCClient(const char* szName, const char* szScript, bool bConsoleInputE
 		strcat(szCmd, params[i]);
 		strcat(szCmd, "\"");
 	}
+	if (strlen(execArg) > 0)
+	{
+		strcat(szCmd, " -e \"");
+		strcat(szCmd, execArg);
+		strcat(szCmd, "\"");
+	}
 	if (bConsoleInputEnabled)
 		strcat(szCmd, " -c");
+	bool writelog = !bConsoleInputEnabled;
 	uint32_t ver = VCMP->GetServerVersion();
+	//printf("The command is %s\n", szCmd);
 #ifdef WIN32
 	INT STATUS_SW = SW_HIDE;
-	if(bConsoleInputEnabled||SW_STATUS==SW_SHOW)
+	if (bConsoleInputEnabled || SW_STATUS == SW_SHOW)
+	{
 		STATUS_SW = SW_SHOW;
-	
+		writelog = false; //Cannot write log. stdout will be stdout
+	}
+#endif
+	if (writelog)
+		strcat(szCmd, " -f");
+#ifdef WIN32
 	if(ver==REL004)
 		ShellExecute(0, "open", "npcclient_r004.exe", szCmd, NULL, STATUS_SW);
 	else if(ver==REL006)
@@ -116,6 +132,7 @@ _SQUIRRELDEF(SQ_ConnectNPC) {
     SQInteger iArgCount = sq->gettop(v);
 	const SQChar* szName=NULL, *szScript=NULL, *host=NULL;
 	SQBool bConsoleInput; const SQChar* szPlugins = NULL;
+	const SQChar* szexecArg = NULL;
 	sq->getstring(v, 2, &szName);
 	if (iArgCount > 2)
 	{
@@ -129,13 +146,19 @@ _SQUIRRELDEF(SQ_ConnectNPC) {
 				if (iArgCount > 5)
 				{
 					sq->getstring(v, 6, &szPlugins);
+					if (iArgCount > 6)
+					{
+						sq->getstring(v, 7, &szexecArg);
+					}
+					else szexecArg = "";
 				}
-				else szPlugins = "";
+				else { szPlugins = ""; szexecArg = ""; }
 			}
 			else 
 			{
 				szPlugins = ""; 
 				host = "127.0.0.1"; 
+				szexecArg = "";
 			}
 		}
 		else
@@ -143,6 +166,7 @@ _SQUIRRELDEF(SQ_ConnectNPC) {
 			szPlugins = ""; 
 			host = "127.0.0.1";
 			bConsoleInput = 0;
+			szexecArg = "";
 		}
 	}
 	else
@@ -151,10 +175,11 @@ _SQUIRRELDEF(SQ_ConnectNPC) {
 		szPlugins = "";
 		host = "127.0.0.1";
 		bConsoleInput = 0;
+		szexecArg = "";
 	}
 	if (strlen(host) == 0)
 		host = "127.0.0.1";
-	CallNPCClient(szName, szScript, bConsoleInput, host, szPlugins);
+	CallNPCClient(szName, szScript, bConsoleInput, host, szPlugins, szexecArg);
 	sq->pushbool(v, SQTrue);
 	return 1;
 }
@@ -310,9 +335,9 @@ _SQUIRRELDEF(SQ_ConnectNPCEx) {
 	else 
 		sprintf(szArgs, "x%f y%f z%f", pos.X, pos.Y, pos.Z);
 	if(flag & 512)
-		CallNPCClient(szName, szScript, bConsoleInput, host, szPlugins, szArgs, params);
+		CallNPCClient(szName, szScript, bConsoleInput, host, szPlugins, "",szArgs, params);
 	else 
-		CallNPCClient(szName, szScript, bConsoleInput, host, szPlugins, szArgs );
+		CallNPCClient(szName, szScript, bConsoleInput, host, szPlugins,"", szArgs);
 	
 	sq->pushbool(v, SQTrue);
 	return 1;
@@ -348,19 +373,128 @@ _SQUIRRELDEF(SQ_StartRecordingPlayerData) {
 	SQInteger playerid;
 	sq->getinteger(v, 2, &playerid);
 	SQInteger type;
-	sq->getinteger(v, 3, &type);
+	if (sq->gettop(v) >= 3)
+	{
+		if (sq->gettype(v, 3) == OT_INTEGER)
+		{
+			sq->getinteger(v, 3, &type);
+		}
+		else return sq->throwerror(v, "The recname parameter must be string");
+	}
+	else type = PLAYER_RECORDING_TYPE_ALL;
+	
 	const SQChar* recname;
-	sq->getstring(v, 4, &recname);
+	if (sq->gettop(v) >= 4 )
+	{
+		if (sq->gettype(v, 4) == OT_STRING)
+		{
+			sq->getstring(v, 4, &recname);
+		}
+		else return sq->throwerror(v, "The recname parameter must be string");
+	}
+	else recname = "";
 	std::string recordname = std::string(recname);
+	SQInteger flags = 60;
+	if (sq->gettop(v) >= 5)
+	{
+		if (sq->gettype(v, 5) == OT_INTEGER)
+		{
+			sq->getinteger(v, 5, &flags);
+		}
+		else return sq->throwerror(v, "The flags parameter must be integer");
+	}
 	if (VCMP->IsPlayerConnected((int32_t)playerid))
 	{
-		bool success = StartRecordingPlayerData((int32_t)playerid, (uint8_t)type, recordname);
+		bool success = StartRecordingPlayerData((int32_t)playerid, (uint8_t)type, recordname, flags);
 		sq->pushbool(v, success);
 	}
 	else sq->pushbool(v, SQFalse);
 	return 1;//1 because we are returning value
 }
-SQInteger NPC04_RegisterSquirrelFunc(HSQUIRRELVM v, SQFUNCTION f, const SQChar* fname, char ucParams, const SQChar* szParams) {
+_SQUIRRELDEF(SQ_StartRecordingAllPlayerData) {
+	//StartRecordingAllPlayerData(type, flags);
+	SQInteger type;
+	if (sq->gettop(v) >= 2)
+	{
+		if (sq->gettype(v, 2) == OT_INTEGER)
+		{
+			sq->getinteger(v, 2, &type);
+		}
+		else return sq->throwerror(v, "The rectype parameter must be integer");
+	}
+	else type = PLAYER_RECORDING_TYPE_ALL;
+
+	
+	SQInteger flags = 60;
+	if (sq->gettop(v) >= 3)
+	{
+		if (sq->gettype(v, 3) == OT_INTEGER)
+		{
+			sq->getinteger(v, 3, &flags);
+		}
+		else return sq->throwerror(v, "The flags parameter must be integer");
+	}
+	SQBool bNewPlayers = SQFalse;
+	if (sq->gettop(v) >= 4)
+	{
+		if ((sq->gettype(v, 4) == OT_BOOL)||(sq->gettype(v,4)==OT_INTEGER))
+		{
+			HSQOBJECT obj;
+			sq->getstackobj(v, 4, &obj);
+			bNewPlayers=sq->objtobool(&obj);
+		}
+		else return sq->throwerror(v, "The newplayers parameter must be boolean");
+	}
+	uint8_t n = StartRecordingAllPlayerData( (uint8_t)type, flags, (bool)bNewPlayers);
+	sq->pushinteger(v, n);
+	return 1;//1 because we are returning value
+}
+SQInteger SQ_PutServerInRecordingMode(HSQUIRRELVM v)
+{
+	const SQChar* szFilename;
+	sq->getstring(v, 2, &szFilename);
+	
+	SQInteger type;
+	if (sq->gettop(v) >= 3)
+	{
+		if (sq->gettype(v, 3) == OT_INTEGER)
+		{
+			sq->getinteger(v, 3, &type);
+		}
+		else return sq->throwerror(v, "The rectype parameter must be integer");
+	}
+	else type = PLAYER_RECORDING_TYPE_ALL;
+
+
+	SQInteger flags = REC_ALLNAME;
+	if (sq->gettop(v) >= 4)
+	{
+		if (sq->gettype(v, 4) == OT_INTEGER)
+		{
+			sq->getinteger(v, 4, &flags);
+		}
+		else return sq->throwerror(v, "The flags parameter must be integer");
+	}
+	
+	if (pServerRecording->IsRecording())
+	{
+		sq->pushbool(v, SQFalse); return 1;
+	}
+	bool success = PutServerInRecordingMode(type, flags, szFilename);
+	sq->pushbool(v, success ? SQTrue : SQFalse); return 1;
+}
+SQInteger SQ_StopServerInRecordingMode(HSQUIRRELVM v)
+{
+	bool s=StopServerInRecordingMode();
+	sq->pushbool(v, s==true?SQTrue:SQFalse);
+	return 1;
+}
+SQInteger SQ_IsServerInRecordingMode(HSQUIRRELVM v)
+{
+	sq->pushbool(v, pServerRecording->IsRecording() ? SQTrue : SQFalse);
+	return 1;
+}
+SQInteger NPC04_RegisterSquirrelFunc(HSQUIRRELVM v, SQFUNCTION f, const SQChar* fname, char ucParams, const SQChar* szParams, bool bAvoidParamsCheck) {
 	char szNewParams[32];
 
 	sq->pushroottable(v);
@@ -372,9 +506,14 @@ SQInteger NPC04_RegisterSquirrelFunc(HSQUIRRELVM v, SQFUNCTION f, const SQChar* 
 		else ucParams++; /* This is to compensate for the root table */
 		sprintf(szNewParams, "t%s", szParams);
 		sq->setparamscheck(v, ucParams, szNewParams); /* Add a param type check */
-	}else 
-		sq->setparamscheck(v, 1, "t"); /* Root table only */
-
+	}
+	else
+	{
+		if(!bAvoidParamsCheck)
+			sq->setparamscheck(v, 1, "t"); /* Root table only */
+		else
+			sq->setparamscheck(v, -1, "t");
+	}
 	sq->setnativeclosurename(v, -1, fname);
 	sq->newslot(v, -3, SQFalse);
 	sq->pop(v, 1);
@@ -388,6 +527,11 @@ _SQUIRRELDEF(SQ_StopRecordingPlayerData) {
 		bool success = StopRecordingPlayerData((int32_t)playerid);
 		sq->pushbool(v, success);
 	}else sq->pushbool(v, SQFalse);
+	return 1;
+}
+_SQUIRRELDEF(SQ_StopRecordingAllPlayerData) {
+	uint8_t n = StopRecordingAllPlayerData();
+	sq->pushinteger(v, n);
 	return 1;
 }
 _SQUIRRELDEF(SQ_SetMaxPlayersOut) {
@@ -454,6 +598,36 @@ SQInteger IsNPC(HSQUIRRELVM v)
 	}
 	return sq->throwerror(v, "Error getting ID of player instance");
 }
+SQInteger SQ_KickAllNPC(HSQUIRRELVM v)
+{
+	uint8_t n = 0;
+	for (uint8_t i = 0; i < VCMP->GetMaxPlayers(); i++)
+	{
+		if (VCMP->IsPlayerConnected(i) && IsPlayerNPC(i))
+		{
+			VCMP->KickPlayer(i); n++;
+		}
+	}
+	sq->pushinteger(v, n);
+	return 1;
+}
+SQInteger SQ_IsPlayerRecording(HSQUIRRELVM v)
+{
+	SQInteger bytePlayerId;
+	if (SQ_SUCCEEDED(sq->getinteger(v, 2, &bytePlayerId)))
+	{
+		if (VCMP->IsPlayerConnected(bytePlayerId))
+		{
+			bool result=IsPlayerRecording(bytePlayerId);
+			if (result)sq->pushbool(v, SQTrue);
+			else sq->pushbool(v, SQFalse);
+			return 1;
+		}
+		sq->pushbool(v, SQFalse);
+		return 1;
+	}
+	else return sq->throwerror(v, "Error occurred in getting playerid");
+}
 void AddPropertyToCPlayer(HSQUIRRELVM v)
 {
 	sq->pushroottable(v);
@@ -474,11 +648,55 @@ void AddPropertyToCPlayer(HSQUIRRELVM v)
 	}
 	sq->poptop(v);//pops roottable
 }
+SQInteger SQ_ConnectMultipleNpcs(HSQUIRRELVM v)
+{
+	if (pPlaybackMultiple->running)return sq->throwerror(v, "Error. Connecting MultipleNpcs already running and not finished");
+	const SQChar* filename, * host = "127.0.0.1", * execArg = ""; uint32_t flags = HREC_PLAY_FLAG_STANDARD;
+	sq->getstring(v, 2, &filename);
+	if (sq->gettop(v) >= 3)
+	{
+		if (!(sq->gettype(v, 3) == OT_STRING))
+			return sq->throwerror(v, "Error. hostname if provided must be string");
+		sq->getstring(v, 3, &host);
+
+		if (sq->gettop(v) >= 4)
+		{
+			if (!(sq->gettype(v, 4) == OT_INTEGER))
+				return sq->throwerror(v, "Error. flags if provided must be integer");
+			sq->getinteger(v, 4, (SQInteger*)&flags);
+
+			if (sq->gettop(v) >= 5)
+			{
+				if (!(sq->gettype(v, 5) == OT_STRING))
+					return sq->throwerror(v, "Error. execArg if provided must be string");
+				sq->getstring(v, 5, &execArg);
+			}
+		}
+	}
+	uint8_t s = ConnectMultipleNpcs(filename, host,flags,execArg);
+	if (s == HREC_INITIALIZE_SUCCESS)
+	{
+		sq->pushbool(v, SQTrue); return 1;
+	}
+	else
+		return sq->throwerror(v, (std::string("Error processing hrec. Code: " )+ std::to_string(s)).c_str());
+}
+SQInteger SQ_StopConnectingMultipleNpc(HSQUIRRELVM v)
+{
+	if (pPlaybackMultiple->running)
+	{
+		pPlaybackMultiple->Abort();
+		sq->pushbool(v, SQTrue);
+	}
+	else sq->pushbool(v, SQFalse);
+	return 1;
+}
+
 void NPC04_RegisterFuncs(HSQUIRRELVM v) {
 	NPC04_RegisterSquirrelFunc(v, SQ_ConnectNPC, "ConnectNPC", -1, "ssbss");
 	NPC04_RegisterSquirrelFunc(v, SQ_ConnectNPCEx, "ConnectNPCEx", -2, "sxf|iiiisbss");
 	NPC04_RegisterSquirrelFunc(v, SQ_IsPlayerNPC, "IsPlayerNPC", 1, "i");
-	NPC04_RegisterSquirrelFunc(v, SQ_StartRecordingPlayerData, "StartRecordingPlayerData", 3, "iis");
+	NPC04_RegisterSquirrelFunc(v, SQ_StartRecordingPlayerData, "StartRecordingPlayerData", -1, "i");
 	NPC04_RegisterSquirrelFunc(v, SQ_StopRecordingPlayerData, "StopRecordingPlayerData", 1, "i");
 //Need NPC_Hide Module. Otherwise throws error safely.
 	NPC04_RegisterSquirrelFunc(v, SQ_SetMaxPlayersOut, "SetMaxPlayersOut", 1, "i");
@@ -495,4 +713,18 @@ void NPC04_RegisterFuncs(HSQUIRRELVM v) {
 	NPC04_RegisterSquirrelFunc(v, SQ_CreateFunction, "RFC", 2, "is|u");
 	NPC04_RegisterSquirrelFunc(v, SQ_CreateFunction2, "RFCa", 2, "is|u");
 	AddPropertyToCPlayer(v);
+
+	NPC04_RegisterSquirrelFunc(v, SQ_KickAllNPC, "KickAllNPC", 0, "");
+	NPC04_RegisterSquirrelFunc(v, SQ_StartRecordingAllPlayerData, "StartRecordingAllPlayerData", 0, "",true);
+	NPC04_RegisterSquirrelFunc(v, SQ_StopRecordingAllPlayerData, "StopRecordingAllPlayerData", 0, "");
+	NPC04_RegisterSquirrelFunc(v, SQ_IsPlayerRecording, "IsPlayerRecording", 1, "i");
+	NPC04_RegisterSquirrelFunc(v, SQ_PutServerInRecordingMode, "PutServerInRecordingMode", -1, "s");
+	NPC04_RegisterSquirrelFunc(v, SQ_StopServerInRecordingMode, "StopServerInRecordingMode", 0, "");
+	NPC04_RegisterSquirrelFunc(v, SQ_ConnectMultipleNpcs, "ConnectMultipleNpcs", -1, "s");
+	NPC04_RegisterSquirrelFunc(v, SQ_StopConnectingMultipleNpc, "StopConnectingMultipleNpcs", 0, "");
+	NPC04_RegisterSquirrelFunc(v, SQ_IsServerInRecordingMode, "IsServerInRecordingMode", 0, "");
+	
+
+
+
 }

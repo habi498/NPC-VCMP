@@ -19,7 +19,7 @@ extern HSQUIRRELVM v;
 extern CPlayerPool* m_pPlayerPool;
 extern NPC* iNPC;
 extern CPlayer* npc;
-uint8_t GetSlotId(uint8_t byteWeapon);
+uint8_t GetSlotIdFromWeaponId(uint8_t byteWeapon);
 SQInteger fn_GetPlayerPosZ(HSQUIRRELVM v)
 {
     SQInteger playerId;
@@ -148,7 +148,7 @@ SQInteger fn_GetWeaponSlotFromWeaponId(HSQUIRRELVM v)
 {
     SQInteger weaponId;
     sq_getinteger(v, 2, &weaponId);
-    uint8_t slotId = GetSlotId(weaponId);
+    uint8_t slotId = GetSlotIdFromWeaponId(weaponId);
     sq_pushinteger(v, slotId);
     return 1;
 }
@@ -492,7 +492,47 @@ SQInteger fn_IsPlayerInRangeOfPoint(HSQUIRRELVM v)
         }
     }
     else return 0;
-
+}
+SQInteger fn_GetPlayerColor(HSQUIRRELVM v)
+{
+    SQInteger bytePlayerId;
+    sq_getinteger(v, 2, &bytePlayerId);
+    if (m_pPlayerPool->GetSlotState(bytePlayerId))
+    {
+        CPlayer* player = m_pPlayerPool->GetAt(bytePlayerId);
+        Color col = player->GetColor();
+        sq_newtable(v);
+        sq_pushstring(v, "r", -1);
+        sq_pushinteger(v, col.r);
+        sq_newslot(v, -3, SQFalse);
+        sq_pushstring(v, "g", -1);
+        sq_pushinteger(v, col.g);
+        sq_newslot(v, -3, SQFalse);
+        sq_pushstring(v, "b", -1);
+        sq_pushinteger(v, col.b);
+        sq_newslot(v, -3, SQFalse);
+        return 1;
+    }
+    else return 0;
+}
+SQInteger fn_GetMyColor(HSQUIRRELVM v)
+{
+    if(npc)
+    {
+        Color col = npc->GetColor();
+        sq_newtable(v);
+        sq_pushstring(v, "r", -1);
+        sq_pushinteger(v, col.r);
+        sq_newslot(v, -3, SQFalse);
+        sq_pushstring(v, "g", -1);
+        sq_pushinteger(v, col.g);
+        sq_newslot(v, -3, SQFalse);
+        sq_pushstring(v, "b", -1);
+        sq_pushinteger(v, col.b);
+        sq_newslot(v, -3, SQFalse);
+        return 1;
+    }
+    else return 0;
 }
 void RegisterNPCFunctions2()
 {
@@ -523,5 +563,9 @@ void RegisterNPCFunctions2()
     register_global_func(v, ::fn_GetClosestPlayer, "GetClosestPlayer", -1, "tb");
     register_global_func(v, ::fn_GetPlayerPos, "GetPlayerPos", 2, "ti");
     register_global_func(v, ::fn_IsPlayerInRangeOfPoint, "IsPlayerInRangeOfPoint", 4, "tif|ix");
+
+    register_global_func(v, ::fn_GetPlayerColor, "GetPlayerColor", 2, "ti");
+    register_global_func(v, ::fn_GetMyColor, "GetMyColor", 1, "t");
+
 
 }

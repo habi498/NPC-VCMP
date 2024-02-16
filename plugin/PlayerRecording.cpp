@@ -16,18 +16,67 @@
 */
 #include "SQMain.h"
 extern CPlayerPool* m_pPlayerPool;
+extern PluginFuncs* VCMP;
+extern std::string szRecDirectory;
+bool bNewPlayersRecord = false;
+uint8_t byteNewPlayersRecordType = 3;
+uint32_t dw_NewPlayersFlag = 60;
 //Return 1: The function was executed successfully.
 //Return 0: The function failed to execute. Either the 
 //specified player does not exist or file creation failed.
 //.rec extension is automatically added
-bool StartRecordingPlayerData(int32_t playerId, uint8_t recordtype, std::string recordname)
+bool StartRecordingPlayerData(int32_t playerId, uint8_t recordtype, std::string recordname,uint32_t flags)
 {
-	std::string filename = std::string(RECDIR + std::string("/") + recordname + std::string(".rec"));
+	if (recordname == "")
+	{
+		time_t rawtime;
+		struct tm* timeinfo;
+		char buffer[100];
+		time(&rawtime);
+		timeinfo = localtime(&rawtime);//
+		size_t chars_copied = strftime(buffer, 50, "%F %I-%M-%S %p ", timeinfo); //2001-08-23 02-55-02 PM
+		if (chars_copied == 0)
+		{
+			printf("Error in creating logfile\n");
+			exit(0);
+		}
+		char name[24];
+		vcmpError e=VCMP->GetPlayerName(playerId, name, sizeof(name));
+		if (e != vcmpErrorNone)return 0;
+
+		strcat(buffer, name);
+		recordname = std::string(buffer);
+	}
+	std::string filename = std::string(szRecDirectory + std::string("/") + recordname + std::string(".rec"));
 	if (!m_pPlayerPool->GetSlotState(playerId))
 		return 0;
 	CPlayer* m_pPlayer = m_pPlayerPool->GetAt(playerId);
-	bool success=m_pPlayer->Start(recordtype, filename);
+	bool success=m_pPlayer->Start(recordtype, filename,flags);
+	if (success)
+		m_pPlayer->szFilename = recordname;
 	return success;
+}
+//Return n = the no:of recordings newly started.
+//n=0 means no players online or no recordings could be started anew.
+uint8_t StartRecordingAllPlayerData(uint8_t recordtype, uint32_t flags, bool bRecordNewPlayers)
+{
+	uint32_t max = VCMP->GetMaxPlayers();  uint8_t n = 0; bool success;
+	for (uint32_t i = 0; i < max; i++)
+	{
+		if (VCMP->IsPlayerConnected(i))
+		{
+			success = StartRecordingPlayerData(i, recordtype, "", flags);
+			if (success)
+				n++;
+		}
+	}
+	if (bRecordNewPlayers)
+	{
+		bNewPlayersRecord = true;
+		byteNewPlayersRecordType = recordtype;
+		dw_NewPlayersFlag = flags;
+	}
+	return n;
 }
 //Return 1:The function executed successfully
 //0: The function failed to execute. The player might not exist.
@@ -44,7 +93,40 @@ bool StopRecordingPlayerData(int32_t playerId)
 	}
 	return false;
 }
-uint8_t GetSlotId(uint8_t byteWeapon)
+//Return n = the no:of recordings stopped.
+//n=0 means either no recordings were in progress or function was unable to stop any.
+uint8_t StopRecordingAllPlayerData()
+{
+	uint32_t max = VCMP->GetMaxPlayers();  uint8_t n = 0; bool success;
+	for (uint32_t i = 0; i < max; i++)
+	{
+		if (VCMP->IsPlayerConnected(i))
+		{
+			success = StopRecordingPlayerData(i);
+			if (success)
+				n++;
+		}
+	}
+	bNewPlayersRecord = false;
+	dw_NewPlayersFlag = 0;
+	byteNewPlayersRecordType = 3;
+	return n;
+}
+bool IsPlayerRecording(uint8_t bytePlayerId)
+{
+	if (VCMP->IsPlayerConnected(bytePlayerId))
+	{
+		if (!m_pPlayerPool->GetSlotState(bytePlayerId))
+			return 0;
+		CPlayer* m_pPlayer = m_pPlayerPool->GetAt(bytePlayerId);
+		if (m_pPlayer)
+		{
+			return m_pPlayer->IsRecording();
+		}
+	}
+	return 0;
+}
+uint8_t GetSlotIdFromWeaponId(uint8_t byteWeapon)
 {
 	uint8_t byteWeaponSlot;
 	switch (byteWeapon)
@@ -141,7 +223,7 @@ void CPlayer::ProcessUpdate2(PluginFuncs* VCMP, vcmpPlayerUpdate updateType)
 		m_pOfSynDat.fAngle = (FLOAT)VCMP->GetPlayerHeading(playerId);
 		/* rec file v 4.0 start*/
 		m_pOfSynDat.byteAction = (BYTE)VCMP->GetPlayerAction(playerId);
-		uint8_t slotId = GetSlotId(m_pOfSynDat.byteCurrentWeapon);
+		uint8_t slotId = GetSlotIdFromWeaponId(m_pOfSynDat.byteCurrentWeapon);
 		m_pOfSynDat.wAmmo = (BYTE)VCMP->GetPlayerAmmoAtSlot(playerId, slotId);
 		uint32_t keys = m_pOfSynDat.dwKeys;
 		//Check for reloading weapon
@@ -154,8 +236,25 @@ void CPlayer::ProcessUpdate2(PluginFuncs* VCMP, vcmpPlayerUpdate updateType)
 			&m_pOfSynDat.vecAimDir.Y, &m_pOfSynDat.vecAimDir.Z);
 		VCMP->GetPlayerAimPosition(playerId, &m_pOfSynDat.vecAimPos.X,
 			&m_pOfSynDat.vecAimPos.Y, &m_pOfSynDat.vecAimPos.Z);
-		m_pOfDatablock.m_pOfSyncData = m_pOfSynDat;
-		size_t t = fwrite((void*)&m_pOfDatablock, sizeof(m_pOfDatablock), 1, this->pFile);
+		if (this->m_RecordingType == PLAYER_RECORDING_TYPE_ONFOOT)
+		{
+			m_pOfDatablock.m_pOfSyncData = m_pOfSynDat;
+			size_t t = fwrite((void*)&m_pOfDatablock, sizeof(m_pOfDatablock), 1, this->pFile);
+		}
+		else if (this->m_RecordingType == PLAYER_RECORDING_TYPE_ALL)
+		{
+			GENERALDATABLOCK datablock;
+			datablock.bytePacketType = (updateType == vcmpPlayerUpdateNormal) ? PACKET_ONFOOT : PACKET_ONFOOT_AIM;
+			datablock.time = time;
+			size_t count=fwrite((void*)&datablock, sizeof(datablock), 1, this->pFile);
+			if (count != 1) {
+				this->Abort(); return;
+			}
+			count = fwrite((void*)&m_pOfSynDat, sizeof(m_pOfSynDat), 1, this->pFile);
+			if (count != 1) {
+				this->Abort(); return;
+			}
+		}
 	}
 	else if (updateType == vcmpPlayerUpdateDriver)
 	{
@@ -175,11 +274,53 @@ void CPlayer::ProcessUpdate2(PluginFuncs* VCMP, vcmpPlayerUpdate updateType)
 		VCMP->GetVehiclePosition(vehicleId, &m_pIcSyncData.vecPos.X,
 			&m_pIcSyncData.vecPos.Y, &m_pIcSyncData.vecPos.Z);
 		VCMP->GetVehicleRotation(vehicleId, &m_pIcSyncData.quatRotation.X,
-			&m_pIcSyncData.quatRotation.Y, &m_pIcSyncData.quatRotation.Z,&m_pIcSyncData.quatRotation.W);
+			&m_pIcSyncData.quatRotation.Y, &m_pIcSyncData.quatRotation.Z, &m_pIcSyncData.quatRotation.W);
 		m_pIcSyncData.VehicleID = vehicleId;
 		m_pIcSyncData.dwKeys = VCMP->GetPlayerGameKeys(playerId);
-		m_pIcDatablock.m_pIcSyncData = m_pIcSyncData;
-		fwrite((void*)&m_pIcDatablock, sizeof(m_pIcDatablock), 1, this->pFile);
+		if (this->m_RecordingType == PLAYER_RECORDING_TYPE_DRIVER)
+		{
+			m_pIcDatablock.m_pIcSyncData = m_pIcSyncData;
+			fwrite((void*)&m_pIcDatablock, sizeof(m_pIcDatablock), 1, this->pFile);
+		}
+		else {//PLAYER_RECORDIN_TYPE_ALL
+			GENERALDATABLOCK datablock;
+			datablock.bytePacketType = PACKET_DRIVER;
+			datablock.time = time;
+			size_t count = fwrite((void*)&datablock, sizeof(datablock), 1, this->pFile);
+			if (count != 1) 
+			{
+				this->Abort(); return;
+			}
+			count = fwrite((void*)&m_pIcSyncData, sizeof(m_pIcSyncData), 1, this->pFile);
+			if (count != 1) {
+				this->Abort(); return;
+			}
+		}
+	}
+	else if (updateType == vcmpPlayerUpdatePassenger)
+	{
+		if (this->m_RecordingType == PLAYER_RECORDING_TYPE_ALL)
+		{
+			GENERALDATABLOCK datablock;
+			datablock.bytePacketType = PACKET_PASSENGER;
+			datablock.time = GetTickCount();
+			size_t count = fwrite((void*)&datablock, sizeof(datablock), 1, this->pFile);
+			if (count != 1)
+			{
+				this->Abort(); return;
+			}
+			PASSENGERDATA data{};
+			data.wVehicleID = (uint16_t)VCMP->GetPlayerVehicleId(playerId);
+			data.wModel = (uint16_t)VCMP->GetVehicleModel(data.wVehicleID);
+			data.SeatId = (uint8_t)VCMP->GetPlayerInVehicleSlot(playerId);
+			data.byteHealth = (uint8_t)VCMP->GetPlayerHealth(playerId);
+			data.byteArmour = (uint8_t)VCMP->GetPlayerArmour(playerId);
+			count = fwrite((void*)&data, sizeof(data), 1, this->pFile);
+			if (count != 1)
+			{
+				this->Abort(); return;
+			}
+		}
 	}
 }
 void CPlayer::ProcessUpdate(PluginFuncs* VCMP, vcmpPlayerUpdate updateType)
@@ -362,4 +503,38 @@ uint16_t ConvertToUINT16_T(float value, float base)
 		uint16_t s = (unsigned short)((abs(value)) * (65535));
 		return s;
 	}
+}
+bool CPlayer::Start(uint32_t recordtype, std::string filename, uint32_t flags)
+{
+	if (IsRecording())return false;
+	bool success = this->CreateRecordingFile(filename);
+	if (!success)return 0;
+	this->m_RecordingType = recordtype;
+	this->m_dwRecFlags = flags;
+	this->init = true;
+	bool s = WriteHeader(NPC_RECFILE_IDENTIFIER_V5);//this will write recordint type also
+	if (!s) { this->Abort(); return 0; }
+	//Just Write Flags to indicate name is present or not.
+	uint32_t f = (flags & 1) == 1 ? 1 : 0;
+	size_t count = fwrite(&f, sizeof(uint32_t), 1, pFile);
+	if (count != 1) { this->Abort(); return 0; }
+	if (flags & REC_NAME)
+	{
+		char name[24] = { 0 };
+		vcmpError e=VCMP->GetPlayerName(this->m_PlayerID, name, sizeof(name));
+		if (e == vcmpErrorNone)
+		{
+			size_t count = fwrite(name, sizeof(char), sizeof(name), pFile);
+			if (count != sizeof(name))
+			{
+				this->Abort();
+				return 0;
+			}
+		}
+	}
+	if (flags & REC_SPAWN)
+	{
+		sgbytePreviousClassID = VCMP->GetPlayerClass(this->m_PlayerID);
+	}
+	return 1;
 }

@@ -29,6 +29,7 @@
 #include "SqVector.h"
 #define PLAYER_RECORDING_TYPE_DRIVER	2
 #define PLAYER_RECORDING_TYPE_ONFOOT	1
+#define PLAYER_RECORDING_TYPE_ALL       3
 /*#define UNIT1 "npcscripts/recordings/units/vector.nut"
 #define UNIT2 "npcscripts/recordings/units/Position.nut"
 #define UNIT3 "npcscripts/recordings/units/constants.nut"*/
@@ -68,7 +69,7 @@ enum class objectUpdate {
     TrackingBumpsShots=4
 };
 void printfunc(HSQUIRRELVM v, const SQChar* s, ...);
-bool StartSquirrel(std::string file, std::string location, std::vector<std::string>params);
+bool StartSquirrel(std::string file, std::string location, std::vector<std::string>params, std::string execstring);
 int StopSquirrel();
 SQInteger register_global_func(HSQUIRRELVM v, SQFUNCTION f, const char* fname, SQInteger nparamscheck, const SQChar* typemask);
 void call_OnNPCConnect(unsigned char npcplayerid);
@@ -107,6 +108,7 @@ void RegisterNPCFunctions2();
 void RegisterNPCFunctions3();
 void RegisterNPCFunctions4();
 void RegisterNPCFunctions5();
+void RegisterNPCFunctions6();
 void RegisterConsts();
 int LoadScript(std::string file, std::vector<std::string> params);
 #endif

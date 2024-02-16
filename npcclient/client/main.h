@@ -35,7 +35,7 @@
 #define _byteswap_ushort(x) __bswap_16 (x)
 
 #endif
-
+uint8_t GetSlotIdFromWeaponId(uint8_t byteWeapon);
 #include "system.h"
 #include <Utils.h>
 #include "npc.h"
@@ -54,7 +54,10 @@
 #include "Plugins.h"
 #include "ClientFunctions.h"
 #include "EventHandler.h"
+#include "SpawnClass.h"
 uint32_t bytes_swap_u32(uint32_t i);
+#define CONFIG_SYNC_ON_PLAYER_STREAMIN 1
+#define CONFIG_RESTORE_WEAPON_ON_SKIN_CHANGE    2
 #include "Exports.h"
 #define ZeroVEC(V){V.X=0;V.Y=0;V.Z=0;}
 #define MulVEC(V,f){V.X*=f;V.Y*=f;V.Z*=f;}
@@ -85,7 +88,9 @@ uint32_t bytes_swap_u32(uint32_t i);
 #define NPC_RECFILE_IDENTIFIER_V2 1001
 #define NPC_RECFILE_IDENTIFIER_V3 1002 //From Nov 2022 onwards
 #define NPC_RECFILE_IDENTIFIER_V4 1004 //From August 2023 onwards
-#define CYCLE_SLEEP 30//30 ms sleep between cycles. 
+#define NPC_RECFILE_IDENTIFIER_V5 1005 //From December 2023 onwards
+#define CYCLE_SLEEP_OLD 30  //30 ms sleep between cycles. 
+#define CYCLE_SLEEP 5
 int ConnectToServer(std::string hostname, int port, std::string npcname, std::string password);
 void OnCycle();//in Playback.cpp
 //void SendNPCUpdate();//in UpdateNPC.cpp

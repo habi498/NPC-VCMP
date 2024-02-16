@@ -27,7 +27,7 @@ public:
 	
 	static void FireSniperRifle(uint8_t weapon, float x, float y, float z, float dx, float dy, float dz);
 	
-	static void SendShotInfo(bodyPart bodypart, int animation);
+	static void SendShotInfo(bodyPart bodypart, int animation, bool bAutoDeath=false,uint8_t AutoDeathWep=0, uint8_t AutoDeathKiller=255);
 	
 	static funcError SendInCarSyncData(uint32_t dwKeys, uint8_t byteHealth, uint8_t byteArmour, uint8_t byteWeapon, uint16_t wAmmo, float fCarHealth, uint32_t dwDamage, VECTOR vecPos, QUATERNION quatRotation, VECTOR vecSpeed, float fTurretx, float fTurrety);
 	
@@ -110,7 +110,7 @@ public:
 	static void FireProjectile(uint8_t byteWeapon, VECTOR vecPos, float r1, float r2, float r3, float r4, float r5, float r6, float r7);
 
 	funcError GetLastError();
-	static funcError RequestClass(uint8_t relativeindex);
+	static funcError RequestClass(uint8_t relativeindex, bool bIgnoreAbsoluteClass=true);
 	static funcError RequestSpawn();
 
 	static void SetFPS(double fps);
@@ -148,6 +148,21 @@ public:
 	static funcError ExitVehicle();
 	static funcError ExitVehicleEx(bool fosd=false, uint8_t style=1, uint8_t byte1=0,uint8_t byte2=0);
 	static uint8_t GetPlayerAction(uint8_t bytePlayerId);
+	
+	static funcError Suicide(uint8_t reason=70);
+	static Color GetColor();
+	static Color GetPlayerColor(uint8_t bytePlayerId);
+	static void RequestAbsoluteClass(uint8_t classID);
+	static bool IsNpcSpawned();
+	static void SendPrivMessage(uint8_t bytePlayerId,const char* message);
+	static void QuitServer();
+	static bool IsWeaponAvailable(uint8_t byteWeaponId);
+	static void SetConfig(uint32_t value);
 };
 
+
+
 #endif
+
+
+

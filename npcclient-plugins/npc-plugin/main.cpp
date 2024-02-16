@@ -20,7 +20,9 @@ long GetTickCount()
 #include "stdio.h"
 #include <map>
 #ifdef WIN32
+#ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
+#endif
 #endif
 #define PI 3.1415926
 #define MAX_PLAYERS 100
@@ -171,7 +173,7 @@ void OnPlayerUpdate(uint8_t bytePlayerId, vcmpPlayerUpdate updateType)
 				{
 					//npc is dead
 					funcs->SetHealth(0, true);
-					funcs->SendShotInfo(bodyPart::Body, 0xd);
+					funcs->SendShotInfo(bodyPart::Body, 0xd,false,0,255);
 					killerId = bytePlayerId;
 					killerWeapon = wep;
 					bpt = bodyPart::Body;
@@ -279,7 +281,7 @@ void OnPlayerUpdate(uint8_t bytePlayerId, vcmpPlayerUpdate updateType)
 					{
 						//npc is dead
 						funcs->SetHealth(0, true);
-						funcs->SendShotInfo(bodyPart::Body, 0xd);
+						funcs->SendShotInfo(bodyPart::Body, 0xd,false,0,255);
 						killerId = bytePlayerId;
 						killerWeapon = wep;
 						bpt = bodyPart::Body;

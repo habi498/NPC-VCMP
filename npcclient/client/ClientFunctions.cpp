@@ -27,7 +27,8 @@ extern CCheckpointPool* m_pCheckpointPool;
 extern CObjectPool* m_pObjectPool;
 extern RakNet::RakPeerInterface* peer;
 extern RakNet::SystemAddress systemAddress;
-uint8_t GetSlotId(uint8_t byteWeapon);
+extern uint32_t configvalue;
+uint8_t GetSlotIdFromWeaponId(uint8_t byteWeapon);
 funcError elastError = funcError::NoError;
 //Returns that value which has to be returned
 funcError SetLastError(funcError e) { elastError = e; return e; }
@@ -47,18 +48,23 @@ funcError CFunctions::GetLastError()
 {
     return elastError;
 }
-funcError CFunctions::RequestClass(uint8_t relativeindex)
+funcError CFunctions::RequestClass(uint8_t relativeindex, bool bIgnoreAbsoluteClass)
 {
     SetLastError(funcError::NoError);
     if (iNPC->IsSpawned() == false)
     {
-        if (relativeindex == 0 || relativeindex == 1 || relativeindex == 255)
+        if (relativeindex == CLASS_CURRENT || relativeindex == CLASS_NEXT || relativeindex == CLASS_PREVIOUS)
         {
+            npc->RemoveAllWeapons();
             RakNet::BitStream bsOut3;
             bsOut3.Write((RakNet::MessageID)ID_GAME_MESSAGE_REQUEST_CLASS);
             bsOut3.Write(relativeindex);
             peer->Send(&bsOut3, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 5, systemAddress, false);
             iNPC->bIsClassRequested = true;
+            iNPC->byteClassIndexRequested = relativeindex;
+            if(bIgnoreAbsoluteClass)iNPC->UnsetSpawnClass();//Unset absolute spawnclass
+            //In NPCClient.cpp, there is a method of checking class==absolute class. when 'unset', checking will overriden
+            
             return funcError::NoError;
         }
         else return SetLastError(funcError::ArgumentIsOutOfBounds);
@@ -468,9 +474,14 @@ void CFunctions::FireSniperRifle(uint8_t weapon, float x, float y, float z, floa
 
 }
 
-void CFunctions::SendShotInfo(bodyPart bodypart, int animation)
+void CFunctions::SendShotInfo(bodyPart bodypart, int animation, bool bAutoDeath, uint8_t AutoDeathWep, uint8_t AutoDeathKiller)
 {
     SetLastError(funcError::NoError); 
+    if (AutoDeathKiller != 255 && !IsPlayerConnected(AutoDeathKiller))
+    {
+        SetLastError(funcError::EntityNotFound);
+        return;
+    }
     RakNet::BitStream bsOut;
     bsOut.Write((RakNet::MessageID)(ID_GAME_MESSAGE_PLAYER_SHOT_BODYPART));
     char nbp; //new body part
@@ -491,6 +502,15 @@ void CFunctions::SendShotInfo(bodyPart bodypart, int animation)
     npc->m_byteArmour = 0;
     npc->m_byteHealth = 0;
     npc->SetKeys(0);
+    //new addition
+    if (bAutoDeath)
+    {
+        iNPC->TimeShotInfoSend = GetTickCount();
+        iNPC->WaitingToRemoveBody = true;
+        iNPC->ShotInfoWeapon = AutoDeathWep;
+        iNPC->KillerId = AutoDeathKiller;
+        iNPC->byteAutodeathBodyPart = static_cast<uint8_t>(bodypart);
+    }
 }
 funcError CFunctions::SendInCarSyncData(uint32_t dwKeys, uint8_t byteHealth, uint8_t byteArmour, uint8_t byteWeapon,uint16_t wAmmo, float fCarHealth, uint32_t dwDamage, VECTOR vecPos, QUATERNION quatRotation, VECTOR vecSpeed, float fTurretx, float fTurrety)
 {
@@ -576,7 +596,7 @@ void CFunctions::SendDeathInfo(uint8_t weapon, uint8_t killerid, bodyPart bodypa
     peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE, 0, systemAddress, false);
     npc->SetState(PLAYER_STATE_WASTED);
     iNPC->SetSpawnStatus(false);
-    iNPC->ClassSelectionCounter = 0;
+    //iNPC->ClassSelectionCounter = 0;
 }
 
 uint32_t CFunctions::GetPlayerKeys(uint8_t playerId)
@@ -614,6 +634,111 @@ uint8_t CFunctions::GetPlayerAction(uint8_t bytePlayerId)
         SetLastError(funcError::EntityNotFound);
         return 0;
     }
+}
+funcError CFunctions::Suicide(uint8_t reason)
+{
+    ClearLastError();
+    if (iNPC->IsSpawned())
+    {
+        SendShotInfo(bodyPart::Body, 0xd);
+        iNPC->TimeShotInfoSend = GetTickCount();
+        iNPC->WaitingToRemoveBody = true;
+        iNPC->ShotInfoWeapon = reason;//70=suicide, 44=fell to death
+        iNPC->KillerId = 255;
+        iNPC->byteAutodeathBodyPart = static_cast<uint8_t>(bodyPart::Body);
+        return funcError::NoError;
+    }
+    else return SetLastError(funcError::NPCNotSpawned);
+}
+Color CFunctions::GetColor()
+{
+    SetLastError(funcError::NoError);
+    if (iNPC->Initialized() && npc)return npc->GetColor();
+    SetLastError(funcError::NPCNotConnected);
+    return Color(0, 0, 0);
+}
+Color CFunctions::GetPlayerColor(uint8_t bytePlayerId)
+{
+    ClearLastError();
+    CPlayer* player = m_pPlayerPool->GetAt(bytePlayerId);
+    if (player)
+    {
+        return player->GetColor();
+    }
+    else {
+        SetLastError(funcError::EntityNotFound);
+        return Color(0,0,0);
+    }
+}
+void CFunctions::RequestAbsoluteClass(uint8_t classID)
+{
+    ClearLastError();
+    if (classID >= MAX_CLASSES_FOR_SPAWNING)
+    {
+        SetLastError(funcError::ArgumentIsOutOfBounds);
+        return;
+    }
+    if (iNPC)
+    {
+        iNPC->SetSpawnClass(classID);
+        if (iNPC->IsSpawned() == false)
+        {
+            //Request class
+            RequestClass(0);//to send the packet
+            iNPC->AbsClassNotSpecified = false;//absolute class specified just now iNPC->SetSpawnClass
+        }
+        return;
+    }
+    SetLastError(funcError::NPCNotConnected);
+    return;
+}
+bool CFunctions::IsNpcSpawned()
+{
+    ClearLastError(); 
+    if (iNPC)
+    {
+        return iNPC->IsSpawned();
+    }
+    SetLastError(funcError::NPCNotConnected);
+    return false;
+}
+void CFunctions::SendPrivMessage(uint8_t bytePlayerId, const char* message)
+{
+    if (!IsPlayerConnected(bytePlayerId))
+    {
+        SetLastError(funcError::EntityNotFound);
+        return;
+    }
+    SetLastError(funcError::NoError);
+    RakNet::BitStream bsOut;
+    bsOut.Write((RakNet::MessageID)(ID_GAME_MESSAGE_PRIVMSG));
+    bsOut.Write((uint8_t)bytePlayerId);
+    uint16_t len = (uint16_t)strlen(message);
+    bsOut.Write(len);
+    bsOut.Write(message, len);
+    //channel is same as CHAT message channel
+    peer->Send(&bsOut, HIGH_PRIORITY, RELIABLE_SEQUENCED, CHAT_MESSAGE_ORDERING_CHANNEL, systemAddress, false);
+}
+void CFunctions::QuitServer()
+{
+    peer->CloseConnection(systemAddress, true);
+}
+bool CFunctions::IsWeaponAvailable(uint8_t byteWeaponId)
+{
+    int npcid = iNPC->GetID(); uint8_t j;
+    for (int i = 0; i <= 9; i++)
+    {
+        j = GetPlayerWeaponAtSlot(npcid, i);
+        if (j == byteWeaponId)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+void CFunctions::SetConfig(uint32_t value)
+{
+    configvalue = value;
 }
 funcError CFunctions::GetPlayerAimDir(uint8_t bytePlayerId, VECTOR* vecAimDirOut)
 {
@@ -922,6 +1047,14 @@ bool CFunctions::IsPlayerReloading(uint8_t bytePlayerId)
 void CFunctions::SendPassengerSync()
 {
     SetLastError(funcError::NoError); 
+    if (!npc->m_wVehicleId)
+    {
+        SetLastError(funcError::VehicleNotEntered); return;
+    }
+    if (npc->m_byteSeatId < 1)
+    {
+        SetLastError(funcError::VehicleSeatIdInvalid); return;
+    }
     SendPassengerSyncData();
 }
 
@@ -956,6 +1089,16 @@ void CFunctions::SetAngle(float fAngle, bool sync)
 void CFunctions::SetHealth(uint8_t byteHealth, bool sync)
 {
     SetLastError(funcError::NoError);
+    if (!iNPC->IsSpawned())
+    {
+        SetLastError(funcError::NPCNotSpawned);
+        return; 
+    }
+    if (npc->m_byteHealth > 0 && byteHealth == 0)
+    {
+        Suicide(44);//44== fell to death, not suicide
+        return;
+    }
     npc->m_byteHealth = byteHealth;
     if (sync)
         SendNPCOfSyncDataLV();
@@ -986,10 +1129,10 @@ void CFunctions::SendServerData(const void* data, size_t size)
 funcError CFunctions::SetWeapon(uint8_t byteWeaponId, bool sync)
 {
     SetLastError(funcError::NoError); 
-    if (npc->GetSlotAmmo(GetSlotId(byteWeaponId)) == 0)
+    if (npc->GetSlotAmmo(GetSlotIdFromWeaponId(byteWeaponId)) == 0)
         return SetLastError(funcError::WeaponNotPossessed);
     npc->SetCurrentWeapon(byteWeaponId);
-    npc->SetCurrentWeaponAmmo(npc->GetSlotAmmo(GetSlotId(byteWeaponId)));
+    npc->SetCurrentWeaponAmmo(npc->GetSlotAmmo(GetSlotIdFromWeaponId(byteWeaponId)));
     if (sync)
     {
         if (!npc->m_wVehicleId)

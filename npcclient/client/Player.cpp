@@ -94,7 +94,7 @@ void CPlayer::StoreOnFootFullSyncData(ONFOOT_SYNC_DATA* pofSync)
 	m_fAngle = pofSync->fAngle;
 	m_byteHealth = pofSync->byteHealth;
 	m_byteArmour = pofSync->byteArmour;
-	m_byteWeapon = pofSync->byteCurrentWeapon;
+	SetCurrentWeapon(pofSync->byteCurrentWeapon);
 	UpdateWeaponSlot(pofSync->byteCurrentWeapon, pofSync->wAmmo);
 	if(m_dwLastKeys!=pofSync->dwKeys)
 		m_dwLastKeys = pofSync->dwKeys;
@@ -113,7 +113,7 @@ void CPlayer::StoreInCarFullSyncData(INCAR_SYNC_DATA* picSync)
 	m_fAngle = (float)asin(m_icSync.quatRotation.Z) * 2;
 	m_byteHealth = m_icSync.bytePlayerHealth;
 	m_byteArmour = m_icSync.bytePlayerArmour;
-	m_byteWeapon = m_icSync.byteCurrentWeapon;
+	SetCurrentWeapon(m_icSync.byteCurrentWeapon);
 	UpdateWeaponSlot(m_icSync.byteCurrentWeapon, m_icSync.wAmmo);
 	if (m_dwLastKeys != m_icSync.dwKeys)
 		m_dwLastKeys = m_icSync.dwKeys;
@@ -218,8 +218,9 @@ void CPlayer::UpdateWeaponSlot(uint8_t byteWeapon, WORD wAmmo)
 
 	default:
 		// If invalid weapon then set fists as weapon
-		m_byteSlotWeapon[0] = 0;
-		m_byteWeapon = 0;
+		//m_byteSlotWeapon[0] = 0;
+		//m_byteWeapon = 0;
+		printf("Warning: Cannot update weapon slot for weapon %d\n", byteWeapon);
 		break;
 	}
 
