@@ -1,5 +1,5 @@
 #define API_MAJOR 1
-#define API_MINOR 5 //since setfps
+#define API_MINOR 6
 enum class funcError {
 	NoError = 0,
 	EntityNotFound = 1,

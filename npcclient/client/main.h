@@ -33,7 +33,7 @@
 #include <sys/times.h>
 #include <byteswap.h>
 #define _byteswap_ushort(x) __bswap_16 (x)
-
+#include <sys/stat.h> //for mkdir
 #endif
 uint8_t GetSlotIdFromWeaponId(uint8_t byteWeapon);
 #include "system.h"

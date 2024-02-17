@@ -21,6 +21,7 @@
 using namespace TCLAP;
 using namespace std;
 void start_consoleinput();
+bool CreateFolder(const char* name);
 CFunctions* m_pFunctions;
 CPlugins* m_pPlugins;
 bool bStdoutRedirected = false;
@@ -112,6 +113,12 @@ int main(int argc, char** argv) {
             bool bWriteLog=logfileSwitch.getValue();
             if (bWriteLog)
             {
+                //Create logs folder if not exist
+                if (!CreateFolder(NPC_LOGS_DIR))
+                {
+                    printf("Error in creating logs directory: %s\n", NPC_LOGS_DIR);
+                    exit(0);
+                }
                 time_t rawtime;
                 struct tm* timeinfo;
                 char buffer[100];
@@ -185,5 +192,22 @@ static BOOL WINAPI console_ctrl_handler(DWORD dwCtrlType)
     // Return TRUE if handled this message, further handler functions won't be called.
     // Return FALSE to pass this message to further handlers until default handler calls ExitProcess().
     return FALSE;
+}
+#endif
+#ifdef _WIN32
+bool CreateFolder(const char* name)
+{
+    if (!CreateDirectoryA(name, NULL) &&
+        ERROR_ALREADY_EXISTS != GetLastError())return false;
+    return true;
+}
+#else
+
+bool CreateFolder(const char* name)
+{
+    mode_t mode = 0755;
+    int s = mkdir(name, mode);
+    if (s == 0 || errno == EEXIST)return true;
+    return false;
 }
 #endif
