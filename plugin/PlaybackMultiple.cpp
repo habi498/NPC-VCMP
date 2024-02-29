@@ -1,6 +1,7 @@
 #include "SQMain.h"
 #include "SQFuncs.h"
 extern PlaybackMultiple* pPlaybackMultiple;
+extern PluginFuncs* VCMP;
 uint8_t ConnectMultipleNpcs(std::string filename, std::string host, uint32_t flags, std::string execArg)
 {
     return pPlaybackMultiple->Start(filename, host,flags,execArg);
@@ -32,6 +33,12 @@ uint8_t PlaybackMultiple::ProcessRow()
     m = fread(playerName, sizeof(char), 24, pFile);
     if (m != 24) {
         free(szFileName); return HREC_ERROR_READING_DATA;
+    }
+    int32_t check_Id = VCMP->GetPlayerIdFromName(playerName);
+    if (check_Id != -1)
+    {
+        //some player with name exists.
+        free(szFileName); return HREC_ERROR_PLAYER_WITH_NAME_EXISTS;
     }
     std::string arg = "";
     bool bShowConsole = this->flags & HF_SHOW_CONSOLE ? true : false;

@@ -38,7 +38,7 @@ SQObject* ArrayIsNPC = NULL;
 bool CallNPCClient(const char* szName, const char* szScript, bool bConsoleInputEnabled,
 	const char* host, const char* plugins, const char* execArg, const char* loc, std::vector<const char*>params)
 {
-	CHAR szCmd[1024]; int iPort;
+	CHAR szCmd[1536]; int iPort;
 	ServerSettings s;
 	VCMP->GetServerSettings(&s);
 	iPort = s.port;//snprintf(szCmd,sizeof(szCmd),)
@@ -651,7 +651,7 @@ void AddPropertyToCPlayer(HSQUIRRELVM v)
 SQInteger SQ_ConnectMultipleNpcs(HSQUIRRELVM v)
 {
 	if (pPlaybackMultiple->running)return sq->throwerror(v, "Error. Connecting MultipleNpcs already running and not finished");
-	const SQChar* filename, * host = "127.0.0.1", * execArg = ""; uint32_t flags = HREC_PLAY_FLAG_STANDARD;
+	const SQChar* filename, * host = "127.0.0.1", * execArg = ""; SQInteger flags = HREC_PLAY_FLAG_STANDARD;
 	sq->getstring(v, 2, &filename);
 	if (sq->gettop(v) >= 3)
 	{
@@ -663,17 +663,18 @@ SQInteger SQ_ConnectMultipleNpcs(HSQUIRRELVM v)
 		{
 			if (!(sq->gettype(v, 4) == OT_INTEGER))
 				return sq->throwerror(v, "Error. flags if provided must be integer");
-			sq->getinteger(v, 4, (SQInteger*)&flags);
+			sq->getinteger(v, 4, &flags);
 
 			if (sq->gettop(v) >= 5)
 			{
 				if (!(sq->gettype(v, 5) == OT_STRING))
 					return sq->throwerror(v, "Error. execArg if provided must be string");
 				sq->getstring(v, 5, &execArg);
+		
 			}
 		}
 	}
-	uint8_t s = ConnectMultipleNpcs(filename, host,flags,execArg);
+	uint8_t s = ConnectMultipleNpcs(std::string(filename), std::string(host),(uint32_t)flags,std::string(execArg));
 	if (s == HREC_INITIALIZE_SUCCESS)
 	{
 		sq->pushbool(v, SQTrue); return 1;

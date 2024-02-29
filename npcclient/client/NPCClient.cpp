@@ -648,6 +648,11 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				bsIn.ReadAlignedBytes(&driver, 1);
 				uint8_t seatid = -1;
 				if (driver == 0x12)seatid = 0;
+				else if (driver == 0x00 && seat[0] == 0x00 && seat[1] == 0x00)
+				{
+					//this must be boat. 
+					seatid = 0;
+				}
 				else if (driver == 0x11)
 				{
 					if (seat[0] == 0x10 && seat[1] == 0x02)seatid = 2;
