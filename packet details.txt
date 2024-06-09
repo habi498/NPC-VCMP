@@ -1,0 +1,22 @@
+df 01 00 00 00 ff ff ff ff
+df 01 00 c9 01 (rule id=01) 45 28 d3 5c  (2701.21=45 28 d3 5c), 
+rule id= 00 means, reset everything for that model
+model=0 means reset all vehicle handling 
+
+addrelturnspeed
+f4 00 89 (model =137) 40 40 00 00 (z) 40 00 00 00 (y) 3f 80 00 00 (x) # p0.Vehicle.AddRelTurnSpeed(Vector(1,2,3))
+
+addspeed
+p0.Vehicle.AddSpeed(Vector(1,2,3));=> same with f0 00 89 ...
+
+addturnspeed
+same f3 00 89 when p0.Vehicle.AddTurnSpeed(Vector(1,2,3));
+
+speed=vector(1,2,3)
+p0.Vehicle.Speed=Vector(1,2,3); same with ef 00 89	
+
+turnspeed=vector(1,2,3)
+f2 00 89 40 40 00 00 40 00 00 00 3f 80 00 00 p0.Vehicle.TurnSpeed=Vector(1,2,3);
+
+addrelspeed
+f1 00 89 .. #p0.Vehicle.AddRelSpeed(Vector(1,2,3));

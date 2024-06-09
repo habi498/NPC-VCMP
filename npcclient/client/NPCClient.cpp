@@ -1607,6 +1607,172 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				}
 			}
 			break;
+			case ID_GAME_MESSAGE_VEHICLE_ADDSPEED:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint16_t wVehicleId; uint16_t time;
+				//f0 00 89 (id =137) 40 40 00 00 (z) 40 00 00 00 (y) 3f 80 00 00 (x)
+				bsIn.Read(wVehicleId);
+				VECTOR vecSpeed;
+				bsIn.Read(vecSpeed.Z);
+				bsIn.Read(vecSpeed.Y);
+				bsIn.Read(vecSpeed.X);
+				m_pEvents->OnVehicleSetSpeedRequest(wVehicleId, vecSpeed, true, false);
+			}
+			break;
+			case ID_GAME_MESSAGE_VEHICLE_ADDRELSPEED:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint16_t wVehicleId; uint16_t time;
+				//f0 00 89 (id =137) 40 40 00 00 (z) 40 00 00 00 (y) 3f 80 00 00 (x)
+				bsIn.Read(wVehicleId);
+				VECTOR vecSpeed;
+				bsIn.Read(vecSpeed.Z);
+				bsIn.Read(vecSpeed.Y);
+				bsIn.Read(vecSpeed.X);
+				m_pEvents->OnVehicleSetSpeedRequest(wVehicleId, vecSpeed, true, true);
+			}
+			break;
+			case ID_GAME_MESSAGE_VEHICLE_SETSPEED:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint16_t wVehicleId; uint16_t time;
+				//f0 00 89 (id =137) 40 40 00 00 (z) 40 00 00 00 (y) 3f 80 00 00 (x)
+				bsIn.Read(wVehicleId);
+				VECTOR vecSpeed;
+				bsIn.Read(vecSpeed.Z);
+				bsIn.Read(vecSpeed.Y);
+				bsIn.Read(vecSpeed.X);
+				m_pEvents->OnVehicleSetSpeedRequest(wVehicleId, vecSpeed, false, false);
+			}
+			break;
+			case ID_GAME_MESSAGE_VEHICLE_ADDTURNSPEED:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint16_t wVehicleId; uint16_t time;
+				//f0 00 89 (id =137) 40 40 00 00 (z) 40 00 00 00 (y) 3f 80 00 00 (x)
+				bsIn.Read(wVehicleId);
+				VECTOR vecSpeed;
+				bsIn.Read(vecSpeed.Z);
+				bsIn.Read(vecSpeed.Y);
+				bsIn.Read(vecSpeed.X);
+				m_pEvents->OnVehicleSetTurnSpeedRequest(wVehicleId, vecSpeed, true, false);
+			}
+			break;
+			case ID_GAME_MESSAGE_VEHICLE_ADDRELTURNSPEED:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint16_t wVehicleId; uint16_t time;
+				//f0 00 89 (id =137) 40 40 00 00 (z) 40 00 00 00 (y) 3f 80 00 00 (x)
+				bsIn.Read(wVehicleId);
+				VECTOR vecSpeed;
+				bsIn.Read(vecSpeed.Z);
+				bsIn.Read(vecSpeed.Y);
+				bsIn.Read(vecSpeed.X);
+				m_pEvents->OnVehicleSetTurnSpeedRequest(wVehicleId, vecSpeed, true, true);
+			}
+			break;
+			case ID_GAME_MESSAGE_VEHICLE_SETTURNSPEED:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint16_t wVehicleId; uint16_t time;
+				//f0 00 89 (id =137) 40 40 00 00 (z) 40 00 00 00 (y) 3f 80 00 00 (x)
+				bsIn.Read(wVehicleId);
+				VECTOR vecSpeed;
+				bsIn.Read(vecSpeed.Z);
+				bsIn.Read(vecSpeed.Y);
+				bsIn.Read(vecSpeed.X);
+				m_pEvents->OnVehicleSetTurnSpeedRequest(wVehicleId, vecSpeed, false, false);
+			}
+			break;
+			case ID_GAME_MESSAGE_VEHICLE_SETPOSITION:
+			{
+				//Send to all players to whom the vehicle is streamed in
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint16_t wVehicleId;
+				bsIn.Read(wVehicleId);
+				VECTOR vecPos;
+				bsIn.Read(vecPos.Z);
+				bsIn.Read(vecPos.Y);
+				bsIn.Read(vecPos.X);
+				if (m_pVehiclePool->GetSlotState(wVehicleId))
+				{
+					CVehicle* vehicle = m_pVehiclePool->GetAt(wVehicleId);
+					if (vehicle)
+					{
+						vehicle->UpdatePosition(vecPos);
+						if (npc && npc->m_wVehicleId==wVehicleId)
+						{
+							//npc is sitting on the vehicle as driver or passenger. update npc's position vector also
+							npc->UpdatePosition(vecPos);
+						}
+					}
+				}
+			}
+			break;
+			case ID_GAME_MESSAGE_VEHICLE_SETROTATION:
+			{
+				//Send to all players to whom the vehicle is streamed in
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint16_t wVehicleId;
+				bsIn.Read(wVehicleId);
+				QUATERNION quatRotation;
+				bsIn.Read(quatRotation.W);
+				bsIn.Read(quatRotation.Z);
+				bsIn.Read(quatRotation.Y);
+				bsIn.Read(quatRotation.X);
+				//here the rotation given must be accurate. otherwise the vehicle rotation actual will be different.
+				//printf("(x,y,z,w)=(%f,%f,%f,%f)\n", quatRotation.X, quatRotation.Y, quatRotation.Z, quatRotation.W);
+				if (m_pVehiclePool->GetSlotState(wVehicleId))
+				{
+					CVehicle* vehicle = m_pVehiclePool->GetAt(wVehicleId);
+					if (vehicle)
+					{
+						vehicle->UpdateRotation(quatRotation);
+						if (npc && npc->m_wVehicleId == wVehicleId)
+						{
+							//npc can be driver or passenger
+							if (vehicle->GetDriver() == iNPC->GetID())
+							{
+								//npc is driver
+								npc->GetINCAR_SYNC_DATA()->quatRotation = quatRotation;
+								SendNPCIcSyncDataLV();
+
+							}
+						}
+					}
+				}
+			}
+			break;
+			case ID_GAME_MESSAGE_VEHICLE_SETHEALTH:
+			{
+				//Send to all players to whom the vehicle is streamed in
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				uint16_t wVehicleId;
+				bsIn.Read(wVehicleId);
+				float fHealth;
+				bsIn.Read(fHealth);
+				if (m_pVehiclePool->GetSlotState(wVehicleId))
+				{
+					CVehicle* vehicle = m_pVehiclePool->GetAt(wVehicleId);
+					if (vehicle)
+					{
+						vehicle->SetHealth(fHealth);
+					}
+				}
+			}
+			break;
+
+
 			}
 		}
 		OnCycle();

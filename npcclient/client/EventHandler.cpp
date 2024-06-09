@@ -94,6 +94,28 @@ void CEvents::OnObjectUpdate(uint16_t wObjectId, objectUpdate update)
             pPlugin->pPluginCalls->OnObjectUpdate(wObjectId, update);
     }
 }
+void CEvents::OnVehicleSetSpeedRequest(uint16_t wVehicleId, VECTOR vecSpeed, bool bAdd, bool isRelative)
+{
+    call_OnVehicleSetSpeedRequest(wVehicleId, vecSpeed, bAdd, isRelative);
+    PluginPool_s* pPlugin;
+    for (DWORD i = 0; i < m_pPlugins->GetPluginCount(); i++)
+    {
+        pPlugin = m_pPlugins->GetPlugin(i);
+        if (pPlugin->pPluginCalls->OnVehicleSetSpeedRequest)
+            pPlugin->pPluginCalls->OnVehicleSetSpeedRequest(wVehicleId, vecSpeed, bAdd, isRelative);
+    }
+}
+void CEvents::OnVehicleSetTurnSpeedRequest(uint16_t wVehicleId, VECTOR vecSpeed, bool bAdd, bool isRelative)
+{
+    call_OnVehicleSetTurnSpeedRequest(wVehicleId, vecSpeed, bAdd, isRelative);
+    PluginPool_s* pPlugin;
+    for (DWORD i = 0; i < m_pPlugins->GetPluginCount(); i++)
+    {
+        pPlugin = m_pPlugins->GetPlugin(i);
+        if (pPlugin->pPluginCalls->OnVehicleSetTurnSpeedRequest)
+            pPlugin->pPluginCalls->OnVehicleSetTurnSpeedRequest(wVehicleId, vecSpeed, bAdd, isRelative);
+    }
+}
 void CEvents::OnExplosion(uint8_t byteExplosionType, VECTOR vecPos, uint8_t bytePlayerCaused, bool bIsOnGround)
 {
     call_OnExplosion(byteExplosionType, vecPos, bytePlayerCaused, bIsOnGround);

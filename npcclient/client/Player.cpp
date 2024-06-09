@@ -86,6 +86,10 @@ void CPlayer::UpdatePosition(float x, float y, float z)
 	m_vecPos.Y = y;
 	m_vecPos.Z = z;
 }
+void CPlayer::UpdatePosition(VECTOR vecPos)
+{
+	m_vecPos = vecPos;
+}
 void CPlayer::StoreOnFootFullSyncData(ONFOOT_SYNC_DATA* pofSync)
 {
 	m_wVehicleId = 0;

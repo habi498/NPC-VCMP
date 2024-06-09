@@ -508,12 +508,21 @@ bool SendPacketFromFile(uint8_t bytePacketType, FILE* file)
                     npc->m_byteHealth = data->byteHealth;
                     npc->m_byteArmour = data->byteArmour;
                 }
+                else
+                {
+                    data->byteArmour = npc->m_byteArmour;
+                    data->byteHealth = npc->m_byteHealth;
+                }
                 if (data->SeatId != npc->m_byteSeatId)
                 {
                     if (!(mPlayback.dw_Flags & PLAY_IGNORE_SEATID))
                     {
                         printf("Error. Seat id in rec file different. See flags for overriding\n");
                         free(buffer); return 0;
+                    }
+                    else
+                    {
+                        data->SeatId = npc->m_byteSeatId;
                     }
                 }
                 if (data->wVehicleID != npc->m_wVehicleId)
@@ -523,6 +532,10 @@ bool SendPacketFromFile(uint8_t bytePacketType, FILE* file)
                         printf("Error. Vehicle id from rec file different. See flags for overriding\n");
                         free(buffer); return 0;
                     }
+                    else
+                    {
+                        data->wVehicleID = npc->m_wVehicleId;
+                    }
                 }
                 if (data->wModel != m_pFunctions->GetVehicleModel(npc->m_wVehicleId))
                 {
@@ -530,6 +543,10 @@ bool SendPacketFromFile(uint8_t bytePacketType, FILE* file)
                     {
                         printf("Error. Model of vehicle in rec file different. See flags for overriding\n");
                         free(buffer); return 0;
+                    }
+                    else
+                    {
+                        data->wModel = m_pFunctions->GetVehicleModel(npc->m_wVehicleId);
                     }
                 }
                 m_pFunctions->SendPassengerSync();
@@ -570,6 +587,10 @@ bool SendPacketFromFile(uint8_t bytePacketType, FILE* file)
                     {
                         printf("Error. Vehicle id from rec file different. See flags for overriding\n");
                         free(buffer); return 0;
+                    }
+                    else 
+                    {
+                        data->VehicleID = npc->m_wVehicleId;//needed
                     }
                 }
                 m_pFunctions->SendInCarSyncDataEx(*data);

@@ -449,6 +449,13 @@ void SendNPCIcSyncDataLV(PacketPriority prioty) //with existing values, send a p
 		m_pIcSyncData->wAmmo = npc->GetCurrentWeaponAmmo();
 		m_pIcSyncData->dwKeys = npc->GetKeys();
 		m_pIcSyncData->vecPos = npc->m_vecPos;
+		CVehicle* vehicle = m_pVehiclePool->GetAt(npc->m_wVehicleId);
+		if (vehicle)
+		{
+			m_pIcSyncData->fCarHealth = vehicle->GetHealth();
+			m_pIcSyncData->dDamage = vehicle->GetDamage();
+			m_pIcSyncData->quatRotation = vehicle->GetRotation();
+		}
 		//In case player was put in new vehicle
 		m_pIcSyncData->VehicleID = npc->m_wVehicleId;
 		SendNPCSyncData(m_pIcSyncData, prioty);

@@ -111,4 +111,6 @@ void RegisterNPCFunctions5();
 void RegisterNPCFunctions6();
 void RegisterConsts();
 int LoadScript(std::string file, std::vector<std::string> params);
+void call_OnVehicleSetSpeedRequest(uint16_t wVehicleId, VECTOR vecSpeed, bool bAdd, bool isRelative);
+void call_OnVehicleSetTurnSpeedRequest(uint16_t wVehicleId, VECTOR vecSpeed, bool bAdd, bool isRelative);
 #endif

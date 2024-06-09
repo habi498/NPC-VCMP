@@ -78,6 +78,10 @@ public:
 	{
 		this->vecPos = vecPos;
 	}
+	void UpdateRotation(QUATERNION quatRotation)
+	{
+		this->quatRotation = quatRotation;
+	}
 	VECTOR GetPosition()
 	{
 		return vecPos;
@@ -90,6 +94,7 @@ public:
 	float GetTurrety() { return fTurrety; }
 	VECTOR GetSpeed() { return vecSpeed; }
 	float GetHealth() { return fCarHealth; }
+	void SetHealth(float fHealth) { fCarHealth = fHealth; }
 	uint32_t GetDamage() { return dwDamage; }
 	void SetDriver(uint8_t driverId)
 	{

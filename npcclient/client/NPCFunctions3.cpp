@@ -723,10 +723,17 @@ SQInteger fn_SetPSLimit(HSQUIRRELVM v)
 }
 SQInteger fn_EnterVehicle(HSQUIRRELVM v)
 {
-    SQInteger vehicleId, seatId;
+    SQInteger vehicleId, seatId = 0;
     sq_getinteger(v, 2, &vehicleId);
-    sq_getinteger(v, 3, &seatId);
-    funcError e=m_pFunctions->RequestVehicleEnter(vehicleId, seatId);
+    if (sq_gettop(v) >= 3)
+    {
+        if (sq_gettype(v,3) == OT_INTEGER)
+        {
+            sq_getinteger(v, 3, &seatId);
+        }
+        else return sq_throwerror(v, "Seat Id must be integer.");
+    }
+    funcError e = m_pFunctions->RequestVehicleEnter(vehicleId, seatId);
     if (e == funcError::NoError)
     {
         sq_pushbool(v, SQTrue);
@@ -848,7 +855,7 @@ void RegisterNPCFunctions3()
     register_global_func(v, ::fn_SendIcSyncData, "SendInCarSyncData", 20, "tiiiiif|iif|if|if|if|if|if|if|if|if|if|if|if|i");
     register_global_func(v, ::fn_SendIcSyncDataEx, "SendInCarSyncDataEx",13 , "tiiiiif|iixxxf|if|i");
     register_global_func(v, ::fn_SendInCarSyncDataLV, "SendInCarSyncDataLV", 1, "t");
-    register_global_func(v, ::fn_EnterVehicle, "EnterVehicle", 3, "tii");
+    register_global_func(v, ::fn_EnterVehicle, "EnterVehicle", -2, "ti");
     register_global_func(v, ::fn_ExitVehicle, "ExitVehicle", 1, "t");
     register_global_func(v, ::fn_ExitVehicleEx, "ExitVehicleEx", 5, "tbiii");
     register_global_func(v, ::fn_SendServerData, "SendServerData", 2, "tx");

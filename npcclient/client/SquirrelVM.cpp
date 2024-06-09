@@ -487,7 +487,36 @@ void call_OnProjectileFired(uint8_t bytePlayerId, uint8_t byteWeapon, VECTOR vec
     }
     sq_settop(v, top); //restores the original stack size
 }
-
+void call_OnVehicleSetSpeedRequest(uint16_t wVehicleId, VECTOR vecSpeed, bool bAdd, bool isRelative)
+{
+    int top = sq_gettop(v); //saves the stack size before the call
+    sq_pushroottable(v); //pushes the global table
+    sq_pushstring(v, _SC("OnVehicleSetSpeedRequest"), -1);
+    if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
+        sq_pushroottable(v); //push the 'this' (in this case is the global table)
+        sq_pushinteger(v, wVehicleId);
+        sq_pushvector(v, vecSpeed);
+        sq_pushbool(v,bAdd);
+        sq_pushbool(v,isRelative);
+        sq_call(v, 5, 0, 1); //calls the function 
+    }
+    sq_settop(v, top); //restores the original stack size
+}
+void call_OnVehicleSetTurnSpeedRequest(uint16_t wVehicleId, VECTOR vecSpeed, bool bAdd, bool isRelative)
+{
+    int top = sq_gettop(v); //saves the stack size before the call
+    sq_pushroottable(v); //pushes the global table
+    sq_pushstring(v, _SC("OnVehicleSetTurnSpeedRequest"), -1);
+    if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
+        sq_pushroottable(v); //push the 'this' (in this case is the global table)
+        sq_pushinteger(v, wVehicleId);
+        sq_pushvector(v, vecSpeed);
+        sq_pushbool(v, bAdd);
+        sq_pushbool(v, isRelative);
+        sq_call(v, 5, 0, 1); //calls the function 
+    }
+    sq_settop(v, top); //restores the original stack size
+}
 bool StartSquirrel(std::string file, std::string location, std::vector<std::string> params, std::string execstring)
 {
     v = sq_open(1024); // creates a VM with initial stack size 1024 

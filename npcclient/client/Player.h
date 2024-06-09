@@ -76,6 +76,7 @@ public:
 	VECTOR m_vecPos;
 	float m_fAngle;
 	void UpdatePosition(float x, float y, float z);
+	void UpdatePosition(VECTOR vecPos);
 	void SetID(uint8_t bytePlayerID) { m_bytePlayerID = bytePlayerID; };
 	void StoreOnFootFullSyncData(ONFOOT_SYNC_DATA* pofSync);
 	void StoreInCarFullSyncData(INCAR_SYNC_DATA* picSync);
