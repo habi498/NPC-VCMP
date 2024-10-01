@@ -262,9 +262,9 @@ bool ReadPacketFromFile(uint8_t bytePacketType, FILE* file, void* buffer,size_t 
 }
 bool SendPacketFromFile(uint8_t bytePacketType, FILE* file)
 {
-    int size = 30;//max PRIVMSGDATA, whose size is 26
+    int size = 64;//max PRIVMSGDATA, whose size is 26
     if (bytePacketType == PACKET_ONFOOT || bytePacketType == PACKET_ONFOOT_AIM || bytePacketType == PACKET_DRIVER)
-        size = 80;
+        size = 256;
     void* buffer = malloc(size); 
     if (!buffer)return 0;
     if (!ReadPacketFromFile(bytePacketType, file, buffer, size))

@@ -323,6 +323,7 @@ void CPlayer::ProcessUpdate2(PluginFuncs* VCMP, vcmpPlayerUpdate updateType)
 		}
 	}
 }
+/*
 void CPlayer::ProcessUpdate(PluginFuncs* VCMP, vcmpPlayerUpdate updateType)
 {
 	uint8_t playerId = this->m_PlayerID;
@@ -491,6 +492,7 @@ void CPlayer::ProcessUpdate(PluginFuncs* VCMP, vcmpPlayerUpdate updateType)
 		fwrite(&_ver, sizeof(_ver), 1, this->pFile);
 	}
 }
+*/
 uint16_t ConvertToUINT16_T(float value, float base)
 {
 	if (base != -1)

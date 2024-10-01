@@ -71,6 +71,7 @@
 	#include <windows.h>
 #else
 	#include <math.h>
+	typedef unsigned int DWORD;
 #endif
 #pragma pack(1)
 typedef struct _VECTOR
@@ -168,6 +169,9 @@ typedef struct _ONFOOT_SYNC_DATA
 	uint16_t wAmmo; // 2 byte
 	uint8_t byteAction;//added v1.7 beta 2
 	uint8_t byteReserved;//for future use
+	//VECTOR vecMatrixRight;
+	//VECTOR vecMatrixUp;
+	//VECTOR vecMatrixPosition;
 	_ONFOOT_SYNC_DATA()
 	{
 		dwKeys = 0; vecPos = VECTOR(0, 0, 0);
@@ -180,28 +184,29 @@ typedef struct _ONFOOT_SYNC_DATA
 		vecAimPos = VECTOR(0, 0, 0);
 		bIsReloading = false;
 		wAmmo = 0; byteAction = 1; byteReserved = 0;
+		//vecMatrixRight = VECTOR(0, 0, 0);
+		//vecMatrixUp = VECTOR(0, 0, 0);
+		//vecMatrixPosition = VECTOR(0, 0, 0);
 	}
 } ONFOOT_SYNC_DATA; 
 //--new
-// 66+ 4 =70 datablock
-//70+8=78 size taken by header+first datablock
-
+// 102 bytes size ONFOOT_SYNC_DATA
 #pragma pack(1)
 typedef struct _INCAR_SYNC_DATA
 {
-	uint16_t VehicleID; 
-	uint32_t dwKeys;
-	QUATERNION quatRotation;
-	VECTOR vecPos;
-	VECTOR vecMoveSpeed;
-	float fCarHealth;
-	uint8_t bytePlayerHealth;
-	uint8_t bytePlayerArmour;
-	uint8_t byteCurrentWeapon;
-	uint32_t dDamage;
-	float Turretx;
-	float Turrety;
-	uint16_t wAmmo;
+	uint16_t VehicleID; //The ID of Car
+	uint32_t dwKeys;	//The Keys the related player is pressing
+	QUATERNION quatRotation;	//The rotation of car
+	VECTOR vecPos;	//The position of car
+	VECTOR vecMoveSpeed;	//The speed of car
+	float fCarHealth;	//The health of car in floating points.
+	uint8_t bytePlayerHealth; //The health of player
+	uint8_t bytePlayerArmour; //The armour of player
+	uint8_t byteCurrentWeapon; //The current weapon of player
+	uint32_t dDamage;	//The damage of car
+	float Turretx;	//The horizontal turret of car
+	float Turrety;	//The vertical turret of car
+	uint16_t wAmmo;	//The ammo of current weapon of player.
 } INCAR_SYNC_DATA;
 
 /*Used to save to .rec file*/

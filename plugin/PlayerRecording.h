@@ -24,8 +24,9 @@ github https://github.com/dashr9230/SA-MP just for fun*/
 #define RECDIR "recordings"
 #define RECDIR_ALTERNATE "npcscripts/recordings"
 #define SERVER_REC_DIR "recordings/a_server"
+//#define NPC_RECFILE_IDENTIFIER_V6 1006 //Aug 2024
 #define NPC_RECFILE_IDENTIFIER_V5 1005 //Dec 2023
-#define NPC_RECFILE_IDENTIFIER_V4 1004 //ref 25.August 2023
+//#define NPC_RECFILE_IDENTIFIER_V4 1004 //ref 25.August 2023
 #define MAX_PLAYERS 100
 #define PLAYER_RECORDING_TYPE_DRIVER	2
 #define PLAYER_RECORDING_TYPE_ONFOOT	1

@@ -12,6 +12,58 @@ add_executable (npcclient
 "client/SquirrelVM.cpp"
 "client/UpdateNPC.cpp"
 "client/CTimer.cpp"
+"client/NPCFunctions3.cpp"
+"client/ClientFunctions.cpp" 
+"client/ConsoleInput.cpp"
+"client/EventHandler.cpp" 
+"client/Plugins.cpp"
+"client/SqVector.cpp"  
+"client/VehiclePool.cpp"  
+"client/SqQuaternion.cpp"
+"client/Exports.cpp"
+"client/NPCFunctions4.cpp" 
+"client/NPCFunctions5.cpp"  
+"client/NPCFunctions6.cpp" )
+
+if(REL047)
+#Use SlikeNet Static Library
+
+option( RAKNET_ENABLE_SAMPLES 	"Generate RakNet sample projects if true." 		FALSE  )
+option( RAKNET_ENABLE_DLL		"Generate the DLL project if true." 			FALSE )
+option( RAKNET_ENABLE_STATIC	"Generate the static library project if true." 	TRUE )
+add_subdirectory("dependencies/slikenet_0.1.3_source/slikenet")
+target_link_libraries(npcclient RakNetLibStatic )
+message(STATUS "Using SlikeNet")
+
+if(REL0470)
+add_definitions(-D_REL0470)
+elseif(REL0471)
+add_definitions(-D_REL0471)
+endif()
+
+#Include zlib
+add_subdirectory("dependencies/zlib")
+
+add_dependencies(RakNetLibStatic zlibstatic)
+target_link_libraries(RakNetLibStatic zlibstatic)
+#RakNetSocket2.cpp needs zlib.h, zlibconf.h etc
+target_include_directories(RakNetLibStatic PRIVATE "dependencies/zlib")
+
+target_include_directories(npcclient PRIVATE "dependencies/slikenet_0.1.3_source/slikenet/Source")
+
+if(REL0470)
+set_target_properties(npcclient PROPERTIES OUTPUT_NAME "npcclient_047") 
+elseif(REL0471)
+set_target_properties(npcclient PROPERTIES OUTPUT_NAME "npcclient_0471") 
+else()
+set_target_properties(npcclient PROPERTIES OUTPUT_NAME "npcclient_047_unknown") 
+endif()
+
+target_sources(npcclient PRIVATE "client/app.rc")
+else()
+#include Raknet files (4.082?)
+message(STATUS "Using Raknet")
+target_sources(npcclient PRIVATE 
 "Raknet/Base64Encoder.cpp"
 "Raknet/BitStream.cpp"
 "Raknet/CCRakNetSlidingWindow.cpp"
@@ -122,19 +174,8 @@ add_executable (npcclient
 "Raknet/VitaIncludes.cpp"
 "Raknet/WSAStartupSingleton.cpp"
 "Raknet/_FindFirst.cpp"
-"client/NPCFunctions3.cpp"
-"client/ClientFunctions.cpp" 
-"client/ConsoleInput.cpp"
-"client/EventHandler.cpp" 
-"client/Plugins.cpp"
- "client/SqVector.cpp"  
-"client/VehiclePool.cpp"  
-"client/SqQuaternion.cpp"
-"client/Exports.cpp"
-"client/NPCFunctions4.cpp" 
-"client/NPCFunctions5.cpp"  
-"client/NPCFunctions6.cpp" "client/app.rc")
-
+"client/app.rc")
+endif()
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	set(OUTPUT_BITNESS 64)
 else()
@@ -175,15 +216,26 @@ endif()
 
    
 if(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 4)
-   target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/npc_static.lib")
+   if(SLIKENET)
+   	target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/npcConnect.lib")
+   else()
+   	target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/npc_static.lib")
+   endif()
    target_link_libraries(npcclient ws2_32)
 else(WIN32)
 	
     if(OUTPUT_BITNESS EQUAL 32)    
-        target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/libnpc_static.a")
+        if(SLIKENET)
+		target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/npcConnect.a")
+	  else()
+		target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x32/libnpc_static.a")
+	  endif()	
 else()
-        target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x64/libnpc_static.a")
-
+         if(SLIKENET)
+		target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x64/npcConnect.a")
+	  else()
+		target_link_libraries(npcclient "${PROJECT_SOURCE_DIR}/npcclient/libs/x64/libnpc_static.a")
+	  endif()
  endif()
     set(CMAKE_CXX_FLAGS "-pthread")
     add_definitions(-DLINUX)
@@ -197,7 +249,11 @@ else()
     else()
         if(REL004)
             set_target_properties(npcclient PROPERTIES OUTPUT_NAME "npcclient64_r004")
-        else()
+        elseif(REL0471)
+		set_target_properties(npcclient PROPERTIES OUTPUT_NAME "npcclient64_0471")
+	  elseif(REL0470)
+		set_target_properties(npcclient PROPERTIES OUTPUT_NAME "npcclient64_0470")
+	  else()
             set_target_properties(npcclient PROPERTIES OUTPUT_NAME "npcclient64")
         endif()
     endif()
@@ -212,7 +268,7 @@ endif()
 
 set_target_properties(npcclient PROPERTIES LINK_FLAGS_RELEASE -s)
 
-set(CMAKE_BUILD_TYPE Release)
+#set(CMAKE_BUILD_TYPE Release)
 #build readline
 if(NOT WIN32)
 include(ExternalProject)

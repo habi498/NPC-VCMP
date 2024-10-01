@@ -31,8 +31,10 @@ INT SW_STATUS = 0;
 #endif
 enum Version
 {
-	REL004 = 67000,
-	REL006 = 67400
+	REL004  = 67000,
+	REL006  = 67400,
+	REL047  = 67700,
+	REL0471 = 67710
 };
 SQObject* ArrayIsNPC = NULL;
 bool CallNPCClient(const char* szName, const char* szScript, bool bConsoleInputEnabled,
@@ -99,9 +101,13 @@ bool CallNPCClient(const char* szName, const char* szScript, bool bConsoleInputE
 		ShellExecute(0, "open", "npcclient_r004.exe", szCmd, NULL, STATUS_SW);
 	else if(ver==REL006)
 		ShellExecute(0, "open", "npcclient.exe", szCmd, NULL, STATUS_SW);
+	else if (ver == REL047)
+		ShellExecute(0, "open", "npcclient_047.exe", szCmd, NULL, STATUS_SW);
+	else if (ver == REL0471)
+		ShellExecute(0, "open", "npcclient_0471.exe", szCmd, NULL, STATUS_SW);
 	else {
-		printf("Error server version: %d. ", ver);
-		printf("Using REL006 = %d\n", REL006);
+		printf("Error server version: %d ", ver);
+		printf("is neither %d, %d, %d or %d\n", REL004, REL006, REL047, REL0471);
 		ShellExecute(0, "open", "npcclient.exe", szCmd, NULL, STATUS_SW);
 	}
 #else
@@ -113,6 +119,10 @@ bool CallNPCClient(const char* szName, const char* szScript, bool bConsoleInputE
 	{
 		if (ver == REL004)
 			sprintf(szBin, "npcclient%s", "32_r004");
+		else if(ver == REL047)
+			sprintf(szBin, "npcclient%s", "32_0470");
+		else if(ver == REL0471)
+			sprintf(szBin, "npcclient%s", "32_0471");
 		else
 			sprintf(szBin, "npcclient%s", "32");
 	}
@@ -120,10 +130,16 @@ bool CallNPCClient(const char* szName, const char* szScript, bool bConsoleInputE
 	{
 		if(ver == REL004)
 			sprintf(szBin, "npcclient%s", "64_r004");
+		else if(ver == REL047)
+			sprintf(szBin, "npcclient%s", "64_0470");
+		else if(ver == REL0471)
+			sprintf(szBin, "npcclient%s", "64_0471");
 		else
 			sprintf(szBin, "npcclient%s", "64");
 	}
-	sprintf(szCmd2, "%s/%s %s &",  szDir, szBin, szCmd);
+	//sprintf(szCmd2, "%s/%s %s &",  szDir, szBin, szCmd);
+	// Using double quotes around %s to handle paths with spaces
+	snprintf(szCmd2, sizeof(szCmd2), "\"%s/%s\" %s &", szDir, szBin, szCmd);
 	system(szCmd2);
 #endif
 	return 1;

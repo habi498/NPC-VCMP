@@ -14,11 +14,7 @@
 	You should have received a copy of the GNU General Public License
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-/*
-Note: The npcclient program also uses this file. So any editing
-in the structure of the classes has to be made on the corresponding
-file with same name in project npcclient.
-*/
+
 #include <stdint.h>
 #ifdef _WIN32
 	#include <windows.h>
@@ -27,22 +23,6 @@ file with same name in project npcclient.
 	typedef unsigned int DWORD;
 #endif
 #pragma pack(1)
-typedef struct _VECTOR
-{
-	float X;
-	float Y;
-	float Z;
-}VECTOR;
-
-#pragma pack(1)
-typedef struct _QUATERNION
-{
-	float X;
-	float Y;
-	float Z;
-	float W;
-}QUATERNION;
-
 #pragma pack(1)
 typedef struct _ONFOOT_SYNC_DATA_V1
 {
@@ -83,6 +63,26 @@ typedef struct _ONFOOT_SYNC_DATA_V2ANDV3
 	uint16_t wAmmo; // 2 byte
 } ONFOOT_SYNC_DATA_V2ANDV3;
 
+//The following is used in recupdate v4
+#pragma pack(1)
+typedef struct _ONFOOT_SYNC_DATA_V4
+{
+	uint32_t dwKeys;
+	VECTOR vecPos;
+	float fAngle;
+	uint8_t byteHealth;
+	uint8_t byteArmour;
+	uint8_t byteCurrentWeapon;
+	bool IsCrouching;
+	VECTOR vecSpeed;
+	bool IsAiming;
+	VECTOR vecAimDir;
+	VECTOR vecAimPos;
+	bool bIsReloading; //1 byte
+	uint16_t wAmmo; // 2 byte
+	uint8_t byteAction;
+	uint8_t byteReserved;
+} ONFOOT_SYNC_DATA_V4;
 
 //Used by recupdate version prior to 3.0
 #pragma pack(1)
@@ -133,6 +133,12 @@ typedef struct _ONFOOT_DATABLOCK_V2ANDV3
 	DWORD time;
 	ONFOOT_SYNC_DATA_V2ANDV3  m_pOfSyncData;
 } ONFOOT_DATABLOCK_V2ANDV3;
+#pragma pack(1)
+typedef struct _ONFOOT_DATABLOCK_V4
+{
+	DWORD time;
+	ONFOOT_SYNC_DATA_V4  m_pOfSyncData;
+} ONFOOT_DATABLOCK_V4;
 
 #pragma pack(1)
 typedef struct _INCAR_DATABLOCK_BEFOREV3

@@ -66,6 +66,16 @@ uint16_t ConvertToUINT16_T(float value, float base)
 		return s;
 	}
 }
+void WriteBit0(RakNet::BitStream* b)
+{
+	uint8_t byteArray[] = { 0 };
+	b->WriteBits(byteArray, 1, false);
+}
+void WriteBit1(RakNet::BitStream* b)
+{
+	uint8_t byteArray[] = { 128 };
+	b->WriteBits(byteArray, 1, false);
+}
 #ifdef _REL004
 void SendNPCSyncData(INCAR_SYNC_DATA* m_pInSyncData, PacketPriority mPriority)
 {
@@ -101,6 +111,114 @@ void SendNPCSyncData(INCAR_SYNC_DATA* m_pInSyncData, PacketPriority mPriority)
 	peer->Send(&bsOut, mPriority, UNRELIABLE_SEQUENCED, 0, systemAddress, false);
 	npc->StoreInCarFullSyncData(m_pInSyncData);
 }
+#elif defined(_REL0471)
+void SendNPCSyncData(INCAR_SYNC_DATA* m_pInSyncData, PacketPriority mPriority)
+{
+	RakNet::BitStream bsOut;
+	bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_PLAYERUPDATE_DRIVER);
+	bsOut.Write(iNPC->anticheatID);
+	uint8_t action = 0;
+	SetActionFlags(m_pInSyncData, &action);
+	bsOut.Write(action);
+	bsOut.Write(_byteswap_ushort((uint16_t)(m_pInSyncData->dwKeys & 0xFFFF)));//swapping is needed
+	uint8_t nibble, byte;
+	SetVehicleIDFlag(m_pInSyncData, &nibble, &byte);
+	bsOut.Write(byte);
+	WriteNibble(nibble, &bsOut);
+	bsOut.Write(m_pInSyncData->bytePlayerHealth);
+	if (action & IC_FLAG_WEAPON)
+	{
+		bsOut.Write(m_pInSyncData->byteCurrentWeapon);
+		if (m_pInSyncData->byteCurrentWeapon > 11)
+			bsOut.Write((WORD)m_pInSyncData->wAmmo);
+		//bsOut.Write((uint16_t)npc->GetSlotAmmo(GetSlotId(npc->GetCurrentWeapon())));
+	}
+	if (action & IC_FLAG_ARMOUR)
+		bsOut.Write(m_pInSyncData->bytePlayerArmour);
+	bool bTurret = false;
+	if (m_pInSyncData->Turretx != 0 || m_pInSyncData->Turrety != 0)
+	{
+		WriteNibble(1, &bsOut);
+		bTurret = true;
+	}
+	else
+		WriteNibble(0, &bsOut);
+	uint8_t type = 0; SetTypeFlags(m_pInSyncData, &type);
+	WriteNibble(type, &bsOut);
+	bsOut.Write(m_pInSyncData->vecPos.X);
+	bsOut.Write(m_pInSyncData->vecPos.Y);
+	bsOut.Write(m_pInSyncData->vecPos.Z);
+	if (type & IC_TFLAG_SPEED)
+	{
+		uint16_t speedx, speedy, speedz;
+		speedx = ConvertToUINT16_T(m_pInSyncData->vecMoveSpeed.X, 20.0);
+		speedy = ConvertToUINT16_T(m_pInSyncData->vecMoveSpeed.Y, 20.0);
+		speedz = ConvertToUINT16_T(m_pInSyncData->vecMoveSpeed.Z, 20.0);
+		bsOut.Write(speedx); bsOut.Write(speedy); bsOut.Write(speedz);
+	}
+	uint8_t byteFlag = 0;
+	SetRotationFlags(m_pInSyncData, &byteFlag);
+	WriteNibble(byteFlag, &bsOut);
+	uint16_t w_rotx, w_roty, w_rotz;
+	w_rotx = ConvertToUINT16_T(m_pInSyncData->quatRotation.X, -1);
+	w_roty = ConvertToUINT16_T(m_pInSyncData->quatRotation.Y, -1);
+	w_rotz = ConvertToUINT16_T(m_pInSyncData->quatRotation.Z, -1);
+	bsOut.Write(w_rotx);
+	bsOut.Write(w_roty); bsOut.Write(w_rotz);
+	if (type & IC_TFLAG_DAMAGE)
+		bsOut.Write(m_pInSyncData->dDamage);
+	if (type & IC_TFLAG_CARHEALTH)
+		bsOut.Write(m_pInSyncData->fCarHealth);
+	if (bTurret)
+	{
+		uint16_t wHorizontal, wVertical;
+		wHorizontal = ConvertToUINT16_T(m_pInSyncData->Turretx, 2 * (float)PI);
+		wVertical = ConvertToUINT16_T(m_pInSyncData->Turrety, 2 * (float)PI);
+		bsOut.Write(wHorizontal);
+		bsOut.Write(wVertical);
+	}
+	//Mystery bytes. Might need investigation..
+	bsOut.Write((uint8_t)0);
+	bsOut.Write((uint8_t)0xc8);
+	bsOut.Write((uint8_t)0);//Changes when vehicle is on water.?
+	bsOut.Write((uint8_t)0);
+	unsigned char* data = bsOut.GetData();
+	uint32_t sourcelen = bsOut.GetNumberOfBytesUsed();
+	uLongf destLen = compressBound(sourcelen - 1);//An upper bound, we do not compress message id 0x32
+	unsigned char* cmpdata = (unsigned char*)malloc(destLen);
+	if (cmpdata)
+	{
+		int c = compress2(cmpdata, (uLongf*)&destLen, data + 1, sourcelen - 1,
+			Z_DEFAULT_COMPRESSION);
+		if (c == Z_OK)
+		{
+			RakNet::BitStream bsNew;
+			bsNew.Write(data[0]);//Write Message ID 0x32
+			WriteBit0(&bsNew);//Write a zero bit
+			//NOw write thelength of original data
+			bsNew.Write(sourcelen - 1);
+			WriteBit0(&bsNew);//Write a zero bit
+			bsNew.Write((uint32_t)destLen);
+			//for (int i = 0; i < destLen; i++)printf("%x ", cmpdata[i]);
+			//printf("\n");
+			for (int i = 0; i < destLen; i++)
+				bsNew.Write(cmpdata[i]);
+			peer->Send(&bsNew, mPriority, UNRELIABLE_SEQUENCED, 0, systemAddress, false);
+		}
+		else {
+			printf("Error. An error occured during compressing data\n");
+			exit(0);
+		}
+		free(cmpdata);
+	}
+	else
+	{
+		printf("Error: Memory allocation failed\n"); exit(0);
+	}
+	//peer->Send(&bsOut, mPriority, UNRELIABLE_SEQUENCED, 0, systemAddress, false);
+	npc->StoreInCarFullSyncData(m_pInSyncData);
+}
+
 #else
 void SendNPCSyncData(INCAR_SYNC_DATA* m_pInSyncData, PacketPriority mPriority )
 {
@@ -231,6 +349,289 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData, PacketPriority priority)
 	peer->Send(&bsOut, priority, UNRELIABLE_SEQUENCED, 0, systemAddress, false);
 	npc->StoreOnFootFullSyncData(m_pOfSyncData);
 }
+#elif defined(_REL0470)
+void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData, PacketPriority priority)
+{
+	RakNet::BitStream bsOut;
+	if (!m_pOfSyncData->IsPlayerUpdateAiming)
+		bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_ONFOOT_UPDATE);
+	else
+		bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_ONFOOT_UPDATE_AIM);
+	bsOut.Write(iNPC->anticheatID);
+	uint8_t action = 0; uint8_t nibble = 0;
+	SetActionFlags(m_pOfSyncData, &action, &nibble);
+
+#ifdef NPC_SHOOTING_ENABLED
+	bool reloading_weapon = false;
+	if (m_pOfSyncData->IsPlayerUpdateAiming)
+	{
+		if ((m_pOfSyncData->dwKeys & 512) == 0)
+		{
+			//This means player is reloading weapon!
+			//key_onfoot_fire is 576
+			reloading_weapon = true;
+
+			//07 Aug 2023, commented 0xd0. If armour this lead error
+			//action = 0xd0;
+			action |= OF_FLAG_EXTRA_NIBBLE;//in somecases, this is already 'OR'ed.
+			nibble |= OF_FLAG_NIBBLE_RELOADING;
+		}
+	}
+#endif
+	bsOut.Write(action);
+	if (nibble)
+		WriteNibble(nibble, &bsOut);
+	bsOut.Write(m_pOfSyncData->vecMatrixRight.Z);
+	bsOut.Write(m_pOfSyncData->vecMatrixRight.Y);
+	bsOut.Write(m_pOfSyncData->vecMatrixRight.X);
+	bsOut.Write(m_pOfSyncData->vecMatrixUp.X);
+	bsOut.Write(m_pOfSyncData->vecMatrixUp.Z);
+	bsOut.Write(m_pOfSyncData->vecMatrixUp.Y);
+	bsOut.Write(m_pOfSyncData->vecMatrixPosition.Y);
+	bsOut.Write(m_pOfSyncData->vecMatrixPosition.X);//does not matter
+	bsOut.Write(m_pOfSyncData->vecMatrixPosition.Z);//does not matter
+	bsOut.Write(m_pOfSyncData->vecPos.Z);
+	bsOut.Write(m_pOfSyncData->vecPos.Y);
+	bsOut.Write(m_pOfSyncData->vecPos.X);
+	bsOut.Write(m_pOfSyncData->fAngle);
+	bsOut.Write((uint32_t)0);//UNKNOWN
+	bsOut.Write(m_pOfSyncData->vecSpeed.Z);
+	bsOut.Write(m_pOfSyncData->vecSpeed.Y);
+	bsOut.Write(m_pOfSyncData->vecSpeed.X);
+	bsOut.Write((float)0);
+	bsOut.Write((float)0);
+	bsOut.Write((float)0);
+	if (action & OF_FLAG_WEAPON)
+	{
+		bsOut.Write(m_pOfSyncData->byteCurrentWeapon);
+		if (m_pOfSyncData->byteCurrentWeapon > 11)
+			bsOut.Write((WORD)(m_pOfSyncData->wAmmo));//ammo
+	}
+	if (action & OF_FLAG_KEYS_OR_ACTION)
+	{
+		CheckAction(m_pOfSyncData);
+		uint8_t keybyte1 = m_pOfSyncData->dwKeys & 0xFF;
+		uint8_t keybyte2 = (m_pOfSyncData->dwKeys >> 8) & 0xFF;
+		bsOut.Write(keybyte1);
+		bsOut.Write(keybyte2);
+		uint16_t value = 0;
+		if (m_pOfSyncData->dwKeys > 0xFFFF)
+			value |= 0x80;
+		value |= m_pOfSyncData->byteAction;
+
+		WriteNibble((value >> 8) & 15, &bsOut);
+		bsOut.Write((uint8_t)(value & 0xFF));
+	}
+	if (!(action & OF_FLAG_NOHEALTH))
+	{
+		bsOut.Write(m_pOfSyncData->byteHealth);
+		if (action & OF_FLAG_ARMOUR)
+			bsOut.Write(m_pOfSyncData->byteArmour);
+#ifdef NPC_SHOOTING_ENABLED
+		if (m_pOfSyncData->IsPlayerUpdateAiming)
+			bsOut.Write((uint8_t)0xa7);
+		else
+			bsOut.Write((uint8_t)0x03);
+		if (m_pOfSyncData->IsPlayerUpdateAiming)
+		{
+			bsOut.Write((float)0);
+			bsOut.Write((float)0);
+			bsOut.Write((float)0);
+			bsOut.Write(m_pOfSyncData->vecAimDir.Z);
+			bsOut.Write(m_pOfSyncData->vecAimDir.Y);
+			bsOut.Write(m_pOfSyncData->vecAimDir.X);
+			bsOut.Write(m_pOfSyncData->vecAimPos.Z);
+			bsOut.Write(m_pOfSyncData->vecAimPos.Y);
+			bsOut.Write(m_pOfSyncData->vecAimPos.X);
+		}
+#else
+		bsOut.Write((uint8_t)0x03);
+#endif
+	}
+#ifdef _REL0471
+	unsigned char* data=bsOut.GetData();
+	uint32_t sourcelen = bsOut.GetNumberOfBytesUsed() ;
+	printf("Original packet was: ");
+	for (int i = 0; i < sourcelen; i++)
+	{
+		printf("%x ", data[i]);
+	}
+	printf("\n");
+	uint32_t destLen = compressBound(sourcelen-1);//An upper bound, we do not compress message id 0x30
+	unsigned char* cmpdata = (unsigned char*)malloc(destLen);
+	if (cmpdata)
+	{
+		int c=compress2(cmpdata, (uLongf*)&destLen, data+1, sourcelen-1,
+			Z_DEFAULT_COMPRESSION);
+		if (c == Z_OK)
+		{
+			RakNet::BitStream bsNew;
+			bsNew.Write(data[0]);//Write Message ID 0x30 or 0x31
+			WriteBit0(&bsNew);//Write a zero bit
+			//NOw write thelength of original data
+			printf("sourcelen adjusted is %u. ", sourcelen - 1);
+			bsNew.Write(sourcelen-1);
+			WriteBit0(&bsNew);//Write a zero bit
+			//Write length of upcoming compressed data
+			printf("destLen is %u\n", destLen);
+			bsNew.Write(destLen);
+			for (int i = 0; i < destLen; i++)printf("%x ", cmpdata[i]);
+			printf("\n");
+			for (int i = 0; i < destLen; i++) 
+				bsNew.Write(cmpdata[i]);
+			peer->Send(&bsNew, priority, UNRELIABLE_SEQUENCED, 0, systemAddress, false);
+		}
+		else {
+			printf("Error. An error occured during compressing data\n");
+			exit(0);
+		}
+		free(cmpdata);
+	}
+	else
+	{
+		printf("Error: Memory allocation failed\n"); exit(0);
+	}
+#else
+	peer->Send(&bsOut, priority, UNRELIABLE_SEQUENCED, 0, systemAddress, false);
+#endif
+	npc->StoreOnFootFullSyncData(m_pOfSyncData);//v1.4
+}
+#elif defined(_REL0471)
+void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData, PacketPriority priority)
+{
+	RakNet::BitStream bsOut;
+	if (!m_pOfSyncData->IsPlayerUpdateAiming)
+		bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_ONFOOT_UPDATE);
+	else
+		bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_ONFOOT_UPDATE_AIM);
+	bsOut.Write(iNPC->anticheatID);
+	uint8_t action = 0; uint8_t nibble = 0;
+	SetActionFlags(m_pOfSyncData, &action, &nibble);
+
+#ifdef NPC_SHOOTING_ENABLED
+	bool reloading_weapon = false;
+	if (m_pOfSyncData->IsPlayerUpdateAiming)
+	{
+		if ((m_pOfSyncData->dwKeys & 512) == 0)
+		{
+			//This means player is reloading weapon!
+			//key_onfoot_fire is 576
+			reloading_weapon = true;
+
+			//07 Aug 2023, commented 0xd0. If armour this lead error
+			//action = 0xd0;
+			action |= OF_FLAG_EXTRA_NIBBLE;//in somecases, this is already 'OR'ed.
+			nibble |= OF_FLAG_NIBBLE_RELOADING;
+		}
+	}
+#endif
+	bsOut.Write(action);
+	if (nibble)
+		WriteNibble(nibble, &bsOut);
+
+	bsOut.Write(m_pOfSyncData->vecPos.X);
+	bsOut.Write(m_pOfSyncData->vecPos.Y);
+	bsOut.Write(m_pOfSyncData->vecPos.Z);
+	WORD angle = ConvertToUINT16_T(m_pOfSyncData->fAngle, 2 * (float)PI);
+	bsOut.Write(angle);
+	float fUnknown = 4.0 / 3;
+	bsOut.Write(fUnknown);
+	if (action & OF_FLAG_SPEED)
+	{
+		VECTOR vecSpeed = m_pOfSyncData->vecSpeed;
+		uint16_t speedx = ConvertToUINT16_T(vecSpeed.X, 20.0);
+		uint16_t speedy = ConvertToUINT16_T(vecSpeed.Y, 20.0);
+		uint16_t speedz = ConvertToUINT16_T(vecSpeed.Z, 20.0);
+		bsOut.Write(speedx); bsOut.Write(speedy); bsOut.Write(speedz);
+	}
+	if (action & OF_FLAG_WEAPON)
+	{
+		bsOut.Write(m_pOfSyncData->byteCurrentWeapon);
+		if (m_pOfSyncData->byteCurrentWeapon > 11)
+			bsOut.Write((WORD)(m_pOfSyncData->wAmmo));//ammo
+	}
+	if (action & OF_FLAG_KEYS_OR_ACTION)
+	{
+		CheckAction(m_pOfSyncData);
+		uint8_t keybyte1 = m_pOfSyncData->dwKeys & 0xFF;
+		uint8_t keybyte2 = (m_pOfSyncData->dwKeys >> 8) & 0xFF;
+		bsOut.Write(keybyte1);
+		bsOut.Write(keybyte2);
+		uint16_t value = 0;
+		if (m_pOfSyncData->dwKeys > 0xFFFF)
+			value |= 0x80;
+		value |= m_pOfSyncData->byteAction;
+
+		WriteNibble((value >> 8) & 15, &bsOut);
+		bsOut.Write((uint8_t)(value & 0xFF));
+
+
+	}
+	if (!(action & OF_FLAG_NOHEALTH))
+	{
+		bsOut.Write(m_pOfSyncData->byteHealth);
+		if (action & OF_FLAG_ARMOUR)
+			bsOut.Write(m_pOfSyncData->byteArmour);
+#ifdef NPC_SHOOTING_ENABLED
+		if (m_pOfSyncData->IsPlayerUpdateAiming)
+			bsOut.Write((uint8_t)0xa7);
+		else
+			bsOut.Write((uint8_t)0x03);
+		if (m_pOfSyncData->IsPlayerUpdateAiming)
+		{
+			uint16_t wAimDirX, wAimDirY, wAimDirZ;
+			wAimDirX = ConvertToUINT16_T(m_pOfSyncData->vecAimDir.X, 2 * (float)PI);
+			wAimDirY = ConvertToUINT16_T(m_pOfSyncData->vecAimDir.Y, 2 * (float)PI);
+			wAimDirZ = ConvertToUINT16_T(m_pOfSyncData->vecAimDir.Z, 2 * (float)PI);
+			bsOut.Write(wAimDirX); bsOut.Write(wAimDirY);
+			bsOut.Write(wAimDirZ);
+			bsOut.Write(m_pOfSyncData->vecAimPos.X);
+			bsOut.Write(m_pOfSyncData->vecAimPos.Y);
+			bsOut.Write(m_pOfSyncData->vecAimPos.Z);
+		}
+#else
+		bsOut.Write((uint8_t)0x03);
+#endif
+	}
+	unsigned char* data = bsOut.GetData();
+	uint32_t sourcelen = bsOut.GetNumberOfBytesUsed();
+	uLongf destLen = compressBound(sourcelen - 1);//An upper bound, we do not compress message id 0x30
+	unsigned char* cmpdata = (unsigned char*)malloc(destLen);
+	if (cmpdata)
+	{
+		int c = compress2(cmpdata, (uLongf*)&destLen, data + 1, sourcelen - 1,
+			Z_DEFAULT_COMPRESSION);
+		if (c == Z_OK)
+		{
+			RakNet::BitStream bsNew;
+			bsNew.Write(data[0]);//Write Message ID 0x30 or 0x31
+			WriteBit0(&bsNew);//Write a zero bit
+			//NOw write thelength of original data
+			//printf("sourcelen adjusted is %u. ", sourcelen - 1);
+			bsNew.Write(sourcelen - 1);
+			WriteBit0(&bsNew);//Write a zero bit
+			//Write length of upcoming compressed data
+			//printf("destLen is %u\n", destLen);
+			bsNew.Write((uint32_t)destLen);
+			//for (int i = 0; i < destLen; i++)printf("%x ", cmpdata[i]);
+			//printf("\n");
+			for (int i = 0; i < destLen; i++)
+				bsNew.Write(cmpdata[i]);
+			peer->Send(&bsNew, priority, UNRELIABLE_SEQUENCED, 0, systemAddress, false);
+		}
+		else {
+			printf("Error. An error occured during compressing data\n");
+			exit(0);
+		}
+		free(cmpdata);
+	}
+	else
+	{
+		printf("Error: Memory allocation failed\n"); exit(0);
+	}
+	//peer->Send(&bsOut, priority, UNRELIABLE_SEQUENCED, 0, systemAddress, false);
+	npc->StoreOnFootFullSyncData(m_pOfSyncData);//v1.4
+}
 #else
 void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData, PacketPriority priority)
 {
@@ -341,8 +742,11 @@ void SetActionFlags(ONFOOT_SYNC_DATA* m_pOfSyncData, uint8_t* action, uint8_t* n
 {
 	if (m_pOfSyncData->byteCurrentWeapon)(*action) |= OF_FLAG_WEAPON;
 	if (m_pOfSyncData->byteArmour)(*action) |= OF_FLAG_ARMOUR;
+#ifndef _REL0470
+	//REL0470 writes speed always
 	if (m_pOfSyncData->vecSpeed.X != 0 || m_pOfSyncData->vecSpeed.Y != 0 ||
 		m_pOfSyncData->vecSpeed.Z != 0)(*action) |= OF_FLAG_SPEED;
+#endif
 	if (m_pOfSyncData->dwKeys || m_pOfSyncData->byteAction>1)(*action) |= OF_FLAG_KEYS_OR_ACTION;
 	if (m_pOfSyncData->IsCrouching)
 	{
@@ -435,6 +839,8 @@ void SendNPCOfSyncDataLV(PacketPriority prioty) //with existing values, send a p
 	m_pOfSyncData->dwKeys = npc->GetKeys();
 	m_pOfSyncData->fAngle = npc->m_fAngle;
 	m_pOfSyncData->vecPos = npc->m_vecPos;
+	//printf("npc->m_byteHealth is %d\n", npc->m_byteHealth);
+	//printf("npcofsyncdatalv calling sendnpcsyncdata...\n");
 	SendNPCSyncData(m_pOfSyncData, prioty);
 }
 void SendNPCIcSyncDataLV(PacketPriority prioty) //with existing values, send a packet. Normally to update health or angle
@@ -461,7 +867,87 @@ void SendNPCIcSyncDataLV(PacketPriority prioty) //with existing values, send a p
 		SendNPCSyncData(m_pIcSyncData, prioty);
 	}
 }
-#ifndef _REL004
+#ifdef _REL004
+void SendPassengerSyncData()
+{
+	if (npc->m_wVehicleId != 0 && npc->m_byteSeatId != -1)
+	{
+		RakNet::BitStream bsOut;
+		bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_PLAYERUPDATE_PASSENGER);
+		bsOut.Write(iNPC->anticheatID);
+		bsOut.Write(npc->m_byteSeatId);
+		bsOut.Write(npc->m_byteArmour);
+		bsOut.Write(npc->m_byteHealth);
+		bsOut.Write(npc->m_wVehicleId);
+		peer->Send(&bsOut, HIGH_PRIORITY, UNRELIABLE_SEQUENCED, 0, systemAddress, false);
+	}
+}
+#elif defined(_REL0471)
+void SendPassengerSyncData()
+{
+	if (npc->m_wVehicleId != 0 && npc->m_byteSeatId != -1)
+	{
+		RakNet::BitStream bsOut;
+		bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_PLAYERUPDATE_PASSENGER);
+		bsOut.Write(iNPC->anticheatID);
+		bsOut.Write((uint8_t)(npc->m_wVehicleId % 256));
+		uint8_t byte = (npc->m_wVehicleId / 256) << 6;
+		uint8_t health = npc->m_byteHealth;
+		byte += health / 4;
+		bsOut.Write(byte);
+
+		if (npc->m_byteArmour)
+		{
+			uint8_t byte2 = (health % 4) * 4 << 4;
+			byte2 += 32;
+			uint8_t armour = npc->m_byteArmour;
+			byte2 += armour / 8;
+			bsOut.Write(byte2);
+			WriteNibble((armour % 8) * 2, &bsOut);
+			WriteNibble(npc->m_byteSeatId * 4, &bsOut);
+		}
+		else
+		{
+			uint8_t byte2 = (health % 4) * 4 << 4;
+			byte2 += npc->m_byteSeatId * 4;
+			bsOut.Write(byte2);
+		}
+		unsigned char* data = bsOut.GetData();
+		uint32_t sourcelen = bsOut.GetNumberOfBytesUsed();
+		uLongf destLen = compressBound(sourcelen - 1);//An upper bound, we do not compress message id 0x30
+		unsigned char* cmpdata = (unsigned char*)malloc(destLen);
+		if (cmpdata)
+		{
+			int c = compress2(cmpdata, (uLongf*)&destLen, data + 1, sourcelen - 1,
+				Z_DEFAULT_COMPRESSION);
+			if (c == Z_OK)
+			{
+				RakNet::BitStream bsNew;
+				bsNew.Write(data[0]);//Write Message ID 0x33
+				WriteBit0(&bsNew);//Write a zero bit
+				//Now write thelength of original data
+				bsNew.Write(sourcelen - 1);
+				WriteBit0(&bsNew);//Write a zero bit
+				//Write length of upcoming compressed data
+				bsNew.Write((uint32_t)destLen);
+				for (int i = 0; i < destLen; i++)
+					bsNew.Write(cmpdata[i]);
+				peer->Send(&bsNew, HIGH_PRIORITY, UNRELIABLE_SEQUENCED, 0, systemAddress, false);
+			}
+			else {
+				printf("Error. An error occured during compressing data\n");
+				exit(0);
+			}
+			free(cmpdata);
+		}
+		else
+		{
+			printf("Error: Memory allocation failed\n"); 
+			exit(0);
+		}
+	}
+}
+#else
 void SendPassengerSyncData()
 {
 	if (npc->m_wVehicleId != 0 && npc->m_byteSeatId != -1)
@@ -491,21 +977,6 @@ void SendPassengerSyncData()
 			byte2 += npc->m_byteSeatId * 4;
 			bsOut.Write(byte2);
 		}
-		peer->Send(&bsOut, HIGH_PRIORITY, UNRELIABLE_SEQUENCED, 0, systemAddress, false);
-	}
-}
-#else
-void SendPassengerSyncData()
-{
-	if (npc->m_wVehicleId != 0 && npc->m_byteSeatId != -1)
-	{
-		RakNet::BitStream bsOut;
-		bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_PLAYERUPDATE_PASSENGER);
-		bsOut.Write(iNPC->anticheatID);
-		bsOut.Write(npc->m_byteSeatId);
-		bsOut.Write(npc->m_byteArmour);
-		bsOut.Write(npc->m_byteHealth);
-		bsOut.Write(npc->m_wVehicleId);
 		peer->Send(&bsOut, HIGH_PRIORITY, UNRELIABLE_SEQUENCED, 0, systemAddress, false);
 	}
 }

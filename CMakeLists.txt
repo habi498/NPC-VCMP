@@ -9,6 +9,9 @@ project ("npc-vcmp")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY $<1:${PROJECT_SOURCE_DIR}/bin>)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY $<1:${PROJECT_SOURCE_DIR}/bin>)
 
+if(REL047)
+add_definitions(-D_REL047)
+endif()
 
 # Include sub-projects.
 if(WIN32)

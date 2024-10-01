@@ -139,6 +139,58 @@
       "ctestCommandArgs": "",
       "inheritEnvironments": [ "linux_x64" ],
       "wslPath": "${defaultWSLPath}"
+    },
+    {
+      "name": "WINDOWS_REL0470",
+      "generator": "Ninja",
+      "configurationType": "Release",
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "-DREL0470:INTEGER=1 -DSLIKENET:INTEGER=1 -DREL047:INTEGER=1",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "inheritEnvironments": [ "msvc_x86" ]
+    },
+    {
+      "name": "WINDOWS_REL0471",
+      "generator": "Ninja",
+      "configurationType": "Release",
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "-DREL0471:INTEGER=1 -DSLIKENET:INTEGER=1 -DREL047:INTEGER=1",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "inheritEnvironments": [ "msvc_x86" ]
+    },
+    {
+      "name": "wsl_64-REL0471",
+      "generator": "Unix Makefiles",
+      "configurationType": "Release",
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeExecutable": "cmake",
+      "cmakeCommandArgs": "-DREL0471:INTEGER=1 -DSLIKENET:INTEGER=1 -DREL047:INTEGER=1",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "inheritEnvironments": [ "linux_x64" ],
+      "variables": [
+        {
+          "name": "CMAKE_C_COMPILER",
+          "value": "/usr/bin/cc",
+          "type": "FILEPATH"
+        },
+        {
+          "name": "CMAKE_CXX_COMPILER",
+          "value": "/usr/bin/c++",
+          "type": "FILEPATH"
+        },
+        {
+          "name": "CMAKE_MAKE_PROGRAM",
+          "value": "/usr/bin/make",
+          "type": "FILEPATH"
+        }
+      ],
+      "wslPath": "${defaultWSLPath}"
     }
   ]
 }

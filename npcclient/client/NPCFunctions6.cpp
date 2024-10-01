@@ -156,6 +156,125 @@ SQInteger fn_SendPrivMsg(HSQUIRRELVM v)
 	else sq_pushbool(v, SQFalse);
 	return 1;
 }
+
+//For InPolyTest
+
+struct point
+{
+	float x; float y;
+};
+
+bool InPolyTest(float px, float py, const std::vector<point>& polygon) {
+	int n = polygon.size();
+	//printf("n is %d\n", n);
+	if (n < 3) return false; // A polygon must have at least 3 points
+	
+	//https://sidvind.com/wiki/Point-in-polygon:_Jordan_Curve_Theorem
+	
+	int crossings = 0;
+
+	for (int i = 0; i < n; ++i) {
+		// Get the points for the current line segment
+		float x1, x2;
+		if (polygon[i].x < polygon[(i + 1) % n].x) {
+			x1 = polygon[i].x;
+			x2 = polygon[(i + 1) % n].x;
+		}
+		else {
+			x1 = polygon[(i + 1) % n].x;
+			x2 = polygon[i].x;
+		}
+
+		// Check if the ray is possible to cross the line segment
+		if (px > x1 && px <= x2 && (py < polygon[i].y || py <= polygon[(i + 1) % n].y)) {
+			static const float eps = 0.000001f;
+
+			// Calculate the equation of the line
+			float dx = polygon[(i + 1) % n].x - polygon[i].x;
+			float dy = polygon[(i + 1) % n].y - polygon[i].y;
+			float k;
+
+			if (std::fabs(dx) < eps) {
+				k = INFINITY; // Vertical line
+			}
+			else {
+				k = dy / dx;
+			}
+
+			float m = polygon[i].y - k * polygon[i].x;
+
+			// Find if the ray crosses the line segment
+			float y2 = k * px + m;
+			if (py <= y2) {
+				crossings++;
+			}
+		}
+	}
+	//printf("crossings is %d\n", crossings);
+	// If crossings are odd, the point is inside the polygon
+	return (crossings % 2 == 1);
+}
+SQInteger fn_InPolyTest(HSQUIRRELVM v)
+{
+	HSQOBJECT* _px, *_py;
+	_px = (HSQOBJECT*)malloc(sizeof(HSQOBJECT));
+	_py = (HSQOBJECT*)malloc(sizeof(HSQOBJECT));
+	if (!_px || !_py)
+		return sq_throwerror(v, "Error allocating memory");
+	sq_resetobject(_px);
+	sq_resetobject(_py);
+	sq_getstackobj(v, 2, _px);
+	sq_getstackobj(v, 3, _py);
+	float px, py;
+	px=sq_objtofloat(_px);
+	py=sq_objtofloat(_py);
+	free(_px); free(_py);
+	int n = sq_gettop(v);
+	if (n % 2 == 0)
+		return sq_throwerror(v, "Error: y missing for one x point");
+	int z = 4;// idx from 4 onwards
+	
+	//printf("Enumeriating vertices..\n");
+	std::vector<point> vertices;
+	point p;
+	HSQOBJECT* __x, *__y;
+	__x = (HSQOBJECT*)malloc(sizeof(HSQOBJECT));
+	__y = (HSQOBJECT*)malloc(sizeof(HSQOBJECT));
+	if (!__x || !__y)return sq_throwerror(v, "Error when allocating memory");
+	sq_resetobject(__x);
+	sq_resetobject(__y);
+	//printf("Starting while loop..\n");
+	while (z < n) //z+1 will be <= n because of throwerror above
+	{
+		sq_resetobject(__x);
+		sq_resetobject(__y);
+		//printf("While Loop. z is %d and n is %d\n", z, n);
+		SQRESULT r1= sq_getstackobj(v, z, __x);
+		SQRESULT r2 = sq_getstackobj(v, z + 1, __y);
+		if (SQ_FAILED(r1) || SQ_FAILED(r2))
+		{
+			return sq_throwerror(v, "Error when getting stack object");
+		}
+		//printf("Got Stack object\n");
+		p.x = sq_objtofloat(__x);
+		p.y = sq_objtofloat(__y);
+		//printf("p.x is %f and p.y is %f\n", p.x, p.y);
+		vertices.push_back(p);
+		//printf("Pushed into vector vertices\n");
+		z += 2;
+		//printf("z incremented by 2\n");
+	}
+	//printf("going to call InPolyTest\n");
+	//We got px, py and vector<point> vertices. 
+	bool b=InPolyTest(px, py, vertices);
+	//printf("InPolyTest returned\n");
+	free(__x); free(__y);
+	if (b)
+		sq_pushbool(v, SQTrue);
+	else
+		sq_pushbool(v, SQFalse);
+	return 1;
+}
 void RegisterNPCFunctions6()
 {
 	register_global_func(v, ::fn_Suicide, "Suicide", 1, "t");
@@ -171,5 +290,5 @@ void RegisterNPCFunctions6()
 	register_global_func(v, ::fn_GetMyTeam, "GetMyTeam", 1, "t");
 	register_global_func(v, ::fn_GetMyArmour, "GetMyArmour", 1, "t");
 	register_global_func(v, ::fn_SendPrivMsg, "SendPrivMsg", 3, "tis");
-
+	register_global_func(v, ::fn_InPolyTest, "InPoly", -9, "tf|if|if|if|if|if|if|if|i");
 }

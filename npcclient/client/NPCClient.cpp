@@ -45,6 +45,7 @@ extern bool bConsoleInputEnabled;
 extern void CheckForConsoleInput();
 extern DWORD ProcessPlaybacks();
 extern Playback mPlayback;
+void ReceivePassengerSyncData(RakNet::BitStream* bsIn, INCAR_SYNC_DATA* m_pIcSyncDataOut, uint8_t* byteSeatIdOut, uint8_t* bytePlayerIdOut);
 unsigned short calculate(unsigned char h, unsigned char t, unsigned char r)
 {
 	return h * 32 + t * 2 + (r >> 3);
@@ -120,9 +121,6 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 	{
 		for (packet = peer->Receive(); packet; peer->DeallocatePacket(packet), packet = peer->Receive())
 		{
-			#ifdef DEBUG
-				printf("%d ", packet->data[0]);
-			#endif		
 			switch (packet->data[0])
 			{
 			case ID_CONNECTION_REQUEST_ACCEPTED:
@@ -132,7 +130,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				systemAddress = packet->systemAddress;
 			}
 			break;
-			case ID_SERVER_MESSAGE_CLIENT_CONNECT:
+			case ID_GAME_MESSAGE_PLAYER_CONNECTED:
 			{
 				RakNet::BitStream bsIn(packet->data, packet->length, false);
 				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
@@ -175,44 +173,16 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				RakNet::BitStream bsIn(packet->data, packet->length, false);
 				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
 				uint8_t bytePlayerId;
-				bsIn.Read(bytePlayerId);
-				uint16_t wVehicleId;
-				uint8_t byte;
-				bsIn.Read(byte);
-				wVehicleId = byte;
-				uint8_t byte1;
-				bsIn.Read(byte1);
-				wVehicleId += 256 * (byte1 >> 6);
-
-				uint8_t bytePlayerHealth;
-				bytePlayerHealth = (byte1 & 63) * 4;
-
-				uint8_t byte2;
-				bsIn.Read(byte2);
-				bytePlayerHealth += byte2 >> 6;
-
-				uint8_t bytePlayerArmour;
+				INCAR_SYNC_DATA m_IcSyncData;
 				uint8_t byteSeatId;
-				if (byte2 & 32)//then armour is present
-				{
-					bytePlayerArmour = (byte2 & 31) * 8;
-					uint8_t byte3;
-					bsIn.Read(byte3);
-					bytePlayerArmour += byte3 >> 5;
-					byteSeatId = (byte3>>2)& 3;
-				}
-				else
-				{
-					bytePlayerArmour = 0;
-					byteSeatId = (byte2 >> 2) & 3;
-				}
+				ReceivePassengerSyncData(&bsIn,  &m_IcSyncData, &byteSeatId, &bytePlayerId);
 				CPlayer* player = m_pPlayerPool->GetAt(bytePlayerId);
 				if (player)
 				{
-					player->m_wVehicleId = wVehicleId;
+					player->m_wVehicleId = m_IcSyncData.VehicleID;
 					player->m_byteSeatId = byteSeatId;
-					player->m_byteHealth = bytePlayerHealth;
-					player->m_byteArmour = bytePlayerArmour;
+					player->m_byteHealth = m_IcSyncData.bytePlayerHealth;
+					player->m_byteArmour = m_IcSyncData.bytePlayerArmour;
 					player->SetState(PLAYER_STATE_PASSENGER);
 					m_pEvents->OnPlayerUpdate(bytePlayerId, vcmpPlayerUpdatePassenger);
 				}
@@ -332,14 +302,18 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				RakNet::BitStream bsOut, bsOut2;
 				#ifdef _REL004
 				bsOut.Write((RakNet::MessageID)0xb8);
-				#else 
+				#elif defined(_REL047)
+				bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_JOINED);
+				#else
 				bsOut.Write((RakNet::MessageID)0xb9);
 				#endif			
 				uint8_t byteZero = 0;
 				bsOut.Write(byteZero);
 				bsOut.Write(byteZero);
 				bsOut.Write(byteZero);
-				
+				#ifdef _REL047
+				bsOut.Write((uint16_t)0);
+				#endif
 				peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 0, packet->systemAddress, false);
 				
 				m_pFunctions->RequestClass(0,false);
@@ -1821,6 +1795,133 @@ void ReceivePlayerSyncData(RakNet::BitStream* bsIn, INCAR_SYNC_DATA* m_pIcSyncDa
 	bsIn->Read(m_pIcSyncDataOut->vecMoveSpeed.Y);
 	bsIn->Read(m_pIcSyncDataOut->vecMoveSpeed.X);
 }
+#elif defined(_REL0471)
+void ReceivePlayerSyncData(RakNet::BitStream* bsIn, INCAR_SYNC_DATA* m_pIcSyncDataOut, uint8_t* bytePlayerIdOut)
+{
+	bsIn->IgnoreBytes(1);
+	bsIn->ReadBit();//read one bit which is zero.
+	uint32_t sourcelen;//The original no:of bytes after messageid=0x30.
+	bsIn->Read(sourcelen);
+	bsIn->ReadBit();//read one bit which is zero
+	uint32_t lenCompressedData;//The length of the compressed data
+	bsIn->Read(lenCompressedData);
+	unsigned char* compressedData = (unsigned char*)malloc(lenCompressedData);
+	if (!compressedData)
+	{
+		printf("Could not allocate memory\n"); exit(0);
+	}
+	for (int i = 0; i < lenCompressedData; i++)
+	{
+		if (!bsIn->Read(compressedData[i]))
+		{
+			printf("Could not read bitstream\n"); exit(0);
+		}
+	}
+	unsigned char* data = (unsigned char*)malloc(sourcelen);//here sourcelen,but precaution.
+	if (!data) {
+		printf("Error allocating memory. Exiting\n"); exit(0);
+	}
+	uLongf datalen = (uLongf)sourcelen;
+	int ret = uncompress(data, &datalen, compressedData, lenCompressedData);
+	if (ret == Z_OK)
+	{
+		if (datalen == sourcelen)
+		{
+			//Decompression was 100% successful.
+			// 
+			//Create a bitstream so that rest of code works.
+			RakNet::BitStream bsIn2(sourcelen);
+			for (int i = 0; i < sourcelen; i++)
+				bsIn2.Write(data[i]);
+			//Now free previous allocated memories
+			free(data); free(compressedData);
+			bsIn2.ResetReadPointer();
+			bsIn2.ReadAlignedBytes(bytePlayerIdOut, 1);
+			uint8_t action;
+			bsIn2.ReadAlignedBytes(&action, 1);
+			uint16_t wKeys;
+			bsIn2.Read(wKeys);
+			wKeys = _byteswap_ushort(wKeys);
+			uint8_t byteVehId;
+			bsIn2.Read(byteVehId);
+			uint8_t byteNibbleVehId;
+			ReadNibble(&byteNibbleVehId, &bsIn2);
+			DecodeIDandKeys(byteNibbleVehId, byteVehId, wKeys, m_pIcSyncDataOut);
+			bsIn2.Read(m_pIcSyncDataOut->bytePlayerHealth);
+			if (action & 0x80)
+			{
+				bsIn2.Read(m_pIcSyncDataOut->byteCurrentWeapon);
+				if (m_pIcSyncDataOut->byteCurrentWeapon > 11)
+					bsIn2.IgnoreBytes(2);//ammo;
+			}
+			else
+				m_pIcSyncDataOut->byteCurrentWeapon = 0;
+			if (action & 0x40)
+			{
+				bsIn2.Read(m_pIcSyncDataOut->bytePlayerArmour);
+			}
+			else
+				m_pIcSyncDataOut->bytePlayerArmour = 0;
+			uint8_t byteTurret;
+			ReadNibble(&byteTurret, &bsIn2);
+			uint8_t byteType;
+			ReadNibble(&byteType, &bsIn2);
+			bsIn2.Read(m_pIcSyncDataOut->vecPos.X);
+			bsIn2.Read(m_pIcSyncDataOut->vecPos.Y);
+			bsIn2.Read(m_pIcSyncDataOut->vecPos.Z);
+			if (byteType & 0x1)
+			{
+				uint16_t speedx, speedy, speedz;
+				bsIn2.Read(speedx); bsIn2.Read(speedy); bsIn2.Read(speedz);
+				m_pIcSyncDataOut->vecMoveSpeed = ConvertFromUINT16_T(speedx, speedy, speedz, 20.0);
+			}
+			else
+				ZeroVEC(m_pIcSyncDataOut->vecMoveSpeed);
+			uint8_t byteRotFlag = 0;
+			ReadNibble(&byteRotFlag,&bsIn2);
+			uint16_t w_RotX, w_RotY, w_RotZ;
+			bsIn2.Read(w_RotX); bsIn2.Read(w_RotY); bsIn2.Read(w_RotZ);
+			m_pIcSyncDataOut->quatRotation.X = ConvertFromUINT16_T(w_RotX, -1);
+			m_pIcSyncDataOut->quatRotation.Y = ConvertFromUINT16_T(w_RotY, -1);
+			m_pIcSyncDataOut->quatRotation.Z = ConvertFromUINT16_T(w_RotZ, -1);
+			m_pIcSyncDataOut->quatRotation.W = \
+				(float)sqrt(1 - (pow(m_pIcSyncDataOut->quatRotation.X, 2) + \
+					pow(m_pIcSyncDataOut->quatRotation.Y, 2) + \
+					pow(m_pIcSyncDataOut->quatRotation.Z, 2)));
+			ApplyRotationFlags(&m_pIcSyncDataOut->quatRotation, byteRotFlag);
+			if (byteType & 0x2)
+				bsIn2.Read(m_pIcSyncDataOut->dDamage);
+			else
+				m_pIcSyncDataOut->dDamage = 0;
+			if (byteType & 0x4)
+				bsIn2.Read(m_pIcSyncDataOut->fCarHealth);
+			else
+				m_pIcSyncDataOut->fCarHealth = CAR_HEALTH_MAX;
+			if (byteTurret)
+			{
+				uint16_t wHorizontal; uint16_t wVertical;
+				bsIn2.Read(wHorizontal); bsIn2.Read(wVertical);
+				m_pIcSyncDataOut->Turretx = ConvertFromUINT16_T(wHorizontal, 2 * (float)PI);
+				m_pIcSyncDataOut->Turrety = ConvertFromUINT16_T(wVertical, 2 * (float)PI);
+			}
+			else
+			{
+				m_pIcSyncDataOut->Turretx = 0;
+				m_pIcSyncDataOut->Turrety = 0;
+			}
+		}
+		else {
+			printf("Error. Decompress was not completely successful.\n");
+			exit(0);
+		}
+	}
+	else {
+		printf("An error occured during decompressing data.\n");
+		exit(0);
+	}
+	
+}
+
 #else
 void ReceivePlayerSyncData(RakNet::BitStream* bsIn, INCAR_SYNC_DATA* m_pIcSyncDataOut, uint8_t* bytePlayerIdOut)
 {
@@ -1991,6 +2092,265 @@ void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncD
 		m_pOfSyncDataOut->vecAimDir = VECTOR(aimdirx, aimdiry, aimdirz);
 	}
 }
+#elif defined(_REL0470)
+void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncDataOut, uint8_t* bytePlayerIdOut)
+{
+	uint8_t byteMessageID; bool bIsAiming;
+	bsIn->Read(byteMessageID);
+	if (byteMessageID == ID_GAME_MESSAGE_ONFOOT_UPDATE)
+		bIsAiming = false;
+	else if (byteMessageID == ID_GAME_MESSAGE_ONFOOT_UPDATE_AIM)
+		bIsAiming = true;
+	else exit(1);
+
+	bsIn->ReadAlignedBytes(bytePlayerIdOut, 1);
+	uint8_t action;
+	bsIn->ReadAlignedBytes(&action, 1);
+	uint8_t nibble = 0;
+	if (action & OF_FLAG_EXTRA_NIBBLE)
+	{
+		//This means a nibble is there to read
+		ReadNibble(&nibble, bsIn);//This is used to find player is crouching and/or reloading 
+	}
+	//bsIn->IgnoreBytes(36);//don't know what is it
+	float matrix[9];
+	for (uint8_t i = 0; i < 9; i++)
+	{
+		bsIn->Read(matrix[i]);
+	}
+	VECTOR vecMatrixRight;
+	VECTOR vecMatrixUp;
+	VECTOR vecMatrixPosition;
+	vecMatrixRight.Z = matrix[0];
+	vecMatrixRight.Y = matrix[1];
+	vecMatrixRight.X = matrix[2];
+	vecMatrixUp.X = matrix[3];
+	vecMatrixUp.Y = matrix[5];
+	vecMatrixUp.Z = matrix[4];
+	vecMatrixPosition.Y = matrix[6];//this is 1 always
+	vecMatrixPosition.X = matrix[7];//does not matter
+	vecMatrixPosition.Z = matrix[8];//does not matter
+	float x= 0.0, y= 0.0, z= 0.0, fAngle=0.0;
+	bsIn->Read(z); bsIn->Read(y); bsIn->Read(x); bsIn->Read(fAngle);
+	bsIn->IgnoreBytes(4);
+	float speedx= 0.0, speedy= 0.0, speedz= 0.0;
+	bsIn->Read(speedz); bsIn->Read(speedy); bsIn->Read(speedx);
+	bsIn->IgnoreBytes(12);//??
+	uint8_t byteWeapon = 0; uint16_t ammo = 0;
+	if (action & OF_FLAG_WEAPON)
+	{
+		bsIn->Read(byteWeapon);
+		if (byteWeapon > 11)
+			bsIn->Read(ammo);//ammo
+	}
+	uint32_t dw_Keys = 0; uint8_t byteAction = 1;
+	if (action & OF_FLAG_KEYS_OR_ACTION)
+	{
+		uint8_t keybyte1, keybyte2;
+		bsIn->Read(keybyte1); bsIn->Read(keybyte2);
+		uint8_t byte, nib; uint16_t value;
+		bsIn->Read(byte);
+		ReadNibble(&nib, bsIn);
+		value = (byte << 4) | nib;
+		byteAction = (value & ~0x80);
+		dw_Keys |= keybyte1;
+		dw_Keys |= (keybyte2 << 8);
+		if (value & 0x80)
+			dw_Keys |= 65536;
+	}
+	uint8_t byteHealth;
+	bsIn->Read(byteHealth);
+	uint8_t byteArmour = 0;
+	if (action & OF_FLAG_ARMOUR)
+		bsIn->Read(byteArmour);
+	bsIn->IgnoreBytes(1);
+	if (bIsAiming)
+	{
+		//bsIn->IgnoreBytes(12);//???
+		VECTOR vecUnknown;
+		bsIn->Read(vecUnknown.Z);
+		bsIn->Read(vecUnknown.Y);
+		bsIn->Read(vecUnknown.X);
+
+		VECTOR aimDir, aimPos;
+		bsIn->Read(aimDir.Z);
+		bsIn->Read(aimDir.Y);
+		bsIn->Read(aimDir.X);
+		bsIn->Read(aimPos.Z);
+		bsIn->Read(aimPos.Y);
+		bsIn->Read(aimPos.X);
+		m_pOfSyncDataOut->vecAimPos = aimPos;
+		m_pOfSyncDataOut->vecAimDir = aimDir;
+	}
+	m_pOfSyncDataOut->byteArmour = byteArmour;
+	m_pOfSyncDataOut->byteCurrentWeapon = byteWeapon;
+	m_pOfSyncDataOut->wAmmo = ammo;
+	m_pOfSyncDataOut->byteHealth = byteHealth;
+	m_pOfSyncDataOut->dwKeys = dw_Keys;
+	m_pOfSyncDataOut->byteAction = byteAction;
+	m_pOfSyncDataOut->fAngle = fAngle;
+	m_pOfSyncDataOut->IsPlayerUpdateAiming = bIsAiming;
+	m_pOfSyncDataOut->IsCrouching = (nibble & OF_FLAG_NIBBLE_CROUCHING) == OF_FLAG_NIBBLE_CROUCHING;
+	m_pOfSyncDataOut->vecPos.X = x;
+	m_pOfSyncDataOut->vecPos.Y = y;
+	m_pOfSyncDataOut->vecPos.Z = z;
+	m_pOfSyncDataOut->vecSpeed = VECTOR(speedx,speedy,speedz);
+	m_pOfSyncDataOut->bIsReloading = (nibble & OF_FLAG_NIBBLE_RELOADING) == OF_FLAG_NIBBLE_RELOADING;
+	m_pOfSyncDataOut->vecMatrixRight = vecMatrixRight;
+	m_pOfSyncDataOut->vecMatrixUp = vecMatrixUp;
+	m_pOfSyncDataOut->vecMatrixPosition = vecMatrixPosition;
+}
+#elif defined(_REL0471)
+void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncDataOut, uint8_t* bytePlayerIdOut)
+{
+	uint8_t byteMessageID; bool bIsAiming;
+	bsIn->Read(byteMessageID);
+	if (byteMessageID == ID_GAME_MESSAGE_ONFOOT_UPDATE)
+		bIsAiming = false;
+	else if (byteMessageID == ID_GAME_MESSAGE_ONFOOT_UPDATE_AIM)
+		bIsAiming = true;
+	else exit(1);
+	bsIn->ReadBit();//read one bit which is zero.
+	uint32_t sourcelen;//The original no:of bytes after messageid=0x30.
+	bsIn->Read(sourcelen);
+	bsIn->ReadBit();//read one bit which is zero
+	uint32_t lenCompressedData;//The length of the compressed data
+	bsIn->Read(lenCompressedData);
+	unsigned char* compressedData=(unsigned char*)malloc(lenCompressedData);
+	if (!compressedData)
+	{
+		printf("Could not allocate memory\n"); exit(0);
+	}
+	for (int i = 0; i < lenCompressedData; i++)
+	{
+		if (!bsIn->Read(compressedData[i]))
+		{
+			printf("Could not read bitstream\n"); exit(0);
+		}
+	}
+	unsigned char* data = (unsigned char*)malloc(sourcelen);//here sourcelen,but precaution.
+	if (!data) {
+		printf("Error allocating memory. Exiting\n"); exit(0);
+	}
+	uLongf datalen = (uLongf)sourcelen;
+	int ret=uncompress(data, &datalen, compressedData, lenCompressedData);
+	if (ret == Z_OK)
+	{
+		if (datalen == sourcelen)
+		{
+			//Decompression was 100% successful.
+			// 
+			//Create a bitstream so that rest of code works.
+			RakNet::BitStream bsIn2(sourcelen);
+			for (int i = 0; i < sourcelen; i++)
+				bsIn2.Write(data[i]);
+			//Now free previous allocated memories
+			free(data); free(compressedData);
+			bsIn2.ResetReadPointer();
+			bsIn2.ReadAlignedBytes(bytePlayerIdOut, 1);
+			uint8_t action;
+			bsIn2.ReadAlignedBytes(&action, 1);
+			uint8_t nibble = 0;
+			if (action & OF_FLAG_EXTRA_NIBBLE)
+			{
+				//This means a nibble is there to read
+				ReadNibble(&nibble, &bsIn2);//This is used to find player is crouching and/or reloading 
+			}
+			float x, y, z;
+			bsIn2.Read(x); bsIn2.Read(y); bsIn2.Read(z);
+			uint16_t w_encodedAngle;
+			bsIn2.Read(w_encodedAngle);
+			float fAngle = ConvertFromUINT16_T(w_encodedAngle, 2 * (float)PI);
+			//Read 3f aa aa ab = 1.333333
+			float fUnknown;
+			bsIn2.Read(fUnknown);
+			//printf("pid %d, %f\n", *bytePlayerIdOut, fUnknown);
+			uint16_t speedx = 0, speedy = 0, speedz = 0;
+			VECTOR vecSpeed; vecSpeed.X = 0; vecSpeed.Y = 0; vecSpeed.Z = 0;
+			if (action & OF_FLAG_SPEED)
+			{
+				bsIn2.Read(speedx); bsIn2.Read(speedy);
+				bsIn2.Read(speedz);
+				vecSpeed.X = ConvertFromUINT16_T(speedx, 20.0);
+				vecSpeed.Y = ConvertFromUINT16_T(speedy, 20.0);
+				vecSpeed.Z = ConvertFromUINT16_T(speedz, 20.0);
+			}
+			uint8_t byteWeapon = 0; uint16_t ammo = 0;
+			if (action & OF_FLAG_WEAPON)
+			{
+				bsIn2.Read(byteWeapon);
+				if (byteWeapon > 11)
+					bsIn2.Read(ammo);//ammo
+			}
+			uint32_t dw_Keys = 0; uint8_t byteAction = 1;
+			if (action & OF_FLAG_KEYS_OR_ACTION)
+			{
+				uint8_t keybyte1, keybyte2;
+				bsIn2.Read(keybyte1); bsIn2.Read(keybyte2);
+				uint8_t byte, nib; uint16_t value;
+				bsIn2.Read(byte);
+				ReadNibble(&nib, &bsIn2);
+				value = (byte << 4) | nib;
+				byteAction = (value & ~0x80);
+				dw_Keys |= keybyte1;
+				dw_Keys |= (keybyte2 << 8);
+				if (value & 0x80)
+					dw_Keys |= 65536;
+			}
+			uint8_t byteHealth;
+			bsIn2.Read(byteHealth);
+			uint8_t byteArmour = 0;
+			if (action & OF_FLAG_ARMOUR)
+				bsIn2.Read(byteArmour);
+			bsIn2.IgnoreBytes(1);
+			if (bIsAiming)
+			{
+				uint16_t wAimDirX, wAimDirY, wAimDirZ;
+				bsIn2.Read(wAimDirX);	bsIn2.Read(wAimDirY);
+				bsIn2.Read(wAimDirZ);
+				float fAimDirX, fAimDirY, fAimDirZ;
+				fAimDirX = ConvertFromUINT16_T(wAimDirX, 2 * (float)PI);
+				fAimDirY = ConvertFromUINT16_T(wAimDirY, 2 * (float)PI);
+				fAimDirZ = ConvertFromUINT16_T(wAimDirZ, 2 * (float)PI);
+				m_pOfSyncDataOut->vecAimDir.X = fAimDirX;
+				m_pOfSyncDataOut->vecAimDir.Y = fAimDirY;
+				m_pOfSyncDataOut->vecAimDir.Z = fAimDirZ;
+				float fAimPosX, fAimPosY, fAimPosZ;
+				bsIn2.Read(fAimPosX); bsIn2.Read(fAimPosY);
+				bsIn2.Read(fAimPosZ);
+				m_pOfSyncDataOut->vecAimPos.X = fAimPosX;
+				m_pOfSyncDataOut->vecAimPos.Y = fAimPosY;
+				m_pOfSyncDataOut->vecAimPos.Z = fAimPosZ;
+			}
+			//ONFOOT_SYNC_DATA m_pOfSyncDataPlayer;
+			m_pOfSyncDataOut->byteArmour = byteArmour;
+			m_pOfSyncDataOut->byteCurrentWeapon = byteWeapon;
+			m_pOfSyncDataOut->wAmmo = ammo;
+			m_pOfSyncDataOut->byteHealth = byteHealth;
+			m_pOfSyncDataOut->dwKeys = dw_Keys;
+			m_pOfSyncDataOut->byteAction = byteAction;
+			m_pOfSyncDataOut->fAngle = fAngle;
+			m_pOfSyncDataOut->IsPlayerUpdateAiming = bIsAiming;
+			m_pOfSyncDataOut->IsCrouching = (nibble & OF_FLAG_NIBBLE_CROUCHING) == OF_FLAG_NIBBLE_CROUCHING;
+			m_pOfSyncDataOut->vecPos.X = x;
+			m_pOfSyncDataOut->vecPos.Y = y;
+			m_pOfSyncDataOut->vecPos.Z = z;
+			m_pOfSyncDataOut->vecSpeed = vecSpeed;
+			m_pOfSyncDataOut->bIsReloading = (nibble & OF_FLAG_NIBBLE_RELOADING) == OF_FLAG_NIBBLE_RELOADING;
+			
+		}
+		else {
+			printf("Error. Decompress was not completely successful.\n"); 
+			exit(0);
+		}
+	}
+	else {
+		printf("An error occured during decompressing data.\n");
+		exit(0);
+	}
+	
+	
+}
 #else
 void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncDataOut, uint8_t* bytePlayerIdOut)
 {
@@ -2093,8 +2453,148 @@ Game Keys: %u, Health: %u, Armour: %u, AimDir: (%f,%f,%f), AimPos: (%f, %f %f)\
 \n", *bytePlayerIdOut, x, y, z, fAngle, vecSpeed.X, vecSpeed.Y,\
 vecSpeed.Z, byteWeapon, dw_Keys, byteHealth, byteArmour,\
 m_pOfSyncDataOut->vecAimDir.X,m_pOfSyncDataOut->vecAimDir.Y,
+
 m_pOfSyncDataOut->vecAimDir.Z,m_pOfSyncDataOut->vecAimPos.X, \
 m_pOfSyncDataOut->vecAimPos.Y, m_pOfSyncDataOut->vecAimPos.Z);*/
+}
+#endif
+#ifdef _REL0471
+void ReceivePassengerSyncData(RakNet::BitStream* bsIn, INCAR_SYNC_DATA* m_pIcSyncDataOut, uint8_t* byteSeatIdOut, uint8_t* bytePlayerIdOut)
+{
+	bsIn->ReadBit();//read one bit which is zero.
+	uint32_t sourcelen;//The original no:of bytes after messageid=0x30.
+	bsIn->Read(sourcelen);
+	bsIn->ReadBit();//read one bit which is zero
+	uint32_t lenCompressedData;//The length of the compressed data
+	bsIn->Read(lenCompressedData);
+	unsigned char* compressedData = (unsigned char*)malloc(lenCompressedData);
+	if (!compressedData)
+	{
+		printf("Could not allocate memory\n"); exit(0);
+	}
+	for (int i = 0; i < lenCompressedData; i++)
+	{
+		if (!bsIn->Read(compressedData[i]))
+		{
+			printf("Could not read bitstream\n"); exit(0);
+		}
+	}
+	unsigned char* data = (unsigned char*)malloc(sourcelen);//here sourcelen,but precaution.
+	if (!data) {
+		printf("Error allocating memory. Exiting\n"); exit(0);
+	}
+	uLongf datalen = (uLongf)sourcelen;
+	int ret = uncompress(data, &datalen, compressedData, lenCompressedData);
+	if (ret == Z_OK)
+	{
+		if (datalen == sourcelen)
+		{
+			//Decompression was 100% successful.
+			// 
+			//Create a bitstream so that rest of code works.
+			RakNet::BitStream bsIn2(sourcelen);
+			for (int i = 0; i < sourcelen; i++)
+				bsIn2.Write(data[i]);
+			//Now free previous allocated memories
+			free(data); free(compressedData);
+			bsIn2.ResetReadPointer();
+			bsIn2.ReadAlignedBytes(bytePlayerIdOut, 1);
+			uint16_t wVehicleId;
+			uint8_t byte;
+			bsIn2.Read(byte);
+			wVehicleId = byte;
+			uint8_t byte1;
+			bsIn2.Read(byte1);
+			wVehicleId += 256 * (byte1 >> 6);
+
+			uint8_t bytePlayerHealth;
+			bytePlayerHealth = (byte1 & 63) * 4;
+
+			uint8_t byte2;
+			bsIn2.Read(byte2);
+			bytePlayerHealth += byte2 >> 6;
+
+			uint8_t bytePlayerArmour;
+			uint8_t byteSeatId;
+			if (byte2 & 32)//then armour is present
+			{
+				bytePlayerArmour = (byte2 & 31) * 8;
+				uint8_t byte3;
+				bsIn2.Read(byte3);
+				bytePlayerArmour += byte3 >> 5;
+				byteSeatId = (byte3 >> 2) & 3;
+			}
+			else
+			{
+				bytePlayerArmour = 0;
+				byteSeatId = (byte2 >> 2) & 3;
+			}
+			m_pIcSyncDataOut->VehicleID = wVehicleId;
+			m_pIcSyncDataOut->bytePlayerHealth = bytePlayerHealth;
+			m_pIcSyncDataOut->bytePlayerArmour = bytePlayerArmour;
+			*byteSeatIdOut = byteSeatId;
+		}
+		else {
+			printf("Error. Decompress was not completely successful.\n");
+			exit(0);
+		}
+	}
+	else {
+		printf("An error occured during decompressing data.\n");
+		exit(0);
+	}
+}
+#elif defined(_REL004)
+void ReceivePassengerSyncData(RakNet::BitStream* bsIn, INCAR_SYNC_DATA* m_pIcSyncDataOut, uint8_t* byteSeatIdOut, uint8_t* bytePlayerIdOut)
+{
+	bsIn->ReadAlignedBytes(bytePlayerIdOut, 1);
+	bsIn->ReadAlignedBytes(byteSeatIdOut, 1);
+	uint8_t byteArmour, byteHealth; uint16_t wVehicleId;
+	bsIn->Read(byteArmour);
+	bsIn->Read(byteHealth);
+	bsIn->Read(wVehicleId);
+	m_pIcSyncDataOut->VehicleID = wVehicleId;
+	m_pIcSyncDataOut->bytePlayerHealth = byteHealth;
+	m_pIcSyncDataOut->bytePlayerArmour = byteArmour;
+}
+#else 
+void ReceivePassengerSyncData(RakNet::BitStream* bsIn, INCAR_SYNC_DATA* m_pIcSyncDataOut, uint8_t* byteSeatIdOut, uint8_t* bytePlayerIdOut)
+{
+	bsIn->ReadAlignedBytes(bytePlayerIdOut, 1);
+	uint16_t wVehicleId;
+	uint8_t byte;
+	bsIn->Read(byte);
+	wVehicleId = byte;
+	uint8_t byte1;
+	bsIn->Read(byte1);
+	wVehicleId += 256 * (byte1 >> 6);
+
+	uint8_t bytePlayerHealth;
+	bytePlayerHealth = (byte1 & 63) * 4;
+
+	uint8_t byte2;
+	bsIn->Read(byte2);
+	bytePlayerHealth += byte2 >> 6;
+
+	uint8_t bytePlayerArmour;
+	uint8_t byteSeatId;
+	if (byte2 & 32)//then armour is present
+	{
+		bytePlayerArmour = (byte2 & 31) * 8;
+		uint8_t byte3;
+		bsIn->Read(byte3);
+		bytePlayerArmour += byte3 >> 5;
+		byteSeatId = (byte3 >> 2) & 3;
+	}
+	else
+	{
+		bytePlayerArmour = 0;
+		byteSeatId = (byte2 >> 2) & 3;
+	}
+	m_pIcSyncDataOut->VehicleID = wVehicleId;
+	m_pIcSyncDataOut->bytePlayerHealth = bytePlayerHealth;
+	m_pIcSyncDataOut->bytePlayerArmour = bytePlayerArmour;
+	*byteSeatIdOut = byteSeatId;
 }
 #endif
 uint8_t GetSlotIdFromWeaponId(uint8_t byteWeapon)

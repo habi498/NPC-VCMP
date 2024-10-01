@@ -1241,7 +1241,7 @@ extern "C" unsigned int VcmpPluginInit(PluginFuncs* pluginFuncs, PluginCallbacks
 	VCMP = pluginFuncs;
 
 	// Plugin information
-	pluginInfo->pluginVersion = 17000;
+	pluginInfo->pluginVersion = 18003;//v1.8 beta3
 	pluginInfo->apiMajorVersion = PLUGIN_API_MAJOR;
 	pluginInfo->apiMinorVersion = PLUGIN_API_MINOR;
 	strcpy(pluginInfo->name, "NPC");

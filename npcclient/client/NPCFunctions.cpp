@@ -90,11 +90,16 @@ SQInteger fn_StartRecordingPlayback(HSQUIRRELVM v)
     int identifier;
     size_t m=fread(&identifier, sizeof(int), 1, mPlayback.pFile);
     if (m != 1)return 0;
-    if (identifier != NPC_RECFILE_IDENTIFIER_V4 && identifier!=NPC_RECFILE_IDENTIFIER_V5)
+    if (
+        identifier != NPC_RECFILE_IDENTIFIER_V4 && identifier!=NPC_RECFILE_IDENTIFIER_V5
+        )
     {
         if (identifier == NPC_RECFILE_IDENTIFIER_V1||
         identifier == NPC_RECFILE_IDENTIFIER_V2||
-            identifier== NPC_RECFILE_IDENTIFIER_V3)
+            identifier== NPC_RECFILE_IDENTIFIER_V3
+        //    ||identifier==NPC_RECFILE_IDENTIFIER_V4||
+          //  identifier==NPC_RECFILE_IDENTIFIER_V5
+            )
         {
             printf("This rec file cannot be played by this version of program. Use program recupdate.exe to convert playback recordings automatically.\n");
             return 0;
@@ -114,7 +119,7 @@ SQInteger fn_StartRecordingPlayback(HSQUIRRELVM v)
         return 0;
     }
     mPlayback.type = type;
-    if (identifier == NPC_RECFILE_IDENTIFIER_V5)
+    if(identifier==NPC_RECFILE_IDENTIFIER_V5)
     {
         uint32_t flags;
         //read flags
@@ -311,7 +316,8 @@ SQInteger fn_GetMyPosX(HSQUIRRELVM v)
 {
     if (!npc) {
         sq_pushfloat(v, 0.0); return 1;
-    }SQFloat val = npc->m_vecPos.X;
+    }
+    SQFloat val = npc->m_vecPos.X;
     sq_pushfloat(v, val);
     return 1;
 }

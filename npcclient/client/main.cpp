@@ -28,6 +28,8 @@ bool bStdoutRedirected = false;
 uint32_t configvalue = CONFIG_RESTORE_WEAPON_ON_SKIN_CHANGE | CONFIG_SYNC_ON_PLAYER_STREAMIN;
 #define NPC_DIR "npcscripts"
 #define NPC_PLUGINS_DIR "npcscripts/plugins"
+//NPC_LOGS_DIR Warning: CreateDirectoryA will create only last folder 
+//in path.
 #define NPC_LOGS_DIR "npcscripts/logs"
 #ifdef LINUX
 #include <time.h>
@@ -51,7 +53,7 @@ int main(int argc, char** argv) {
     // because exceptions will be thrown for problems.
     try {
         // Define the command line object.
-        CmdLine cmd("VCMP-Non Player Characters v1.8 (Feb.2024)", ' ', "0.1b",false);
+        CmdLine cmd("VCMP-Non Player Characters v1.8.beta3 (01.Oct.2024)", ' ', "0.1b",false);
 
         // Define a value argument and add it to the command line.
         ValueArg<string> hostnameArg("h", "hostname", "IP address of host", false, "127.0.0.1",
@@ -113,6 +115,12 @@ int main(int argc, char** argv) {
             bool bWriteLog=logfileSwitch.getValue();
             if (bWriteLog)
             {
+                //Create logs folder if not exist
+                if (!CreateFolder(NPC_DIR))
+                {
+                    printf("Error in creating npcscripts directory for logs: %s\n", NPC_DIR);
+                    exit(0);
+                }
                 //Create logs folder if not exist
                 if (!CreateFolder(NPC_LOGS_DIR))
                 {
@@ -198,7 +206,9 @@ static BOOL WINAPI console_ctrl_handler(DWORD dwCtrlType)
 bool CreateFolder(const char* name)
 {
     if (!CreateDirectoryA(name, NULL) &&
-        ERROR_ALREADY_EXISTS != GetLastError())return false;
+        ERROR_ALREADY_EXISTS != GetLastError()) {
+        printf("%d", GetLastError()); return false;
+    }
     return true;
 }
 #else

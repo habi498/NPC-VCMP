@@ -18,11 +18,17 @@
 #define MAIN_H
 #include <string>
 #include <stdio.h>
-
+#ifdef _REL047
+#include "dependencies/slikenet_0.1.3_source/slikenet/Source/RakPeerInterface.h"
+#include "dependencies/slikenet_0.1.3_source/slikenet/Source/MessageIdentifiers.h"
+#include "dependencies/slikenet_0.1.3_source/slikenet/Source/BitStream.h"
+#include "dependencies/slikenet_0.1.3_source/slikenet/Source/RakNetTypes.h"
+#else
 #include "Raknet/RakPeerInterface.h"
 #include "Raknet/MessageIdentifiers.h"
 #include "Raknet/BitStream.h"
 #include "Raknet/RakNetTypes.h"  // MessageID
+#endif
 #ifdef _WIN32
 
 #else
@@ -55,6 +61,9 @@ uint8_t GetSlotIdFromWeaponId(uint8_t byteWeapon);
 #include "ClientFunctions.h"
 #include "EventHandler.h"
 #include "SpawnClass.h"
+#ifdef _REL047
+#include "zlib.h"
+#endif
 uint32_t bytes_swap_u32(uint32_t i);
 #define CONFIG_SYNC_ON_PLAYER_STREAMIN 1
 #define CONFIG_RESTORE_WEAPON_ON_SKIN_CHANGE    2
@@ -89,6 +98,9 @@ uint32_t bytes_swap_u32(uint32_t i);
 #define NPC_RECFILE_IDENTIFIER_V3 1002 //From Nov 2022 onwards
 #define NPC_RECFILE_IDENTIFIER_V4 1004 //From August 2023 onwards
 #define NPC_RECFILE_IDENTIFIER_V5 1005 //From December 2023 onwards
+//#define NPC_RECFILE_IDENTIFIER_V6 1006 //From August 2024 onwards
+//#define NPC_RECFILE_IDENTIFIER_LATEST NPC_RECFILE_IDENTIFIER_V6
+#define NPC_RECFILE_IDENTIFIER_LATEST NPC_RECFILE_IDENTIFIER_V5
 #define CYCLE_SLEEP_OLD 30  //30 ms sleep between cycles. 
 #define CYCLE_SLEEP 5
 int ConnectToServer(std::string hostname, int port, std::string npcname, std::string password);
