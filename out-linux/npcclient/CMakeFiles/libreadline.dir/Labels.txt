@@ -1,0 +1,13 @@
+# Target labels
+ libreadline
+# Source files and their labels
+/mnt/hgfs/C/Users/hhabi/source/repos/habi498/NPC-VCMP/out-linux/npcclient/CMakeFiles/libreadline
+/mnt/hgfs/C/Users/hhabi/source/repos/habi498/NPC-VCMP/out-linux/npcclient/CMakeFiles/libreadline.rule
+/mnt/hgfs/C/Users/hhabi/source/repos/habi498/NPC-VCMP/out-linux/npcclient/CMakeFiles/libreadline-complete.rule
+/mnt/hgfs/C/Users/hhabi/source/repos/habi498/NPC-VCMP/out-linux/npcclient/libreadline-prefix/src/libreadline-stamp/libreadline-build.rule
+/mnt/hgfs/C/Users/hhabi/source/repos/habi498/NPC-VCMP/out-linux/npcclient/libreadline-prefix/src/libreadline-stamp/libreadline-configure.rule
+/mnt/hgfs/C/Users/hhabi/source/repos/habi498/NPC-VCMP/out-linux/npcclient/libreadline-prefix/src/libreadline-stamp/libreadline-download.rule
+/mnt/hgfs/C/Users/hhabi/source/repos/habi498/NPC-VCMP/out-linux/npcclient/libreadline-prefix/src/libreadline-stamp/libreadline-install.rule
+/mnt/hgfs/C/Users/hhabi/source/repos/habi498/NPC-VCMP/out-linux/npcclient/libreadline-prefix/src/libreadline-stamp/libreadline-mkdir.rule
+/mnt/hgfs/C/Users/hhabi/source/repos/habi498/NPC-VCMP/out-linux/npcclient/libreadline-prefix/src/libreadline-stamp/libreadline-patch.rule
+/mnt/hgfs/C/Users/hhabi/source/repos/habi498/NPC-VCMP/out-linux/npcclient/libreadline-prefix/src/libreadline-stamp/libreadline-update.rule

@@ -570,6 +570,8 @@ void RegisterConsts() {
     NPC04_RegisterSquirrelConst(v, "F_CAR_TURRETX", F_CAR_TURRETX);
     NPC04_RegisterSquirrelConst(v, "F_CAR_TURRETY", F_CAR_TURRETY);
     NPC04_RegisterSquirrelConst(v, "I_ACTION", I_ACTION);
+    NPC04_RegisterSquirrelConst(v, "B_CROUCHING", B_CROUCHING);
+    NPC04_RegisterSquirrelConst(v, "B_RELOADING", B_RELOADING);
 
 
     NPC04_RegisterSquirrelConst(v, "PLAYERUPDATE_NORMAL", vcmpPlayerUpdateNormal);

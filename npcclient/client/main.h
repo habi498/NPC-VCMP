@@ -23,11 +23,17 @@
 #include "dependencies/slikenet_0.1.3_source/slikenet/Source/MessageIdentifiers.h"
 #include "dependencies/slikenet_0.1.3_source/slikenet/Source/BitStream.h"
 #include "dependencies/slikenet_0.1.3_source/slikenet/Source/RakNetTypes.h"
+#include "dependencies/slikenet_0.1.3_source/slikenet/Source/FileListTransfer.h"
+#include "dependencies/slikenet_0.1.3_source/slikenet/Source/FileListTransferCBInterface.h"
+#include "dependencies/slikenet_0.1.3_source/slikenet/Source/SuperFastHash.h"
 #else
 #include "Raknet/RakPeerInterface.h"
 #include "Raknet/MessageIdentifiers.h"
 #include "Raknet/BitStream.h"
 #include "Raknet/RakNetTypes.h"  // MessageID
+#include "RakNet/FileListTransfer.h"
+#include "RakNet/FileListTransferCBInterface.h"
+#include "RakNet/SuperFastHash.h"
 #endif
 #ifdef _WIN32
 
@@ -61,12 +67,18 @@ uint8_t GetSlotIdFromWeaponId(uint8_t byteWeapon);
 #include "ClientFunctions.h"
 #include "EventHandler.h"
 #include "SpawnClass.h"
+#include "FileReceiver.h"
 #ifdef _REL047
 #include "zlib.h"
+#include "compress.h"
 #endif
+
 uint32_t bytes_swap_u32(uint32_t i);
+void WriteBit0(RakNet::BitStream* b);
+void WriteBit1(RakNet::BitStream* b);
 #define CONFIG_SYNC_ON_PLAYER_STREAMIN 1
 #define CONFIG_RESTORE_WEAPON_ON_SKIN_CHANGE    2
+
 #include "Exports.h"
 #define ZeroVEC(V){V.X=0;V.Y=0;V.Z=0;}
 #define MulVEC(V,f){V.X*=f;V.Y*=f;V.Z*=f;}

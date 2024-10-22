@@ -59,5 +59,6 @@ public:
     void OnObjectUpdate(uint16_t wObjectId, objectUpdate update);
     void OnVehicleSetSpeedRequest(uint16_t wVehicleId, VECTOR vecSpeed, bool bAdd, bool isRelative);
     void OnVehicleSetTurnSpeedRequest(uint16_t wVehicleId, VECTOR vecSpeed, bool bAdd, bool isRelative);
+    void OnBulletFired(uint8_t byteWeaponId, VECTOR vecSourcePos);
 };
 #endif

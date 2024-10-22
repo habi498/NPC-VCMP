@@ -26,12 +26,18 @@ CFunctions* m_pFunctions;
 CPlugins* m_pPlugins;
 bool bStdoutRedirected = false;
 uint32_t configvalue = CONFIG_RESTORE_WEAPON_ON_SKIN_CHANGE | CONFIG_SYNC_ON_PLAYER_STREAMIN;
+bool bDownloadStore = false;
+std::string store_download_location;
+bool bManualSpawn = false;
 #define NPC_DIR "npcscripts"
 #define NPC_PLUGINS_DIR "npcscripts/plugins"
 //NPC_LOGS_DIR Warning: CreateDirectoryA will create only last folder 
 //in path.
 #define NPC_LOGS_DIR "npcscripts/logs"
+#include <iostream>
+#include <limits.h>   // For PATH_MAX
 #ifdef LINUX
+#include <unistd.h>   // POSIX header for getcwd()
 #include <time.h>
 long GetTickCount()
 {
@@ -47,13 +53,39 @@ long GetTickCount()
 #ifdef WIN32
     bool bShutdownSignal = false;
     static BOOL WINAPI console_ctrl_handler(DWORD dwCtrlType);
+#include <direct.h>
+#include <windows.h>
+#define PATH_MAX MAX_PATH
 #endif
+void convertBackslashToForwardSlash(std::string& path);
 int main(int argc, char** argv) {
+    
+    char buffer[PATH_MAX];
+    if (getcwd(buffer, PATH_MAX)) {
+    }
+    else {
+        printf("Error. could not get current working directory");
+        exit(0);
+    }
+
+    std:string strloc = std::string(buffer);
+    //printf("%s\n", strloc.c_str());
+    //Get appdata location
+#ifdef _WIN32
+    const char* appdata = std::getenv("APPDATA");
+    if (appdata) {
+        strloc = std::string(appdata) + "\\VCMP\\04beta\\store";
+    }
+    else {
+        strloc = "";
+    }
+#endif
+    
     // Wrap everything in a try block.  Do this every time,
     // because exceptions will be thrown for problems.
     try {
         // Define the command line object.
-        CmdLine cmd("VCMP-Non Player Characters v1.8.beta3 (01.Oct.2024)", ' ', "0.1b",false);
+        CmdLine cmd("VCMP-Non Player Characters v1.8.beta4 (16.Oct.2024)", ' ', "0.1b",false);
 
         // Define a value argument and add it to the command line.
         ValueArg<string> hostnameArg("h", "hostname", "IP address of host", false, "127.0.0.1",
@@ -77,6 +109,9 @@ int main(int argc, char** argv) {
         SwitchArg consoleInputSwitch("c", "consoleinput", "Use Console Input", cmd, false);
         ValueArg<string> execArg("e", "compilestring", "The string to be compiled by squirrel and executed on startup", false, "", "string");
         SwitchArg logfileSwitch("f", "logfile", "Logs stdout to file",cmd,false);
+        SwitchArg downloadStoreSwitch("d", "download-store", "Get the store files to appdata/vcmp",cmd,false);
+        ValueArg<string> storeLocationArg("D", "Store-Location", "The location to download store files. Use with -d switch", false, strloc.c_str(), "string");
+        SwitchArg manualSpawn("M", "Manual-Spawn", "Disables automatic-spawn of npc", cmd, false);
         cmd.add(hostnameArg);
         cmd.add(portArg);
         cmd.add(npcnameArg);
@@ -86,7 +121,7 @@ int main(int argc, char** argv) {
         cmd.add(scriptArg);
         cmd.add(pluginArg); 
         cmd.add(execArg);
-        
+        cmd.add(storeLocationArg);
         // Parse the args.
         cmd.parse(argc, argv);
         // Get the value parsed by each arg.
@@ -99,6 +134,23 @@ int main(int argc, char** argv) {
         std::string location = LocationArg.getValue();
         std::vector<string> params=scriptArg.getValue();
         std::string execstring = execArg.getValue();
+        store_download_location = storeLocationArg.getValue();
+        convertBackslashToForwardSlash(store_download_location);
+        if (store_download_location != "")
+            store_download_location += "/";//otherwise it will go to C:\ folder
+        store_download_location +=  hostname + "-" + std::to_string(port)+"/";
+        bDownloadStore = downloadStoreSwitch.getValue();
+        if (storeLocationArg.isSet() && !bDownloadStore)
+        {
+            printf("Activating -d switch since -D was used\n");
+            bDownloadStore = true;
+        }
+        if (bDownloadStore)
+            printf("Store download location: %s\n", store_download_location.c_str());
+        if (manualSpawn.isSet())
+        {
+            bManualSpawn = true;
+        }
         TimersInit();
         std::string scriptpath = "";
         if (npcscript.length() > 0)
@@ -221,3 +273,10 @@ bool CreateFolder(const char* name)
     return false;
 }
 #endif
+void convertBackslashToForwardSlash(std::string& path) {
+    for (char& c : path) {
+        if (c == '\\') {
+            c = '/';
+        }
+    }
+}

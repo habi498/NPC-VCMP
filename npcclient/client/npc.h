@@ -163,6 +163,7 @@ public:
 	bool WaitingForVEOnFootSync = false;
 	DWORD VETickCount = 0;
 	char PotentialClassID = 0;
+	std::string storeURL = "";
 public:
 	NPC()
 	{
@@ -250,6 +251,8 @@ typedef enum tagNPCFIELDS
 	F_CAR_ROTATIONY,
 	F_CAR_ROTATIONZ,
 	F_CAR_ROTATIONW,
-	I_ACTION
+	I_ACTION,
+	B_CROUCHING,
+	B_RELOADING
 }NPCFIELDS;
 #endif

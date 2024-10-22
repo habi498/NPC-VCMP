@@ -15,6 +15,14 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 #include "main.h"
+#include "SHA1.cpp" //for sha1 file hashing store files
+#include <mutex>
+bool bIsDownloadInProgress = false;
+bool bIsDownloadCompleted = false;
+std::mutex flt_mtx; //for filelisttransfer
+bool shared_dwnld_cmpltd_signal = false;
+
+bool debug_mode = true;
 #ifdef WIN32
 extern bool bShutdownSignal;
 #endif
@@ -35,6 +43,7 @@ CObjectPool* m_pObjectPool = NULL;
 extern CFunctions* m_pFunctions;
 CSpawnClassPool* m_pSpawnClassPool = NULL;
 CPlayer* npc = NULL;
+extern bool bDownloadStore;
 #define CAR_HEALTH_MAX 1000
 void ReceivePlayerSyncData(RakNet::BitStream* bsIn, INCAR_SYNC_DATA* m_pIcSyncDataOut, uint8_t* bytePlayerIdOut);
 void ReceivePlayerSyncData(RakNet::BitStream* bsIn, ONFOOT_SYNC_DATA* m_pOfSyncDataOut, uint8_t* bytePlayerIdOut);
@@ -42,10 +51,12 @@ VECTOR ConvertFromUINT16_T(uint16_t w_ComponentX, uint16_t w_ComponentY, uint16_
 float ConvertFromUINT16_T(uint16_t compressedFloat, float base);
 uint8_t GetSlotIdFromWeaponId(uint8_t byteWeapon); 
 extern bool bConsoleInputEnabled;
+extern std::string store_download_location;
 extern void CheckForConsoleInput();
 extern DWORD ProcessPlaybacks();
 extern Playback mPlayback;
 void ReceivePassengerSyncData(RakNet::BitStream* bsIn, INCAR_SYNC_DATA* m_pIcSyncDataOut, uint8_t* byteSeatIdOut, uint8_t* bytePlayerIdOut);
+extern bool bManualSpawn;
 unsigned short calculate(unsigned char h, unsigned char t, unsigned char r)
 {
 	return h * 32 + t * 2 + (r >> 3);
@@ -160,6 +171,7 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					{
 						m_pPlayerPool->New(playerid, playername);
 					}
+					free(playername);
 				}
 				else
 				{
@@ -244,6 +256,17 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				if (player)
 				{
 					player->StoreOnFootFullSyncData(&m_OfSyncData); 
+					//Remove driver from vehicle if player was driving a vehicle
+					if (player->m_wVehicleId)
+					{
+						CVehicle* vehicle = m_pVehiclePool->GetAt(player->m_wVehicleId);
+						if (vehicle)
+						{
+							if (vehicle->GetDriver() == bytePlayerId)
+								vehicle->RemoveDriver();
+						}
+						player->m_wVehicleId = 0;
+					}
 					if (packet->data[0] == ID_GAME_MESSAGE_ONFOOT_UPDATE)
 						m_pEvents->OnPlayerUpdate(bytePlayerId, vcmpPlayerUpdateNormal);
 					else
@@ -278,13 +301,28 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				uint8_t npcid;//same as playerid
 				bsIn.ReadAlignedBytes(&npcid, 1);
 				iNPC->SetID(npcid);
-				printf("ID %d ", npcid);
-				char* name;
-				name = (char*)malloc(sizeof(char) * (npcname.length() + 1));
+				printf("ID %d. ", npcid);
+				float maxx, minx, maxy, miny;
+				bsIn.Read(maxx);
+				bsIn.Read(minx);
+				bsIn.Read(maxy);
+				bsIn.Read(miny);
+				uint8_t hostnamelen;
+				bsIn.Read(hostnamelen);
+				char hostname[256];
+				bsIn.ReadAlignedBytes((unsigned char*)hostname, hostnamelen);
+				hostname[hostnamelen] = '\0';
+				printf("%s. ", hostname);
+				uint8_t namelen; bsIn.Read(namelen);
+				char name[256];
+				bsIn.ReadAlignedBytes((unsigned char*)name,namelen); name[namelen] = '\0';
+				printf("%s\n", name);
+				//char* name;
+				//name = (char*)malloc(sizeof(char) * (npcname.length() + 1));
 				if (name)
 				{
-					strcpy(name, npcname.c_str());
-					name[npcname.length()] = '\0';
+					//strcpy(name, npcname.c_str());
+					//name[npcname.length()] = '\0';
 					bool bSuccess=m_pPlayerPool->New(npcid, name);
 					if (bSuccess)
 						npc = m_pPlayerPool->GetAt(npcid);
@@ -292,32 +330,185 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 					{
 						exit(1);
 					}
-					printf("%s\n", name);
-					free(name);
+					//printf("%s\n", name);
+					//free(name);
 				}
 				else {
 					exit(1);
 				}
+
+				struct FileInfo {
+					std::string filename;              // Holds the filename
+					unsigned char sha1[20]; // Holds the SHA-1 hash (20 bytes)
+#ifdef _REL047
+					uint32_t size_in_bytes;
+#endif
+				};
+				RakNet::BitStream* _bsIn = NULL;
+#ifdef _REL047
+				uint16_t nFiles; uint16_t fnamelen;
+				RakNet::BitStream bsUncomp;
+				UnCompressBitStream(bsIn, bsUncomp);
+				_bsIn = &bsUncomp;
+#else
+				uint8_t nFiles; uint8_t fnamelen;
+				_bsIn = &bsIn;
+#endif
+				_bsIn->Read(nFiles);
+				std::vector<FileInfo> files;
+				// Example of how to add a file's info
+				char fname[256];
+				for (int i = 0; i < nFiles; i++)
+				{
+					FileInfo file; //unsigned char sha1[20];
+					
+					_bsIn->Read((char*)file.sha1, 20);
+					//for (int j = 0; j < 20; j++)printf("%.2x ", file.sha1[j]);
+					//printf("\n");
+#ifdef _REL047
+					_bsIn->Read(file.size_in_bytes);
+					//printf("File size in bytes: %u\n", file.size_in_bytes);
+#endif
+					_bsIn->Read(fnamelen);
+					_bsIn->Read(fname, fnamelen);
+					fname[fnamelen] = '\0';
+					file.filename = fname;
+					//printf("Filename is %s\n", fname);
+					// Add the file info to the vector
+					files.push_back(file);
+#ifdef _REL047
+					_bsIn->ReadBit();	//empty bit
+					
+#endif
+				}
+#ifdef _REL047
+				uint8_t byteHasStoreURL;
+				_bsIn->Read(byteHasStoreURL);
+				if (byteHasStoreURL)
+				{
+					uint16_t wlen;
+					_bsIn->Read(wlen);
+					char* url;
+					url = (char*)malloc(sizeof(char) * wlen+1);
+					if (url)
+					{
+						_bsIn->Read(url, wlen);
+						url[wlen] = '\0';
+						iNPC->storeURL = std::string(url);
+						free(url);
+					}
+					else {
+						printf("Error allocating memory\n");
+						exit(0);
+					}
+					
+				}
+#endif
 				m_pEvents->OnNPCConnect(iNPC->GetID());
 				RakNet::BitStream bsOut, bsOut2;
-				#ifdef _REL004
-				bsOut.Write((RakNet::MessageID)0xb8);
-				#elif defined(_REL047)
-				bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_JOINED);
-				#else
-				bsOut.Write((RakNet::MessageID)0xb9);
-				#endif			
+				bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_STOREFILES_NEEDED);
+				Setup_FileTransfer(peer, systemAddress);
 				uint8_t byteZero = 0;
-				bsOut.Write(byteZero);
-				bsOut.Write(byteZero);
-				bsOut.Write(byteZero);
-				#ifdef _REL047
-				bsOut.Write((uint16_t)0);
-				#endif
+				if (!bDownloadStore)
+				{
+					bsOut.Write(byteZero);
+					bsOut.Write(byteZero);
+					bsOut.Write(byteZero);
+#ifdef _REL047
+					bsOut.Write((uint16_t)0);
+#endif
+				}
+				else
+				{
+
+					//Sort changed store files
+					//Create all intermediatory directories
+					CreateDirectories(store_download_location);
+					//Loop through the vector files
+					//printf("Checking which files needed to ask\n");
+					std::string filePath;
+					std::string hash;
+					bool bHashDifferent;
+					// Use iterator to safely iterate and delete elements
+					for (auto it = files.begin(); it != files.end(); ) {
+						filePath = store_download_location + (*it).filename;
+						hash = SHA1::from_file(filePath);
+						//printf("hash given for %s: ", (*it).filename.c_str());
+						//for (int i = 0; i < 20; i++)printf("%x", (*it).sha1[i]);
+						//printf("\nhash calculated: %s\n", hash.c_str());
+						bHashDifferent = false;
+						for (int i = 0; i < 20; i++)
+						{
+							
+							if (static_cast<uint8_t>(std::strtol(hash.substr(2*i, 2).c_str(),NULL,16)) != (*it).sha1[i])
+							{
+								bHashDifferent = true; 
+								//printf("%u against %u\n", static_cast<uint8_t>(std::strtol(hash.substr(2*i, 2).c_str(), NULL, 16)), (*it).sha1[i]);
+								break;
+							}
+						}
+						if (!bHashDifferent)
+						{
+							if(debug_mode)
+								printf("[FILES]%s already exists with the same name.\n", (*it).filename.c_str());
+							//Remove that file from files vector
+							it=files.erase(it);
+						}
+						else 
+						{
+							//Increase the interator
+							if (debug_mode)
+								printf("[FILES]%s waiting to be sent from server.\n", (*it).filename.c_str());
+							++it;
+						};
+					}
+					if (files.size() > 0)
+					{
+						if (debug_mode)
+							printf("[FILES]Asking server for %d different files.\n", files.size());
+					}
+					else
+					{
+						if (debug_mode)
+							printf("[FILES]All files are up-to-date.\n");
+					}
+					//Download all needed store-files
+					
+#ifdef _REL047
+#ifndef STORE_BUG_FIXED
+					bsOut.Write((uint8_t)files.size());
+#else
+					bsOut.Write((uint16_t)files.size());
+#endif
+#else
+					bsOut.Write((uint8_t)files.size());
+#endif
+					bsOut.Write(byteZero);
+					bsOut.Write(byteZero);
+					for(int i=0;i<files.size();i++)
+					bsOut.WriteAlignedBytes(files[i].sha1, 20);
+
+					if (files.size() == 0)
+					{
+#ifdef _REL047
+						bsOut.Write((uint16_t)0);
+#endif
+					}
+					else
+					{
+						bIsDownloadInProgress = true;
+					}
+
+				}
+
 				peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE_ORDERED, 0, packet->systemAddress, false);
 				
-				m_pFunctions->RequestClass(0,false);
-				
+				if (!bDownloadStore|| files.size() == 0)
+				{
+					call_OnStoreDownloadComplete();
+					if(!bManualSpawn)
+						m_pFunctions->RequestClass(0, false);
+				}
 				//Sometimes client sends an additional message which is omitted here: 0xbd. 
 			}	
 			break;
@@ -704,14 +895,15 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 						//player was driver of a vehicle
 						//iNPC->RemoveVehicleDriver(player->m_wVehicleId);
 					}*/
-					player->m_wVehicleId = 0;
-					player->m_byteSeatId = -1;
+					
 					CVehicle* vehicle = m_pVehiclePool->GetAt(player->m_wVehicleId);
 					if (vehicle)
 					{
 						if (vehicle->GetDriver() == bytePlayerId)
 							vehicle->RemoveDriver();
 					}
+					player->m_wVehicleId = 0;
+					player->m_byteSeatId = -1;
 				}
 				
 			}
@@ -958,12 +1150,14 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				uint8_t len;
 				bsIn.Read(len);
 				char* name;
-				name = (char*)malloc(sizeof(char) * len);
+				name = (char*)malloc(sizeof(char) * len + 1);
 				if (name)
 				{
 					bsIn.Read(name, len);
+					name[len] = '\0';
 					if(m_pPlayerPool->GetAt(playerId))
 						m_pPlayerPool->SetPlayerName(playerId, name);
+					free(name);
 				}
 			}
 			break;
@@ -1745,8 +1939,66 @@ int ConnectToServer(std::string hostname, int port, std::string npcname,std::str
 				}
 			}
 			break;
+#ifdef _REL047
+			case ID_GAME_MESSAGE_BULLET_FIRED:
+			{
+				RakNet::BitStream bsIn(packet->data, packet->length, false);
+				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
+				RakNet::BitStream bsUncomp;//Uncompressed
+				UnCompressBitStream(bsIn, bsUncomp);
+				//printf("Bullet-Fired Data\n");
+				//Read from bsUncomp;
+				uint8_t byte;
+				/*for (int i = 0; i < bsUncomp.GetNumberOfBytesUsed(); i++)
+				{
+					bsUncomp.Read(byte);
+					printf("%0.2x ", byte);
+				}
+				printf("\n");*/
+				bsUncomp.ResetReadPointer();
+				uint8_t playerId, weaponId;
+				float x, y, z;
+				if (bsUncomp.ReadBit())
+				{
+					//no extra byte in bullet-fired packet
+					
+					unsigned char bytearray[1];
+					bsUncomp.ReadBits(bytearray,4,true);
+					
+					playerId = bytearray[0];
+					bsUncomp.ReadBit();//Read a bit which is 0
+					bsUncomp.Read(weaponId);
+					//printf("player Id %d, weaponId %d\n", playerId, weaponId);
+					//float x, y, z;
+					bsUncomp.Read(z);
+					bsUncomp.Read(y);
+					bsUncomp.Read(x);
+					//printf("bullet-source is (%f, %f, %f)\n", x, y, z);
+				}
+				else
+				{
+					//one - extra byte in packet!
 
-
+					//ignoring one bit which might be 0 always, but not sure
+					bsUncomp.ReadBit();//player id max 100
+					
+					unsigned char bytearray[1] = { 0 };
+					bsUncomp.ReadBits(bytearray, 7, true);
+					playerId = bytearray[0];
+					bsUncomp.ReadBit();//Read a bit which is 0
+					bsUncomp.Read(weaponId);
+					//printf("player id %d, weaponId %d\n", playerId, weaponId);
+					//float x, y, z;
+					bsUncomp.Read(z);
+					bsUncomp.Read(y);
+					bsUncomp.Read(x);
+					//printf("bullet-source is ( %f, %f, %f)\n", x, y, z);
+				}
+				m_pEvents->OnBulletFired(weaponId, VECTOR(x, y, z));
+				
+			}
+			break;
+#endif
 			}
 		}
 		OnCycle();
@@ -2732,7 +2984,7 @@ void CheckSendOnFootSyncVE()
 	{
 		DWORD t = iNPC->VETickCount;
 		DWORD n = GetTickCount();
-		if (n - t > 650 || n - t < 0) //650 ms, after exit vehicle, send ofsyncdata
+		if (n - t > 1050 || n - t < 0) //1050 ms, after exit vehicle, send ofsyncdata
 		{
 			SendNPCOfSyncDataLV();
 			iNPC->WaitingForVEOnFootSync = false;
@@ -2756,6 +3008,23 @@ void OnCycle()
 	if (bConsoleInputEnabled)
 		CheckForConsoleInput();
 	CheckRemoveDeadBody();
+	if (bIsDownloadInProgress)
+	{
+		std::lock_guard<std::mutex> lock(flt_mtx);
+		if (shared_dwnld_cmpltd_signal)
+		{
+			bIsDownloadInProgress = false;
+			bIsDownloadCompleted = true;
+			//m_pEvents->OnStoreDownloadComplete();
+			shared_dwnld_cmpltd_signal = false; 
+			call_OnStoreDownloadComplete();
+			//RequestClass
+			if (!bManualSpawn)
+				m_pFunctions->RequestClass(0, false);
+
+		}
+	}
+	
 	m_pEvents->OnCycle();
 	DWORD dw_TickTwo = GetTickCount();
 	DWORD dw_interval = dw_TickTwo - dw_TickOne;

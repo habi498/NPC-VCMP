@@ -23,7 +23,8 @@ void LoadWeaponData()
     wepdata[18] = WeaponData(30.0, 630, 1000, 6, 135);
     wepdata[19] = WeaponData(20.0, 250, 450, 1, 80);
     wepdata[20] = WeaponData(15.0, 250, 750, 7, 100);
-    wepdata[21] = WeaponData(10.0, 250, 250, 1, 120);
+    //https://www.gtavice.com/weapons/ (stubby shotgun)
+    wepdata[21] = WeaponData(15.0, 250, 750, 1, 120);
     wepdata[22] = WeaponData(30.0, 119, 500, 50, 20);
     wepdata[23] = WeaponData(45.0, 59, 500, 30, 20);
     wepdata[24] = WeaponData(30.0, 60, 500, 30, 15);

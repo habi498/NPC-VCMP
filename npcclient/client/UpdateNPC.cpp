@@ -594,6 +594,11 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData, PacketPriority priority)
 #endif
 	}
 	unsigned char* data = bsOut.GetData();
+	/*for (int i = 0; i < bsOut.GetNumberOfBytesUsed(); i++)
+	{
+		printf("%0.2x ", data[i]);
+	}
+	printf("\n");*/
 	uint32_t sourcelen = bsOut.GetNumberOfBytesUsed();
 	uLongf destLen = compressBound(sourcelen - 1);//An upper bound, we do not compress message id 0x30
 	unsigned char* cmpdata = (unsigned char*)malloc(destLen);

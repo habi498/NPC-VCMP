@@ -23,11 +23,13 @@ add_executable (npcclient
 "client/Exports.cpp"
 "client/NPCFunctions4.cpp" 
 "client/NPCFunctions5.cpp"  
-"client/NPCFunctions6.cpp" )
+"client/NPCFunctions6.cpp" 
+"client/FileReceiver.cpp")
 
 if(REL047)
+#Add compression source file
+target_sources(npcclient PRIVATE "client/compress.cpp")
 #Use SlikeNet Static Library
-
 option( RAKNET_ENABLE_SAMPLES 	"Generate RakNet sample projects if true." 		FALSE  )
 option( RAKNET_ENABLE_DLL		"Generate the DLL project if true." 			FALSE )
 option( RAKNET_ENABLE_STATIC	"Generate the static library project if true." 	TRUE )
@@ -174,7 +176,7 @@ target_sources(npcclient PRIVATE
 "Raknet/VitaIncludes.cpp"
 "Raknet/WSAStartupSingleton.cpp"
 "Raknet/_FindFirst.cpp"
-"client/app.rc")
+"client/app.rc" )
 endif()
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	set(OUTPUT_BITNESS 64)
@@ -191,6 +193,9 @@ if(REL004)
 	message(STATUS "You are building for rel004")
     add_definitions(-D_REL004)
 	set_target_properties(npcclient PROPERTIES OUTPUT_NAME "npcclient_r004") 
+elseif(REL006) #after 1.8 beta3
+	message(STATUS "You are building for rel006")
+       add_definitions(-D_REL006)
 endif()
 
 target_include_directories(npcclient PRIVATE "${PROJECT_SOURCE_DIR}/npcclient")
@@ -210,6 +215,10 @@ else()
 option(DISABLE_DYNAMIC "Disable building squirrel-dynamic libraries" ON)
 #No need to include squirrel include directory, because in building squirrel, those will be included
 add_subdirectory("dependencies/squirrel-master" "dependencies/squirrel-master")
+if(OUTPUT_BITNESS EQUAL 32)  
+set_target_properties(squirrel_static PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
+set_target_properties(sqstdlib_static PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
+endif()
 target_link_libraries(npcclient squirrel_static)
 target_link_libraries(npcclient sqstdlib_static)
 endif()
@@ -243,7 +252,11 @@ else()
     if(FORCE_32 OR OUTPUT_BITNESS EQUAL 32)
         if(REL004)
             set_target_properties(npcclient PROPERTIES OUTPUT_NAME "npcclient32_r004")
-        else()
+        elseif(REL0471)
+			set_target_properties(npcclient PROPERTIES OUTPUT_NAME "npcclient32_0471")
+		elseif(REL0470)
+			set_target_properties(npcclient PROPERTIES OUTPUT_NAME "npcclient32_0470") 
+		else()
            set_target_properties(npcclient PROPERTIES OUTPUT_NAME "npcclient32")
         endif()
     else()
@@ -278,12 +291,24 @@ if(with-libreadline)
 	target_include_directories(npcclient PRIVATE ${with-libreadline}/include)
 else()
 message(STATUS "libreadline libraries not specified(-Dwith-libreadline=path). So it will be compiled")
+if(OUTPUT_BITNESS EQUAL 32)  
+message(STATUS "setting -m32 c flags and cxx flags to libreadline")
+#message(STATUS "Cxx flags is ${CMAKE_CXX_FLAGS} and c flags is ${CMAKE_C_FLAGS}")
+ExternalProject_Add(libreadline
+    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/readline-8.2
+    CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/readline-8.2/configure --prefix=<INSTALL_DIR> --enable-shared=false --enable-install-examples=false --with-curses
+    INSTALL_DIR ${CMAKE_BINARY_DIR}/npcclient/dependencies/libreadline
+    BINARY_DIR ${CMAKE_BINARY_DIR}/npcclient/dependencies/libreadline-out
+	CMAKE_ARGS "-DCMAKE_CXX_FLAGS=-m32 -DCMAKE_C_FLAGS=-m32"
+    BUILD_COMMAND ${MAKE})
+else()
 ExternalProject_Add(libreadline
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/readline-8.2
     CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/readline-8.2/configure --prefix=<INSTALL_DIR> --enable-shared=false --enable-install-examples=false --with-curses
     INSTALL_DIR ${CMAKE_BINARY_DIR}/npcclient/dependencies/libreadline
     BINARY_DIR ${CMAKE_BINARY_DIR}/npcclient/dependencies/libreadline-out
     BUILD_COMMAND ${MAKE})
+endif()
 target_include_directories(npcclient PRIVATE ${CMAKE_BINARY_DIR}/npcclient/dependencies/libreadline/include)
 target_link_libraries(npcclient ${CMAKE_BINARY_DIR}/npcclient/dependencies/libreadline/lib/libhistory.a)
 target_link_libraries(npcclient ${CMAKE_BINARY_DIR}/npcclient/dependencies/libreadline/lib/libreadline.a)
@@ -292,14 +317,26 @@ endif()
 
 if(with-ncurses)
 target_link_libraries(npcclient ${with-ncurses}/lib/libncurses.a)
+target_include_directories(npcclient PRIVATE ${with-libreadline}/include)
 else()
 message(STATUS "ncurses libraries not specified.(-Dwith-ncurses=path). So it will be compiled")
+if(OUTPUT_BITNESS EQUAL 32)  
+message(STATUS "setting -m32 c flags and cxx flags to libncurses")
+ExternalProject_Add(libncurses
+    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/ncurses-6.4
+    CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/ncurses-6.4/configure --prefix=<INSTALL_DIR> 
+    INSTALL_DIR ${CMAKE_BINARY_DIR}/npcclient/dependencies/libncurses
+    BINARY_DIR ${CMAKE_BINARY_DIR}/npcclient/dependencies/libncurses-out
+	CMAKE_ARGS "-DCMAKE_CXX_FLAGS=-m32 -DCMAKE_C_FLAGS=-m32"
+    BUILD_COMMAND ${MAKE})
+else()
 ExternalProject_Add(libncurses
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/ncurses-6.4
     CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/ncurses-6.4/configure --prefix=<INSTALL_DIR> 
     INSTALL_DIR ${CMAKE_BINARY_DIR}/npcclient/dependencies/libncurses
     BINARY_DIR ${CMAKE_BINARY_DIR}/npcclient/dependencies/libncurses-out
     BUILD_COMMAND ${MAKE})
+endif()
 target_link_libraries(npcclient ${CMAKE_BINARY_DIR}/npcclient/dependencies/libncurses/lib/libncurses.a)
 add_dependencies(npcclient libncurses)
 endif()

@@ -1,0 +1,13 @@
+# Target labels
+ libncurses
+# Source files and their labels
+/mnt/hgfs/C/Users/hhabi/source/repos/habi498/NPC-VCMP/out-linux/npcclient/CMakeFiles/libncurses
+/mnt/hgfs/C/Users/hhabi/source/repos/habi498/NPC-VCMP/out-linux/npcclient/CMakeFiles/libncurses.rule
+/mnt/hgfs/C/Users/hhabi/source/repos/habi498/NPC-VCMP/out-linux/npcclient/CMakeFiles/libncurses-complete.rule
+/mnt/hgfs/C/Users/hhabi/source/repos/habi498/NPC-VCMP/out-linux/npcclient/libncurses-prefix/src/libncurses-stamp/libncurses-build.rule
+/mnt/hgfs/C/Users/hhabi/source/repos/habi498/NPC-VCMP/out-linux/npcclient/libncurses-prefix/src/libncurses-stamp/libncurses-configure.rule
+/mnt/hgfs/C/Users/hhabi/source/repos/habi498/NPC-VCMP/out-linux/npcclient/libncurses-prefix/src/libncurses-stamp/libncurses-download.rule
+/mnt/hgfs/C/Users/hhabi/source/repos/habi498/NPC-VCMP/out-linux/npcclient/libncurses-prefix/src/libncurses-stamp/libncurses-install.rule
+/mnt/hgfs/C/Users/hhabi/source/repos/habi498/NPC-VCMP/out-linux/npcclient/libncurses-prefix/src/libncurses-stamp/libncurses-mkdir.rule
+/mnt/hgfs/C/Users/hhabi/source/repos/habi498/NPC-VCMP/out-linux/npcclient/libncurses-prefix/src/libncurses-stamp/libncurses-patch.rule
+/mnt/hgfs/C/Users/hhabi/source/repos/habi498/NPC-VCMP/out-linux/npcclient/libncurses-prefix/src/libncurses-stamp/libncurses-update.rule

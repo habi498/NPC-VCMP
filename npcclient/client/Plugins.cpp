@@ -207,6 +207,7 @@ BOOL CPlugins::LoadSinglePlugin(char* szPluginPath)
         PLUGIN_ADD_CALLBACK(QuitServer);
         PLUGIN_ADD_CALLBACK(IsWeaponAvailable);
         PLUGIN_ADD_CALLBACK(SetConfig);
+        PLUGIN_ADD_CALLBACK(FireBullet);
     }
     else return FALSE;
     pPlugin->pPluginInfo->structSize = sizeof(PluginInfo);

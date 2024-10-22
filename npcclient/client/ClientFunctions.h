@@ -158,6 +158,7 @@ public:
 	static void QuitServer();
 	static bool IsWeaponAvailable(uint8_t byteWeaponId);
 	static void SetConfig(uint32_t value);
+	static void FireBullet(uint8_t weaponid, float x, float y, float z);
 };
 
 

@@ -393,4 +393,16 @@ void CEvents::OnCycle()
             pPlugin->pPluginCalls->OnCycle();
     }
 }
+void CEvents::OnBulletFired(uint8_t byteWeaponId, VECTOR vecSourcePos)
+{
+    call_OnBulletFired(byteWeaponId, vecSourcePos);
+    PluginPool_s* pPlugin;
+    for (DWORD i = 0; i < m_pPlugins->GetPluginCount(); i++)
+    {
+        pPlugin = m_pPlugins->GetPlugin(i);
+        if (pPlugin->pPluginCalls->OnBulletFired)
+            pPlugin->pPluginCalls->OnBulletFired(byteWeaponId, vecSourcePos);
+    }
+}
+
 

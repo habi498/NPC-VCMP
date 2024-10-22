@@ -381,6 +381,10 @@ SQInteger fn_GetLocalValue(HSQUIRRELVM v)
         break;
     case I_ACTION: sq_pushinteger(v, npc->GetONFOOT_SYNC_DATA()->byteAction);
         break;
+    case B_CROUCHING: sq_pushbool(v, npc->GetONFOOT_SYNC_DATA()->IsCrouching);
+        break;
+    case B_RELOADING: sq_pushbool(v, npc->GetONFOOT_SYNC_DATA()->bIsReloading);
+        break;
     case F_CAR_ROTATIONX:
     if (npc->m_wVehicleId)
     {
@@ -420,7 +424,6 @@ SQInteger fn_SetLocalValue(HSQUIRRELVM v)
     SQFloat fvalue; SQInteger dwvalue;
     VECTOR vec; QUATERNION quat;
     SQBool bIsVector=SQFalse, bIsQuaternion=SQFalse;
-
     if (sq_gettype(v, 3) == OT_INTEGER)
     {
         sq_getinteger(v, 3, &dwvalue);
@@ -429,6 +432,12 @@ SQInteger fn_SetLocalValue(HSQUIRRELVM v)
     else if (sq_gettype(v, 3) == OT_FLOAT)
     {
         sq_getfloat(v, 3, &fvalue);
+    }
+    else if (sq_gettype(v, 3) == OT_BOOL)
+    {
+        SQBool bvalue;
+        sq_getbool(v, 3, &bvalue);
+        fvalue = static_cast<bool>(bvalue);
     }
     else if (sq_gettype(v, 3) == OT_INSTANCE)
     {
@@ -596,7 +605,21 @@ SQInteger fn_SetLocalValue(HSQUIRRELVM v)
             npc->GetONFOOT_SYNC_DATA()->byteAction = static_cast<uint8_t> (fvalue); break;
         }
         else return sq_throwerror(v, "The value corresponding to this field must be a quaternion");
-    
+        break;
+    case B_CROUCHING:
+        if (sq_gettype(v, 3) == OT_BOOL)
+        {
+            npc->GetONFOOT_SYNC_DATA()->IsCrouching = static_cast<bool> (fvalue); break;
+        }
+        else return sq_throwerror(v, "The value corresponding to this field must be boolean");
+        break;
+    case B_RELOADING:
+        if (sq_gettype(v, 3) == OT_BOOL)
+        {
+            npc->GetONFOOT_SYNC_DATA()->bIsReloading = static_cast<bool> (fvalue); break;
+        }
+        else return sq_throwerror(v, "The value corresponding to this field must be boolean");
+        break;
     default: return 0;
     }
     sq_pushbool(v, SQTrue);
@@ -844,7 +867,7 @@ void RegisterNPCFunctions3()
     register_global_func(v, ::fn_FireSniperRifleEx, "FireSniperRifleEx", 4, "tixx");
     //register_global_func(v, ::fn_FireProjectile, "FireProjectile", 7, "tifffff");
     register_global_func(v, ::fn_SendShotInfo, "SendShotInfo", -3, "tii|o");
-    register_global_func(v, ::fn_SetLocalValue, "SetLocalValue", 3, "tii|f|x");
+    register_global_func(v, ::fn_SetLocalValue, "SetLocalValue", 3, "tii|f|x|b");
     register_global_func(v, ::fn_GetLocalValue, "GetLocalValue", 2, "ti");
     register_global_func(v, ::fn_SendOnFootSyncDataLV, "SendOnFootSyncDataLV", 1, "t");
     register_global_func(v, ::fn_SendDeathInfo, "SendDeathInfo", 4, "tiii");

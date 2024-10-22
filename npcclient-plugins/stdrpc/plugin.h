@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include "utils.h"
 #define API_MAJOR 1
-#define API_MINOR 6
+#define API_MINOR 8
 enum class funcError {
 	NoError = 0,
 	EntityNotFound = 1,
@@ -189,6 +189,7 @@ struct PluginFuncs {
 	void (*QuitServer)() {};
 	bool (*IsWeaponAvailable)(uint8_t byteWeaponId) {};
 	void (*SetConfig)(uint32_t dw_value) {};
+	void (*FireBullet)(uint8_t weapon, float x, float y, float z) {};
 };
 
 struct PluginCallbacks {
@@ -226,6 +227,10 @@ struct PluginCallbacks {
 	void (*OnObjectStreamIn)(uint16_t wObjectId) {};
 	void (*OnObjectDestroyed)(uint16_t wObjectId) {};
 	void (*OnObjectUpdate)(uint16_t wObjectId, objectUpdate update) {};
+	
+	void (*OnVehicleSetSpeedRequest)(uint16_t wVehicleId, VECTOR vecSpeed, bool bAdd, bool isRelative) {};
+	void (*OnVehicleSetTurnSpeedRequest)(uint16_t wVehicleId, VECTOR vecSpeed, bool bAdd, bool isRelative) {};
+	void (*OnBulletFired)(uint8_t byteWeaponId, VECTOR vecSourcePos) {};
 };
 
 

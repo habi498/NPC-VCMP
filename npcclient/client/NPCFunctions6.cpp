@@ -1,5 +1,6 @@
 
 #include "main.h"
+#include <cmath>
 extern HSQUIRRELVM v;
 extern CPlayerPool* m_pPlayerPool;
 extern NPC* iNPC;
@@ -11,6 +12,9 @@ extern RakNet::RakPeerInterface* peer;
 extern RakNet::SystemAddress systemAddress;
 extern CVehiclePool* m_pVehiclePool;
 extern uint32_t configvalue;
+extern std::string store_download_location;
+extern bool bDownloadStore;
+extern bool bIsDownloadInProgress;
 SQInteger fn_Suicide(HSQUIRRELVM v)
 {
 	if (m_pFunctions->Suicide() == funcError::NoError)
@@ -275,6 +279,55 @@ SQInteger fn_InPolyTest(HSQUIRRELVM v)
 		sq_pushbool(v, SQFalse);
 	return 1;
 }
+SQInteger fn_FireBullet(HSQUIRRELVM v)
+{
+#ifdef _REL047
+	SQInteger weaponId;
+	sq_getinteger(v, 2, &weaponId);
+	HSQOBJECT* x, * y, * z;
+	x = (HSQOBJECT*)malloc(sizeof(HSQOBJECT));
+	if (!x)return sq_throwerror(v, "Error. Memory allocation failed");
+	y = (HSQOBJECT*)malloc(sizeof(HSQOBJECT));
+	if (!y)return sq_throwerror(v, "Error. Memory allocation failed");
+	z = (HSQOBJECT*)malloc(sizeof(HSQOBJECT));
+	if (!z)return sq_throwerror(v, "Error. Memory allocation failed");
+	sq_resetobject(x);
+	sq_resetobject(y);
+	sq_resetobject(z);
+	sq_getstackobj(v, 3, x);
+	sq_getstackobj(v, 4, y);
+	sq_getstackobj(v, 5, z);
+	SQFloat _x, _y, _z;
+	_x=sq_objtofloat(x);
+	_y=sq_objtofloat(y);
+	_z=sq_objtofloat(z);
+	free(x); free(y); free(z);
+	m_pFunctions->FireBullet(weaponId, _x, _y, _z);
+#endif
+	return 0;
+}
+SQInteger fn_GetStoreLocation(HSQUIRRELVM v)
+{
+	if (bDownloadStore)
+		sq_pushstring(v, store_download_location.c_str(), -1);
+	else
+		sq_pushnull(v);
+	return 1;
+}
+SQInteger fn_IsStoreDownloadInProgress(HSQUIRRELVM v)
+{
+	if (bDownloadStore)return 0;//return null
+	if (bIsDownloadInProgress)
+		sq_pushbool(v, SQTrue);
+	else
+		sq_pushbool(v, SQFalse);
+	return 1;
+}
+SQInteger fn_GetStoreUrl(HSQUIRRELVM v)
+{
+	sq_pushstring(v, iNPC->storeURL.c_str(),-1);
+	return 1;
+}
 void RegisterNPCFunctions6()
 {
 	register_global_func(v, ::fn_Suicide, "Suicide", 1, "t");
@@ -291,4 +344,9 @@ void RegisterNPCFunctions6()
 	register_global_func(v, ::fn_GetMyArmour, "GetMyArmour", 1, "t");
 	register_global_func(v, ::fn_SendPrivMsg, "SendPrivMsg", 3, "tis");
 	register_global_func(v, ::fn_InPolyTest, "InPoly", -9, "tf|if|if|if|if|if|if|if|i");
+	register_global_func(v, ::fn_FireBullet, "FireBullet", 5, "tif|if|if|i");
+	register_global_func(v, ::fn_GetStoreLocation, "GetStoreLocation", 1, "t");
+	register_global_func(v, ::fn_IsStoreDownloadInProgress, "IsStoreDownloading", 1, "t");
+	register_global_func(v, ::fn_GetStoreUrl, "GetStoreURL", 1, "t");
+
 }

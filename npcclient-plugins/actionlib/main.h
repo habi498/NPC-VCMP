@@ -49,6 +49,7 @@ public:
 	DWORD m_dwNextCycle;
 	bool m_bTargetOutOfRange;
 	bool m_bIsReloadingWeapon;
+	bool m_bIsFiringBullet;
 	NPC()
 	{
 		m_bHasTarget = false;
@@ -57,6 +58,7 @@ public:
 		m_dwNextCycle = 0;
 		m_bTargetOutOfRange = false;
 		m_bIsReloadingWeapon = false;
+		m_bIsFiringBullet = false;
 	}
 	void ClearTarget(REASON reason);
 };

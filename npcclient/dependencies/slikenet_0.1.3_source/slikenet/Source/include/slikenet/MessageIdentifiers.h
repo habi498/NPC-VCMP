@@ -155,14 +155,11 @@ enum DefaultMessageIDTypes
 	///  and partLength in OnFileProgress in FileListTransferCBInterface.h
 	ID_DOWNLOAD_PROGRESS,
 	
-	/// ConnectionGraph2 plugin - In a client/server environment, a client other than ourselves has disconnected gracefully.
-	///   Packet::systemAddress is modified to reflect the systemAddress of this client.
-	ID_REMOTE_DISCONNECTION_NOTIFICATION,
-	/// ConnectionGraph2 plugin - In a client/server environment, a client other than ourselves has been forcefully dropped.
-	///  Packet::systemAddress is modified to reflect the systemAddress of this client.
-	ID_REMOTE_CONNECTION_LOST,
-	/// ConnectionGraph2 plugin: Bytes 1-4 = count. for (count items) contains {SystemAddress, RakNetGUID, 2 byte ping}
-	ID_REMOTE_NEW_INCOMING_CONNECTION,
+	/*
+	
+	0.4.7.1 does not need this
+
+	*/
 
 	/// FileListTransfer plugin - Setup data
 	ID_FILE_LIST_TRANSFER_HEADER,
@@ -170,6 +167,22 @@ enum DefaultMessageIDTypes
 	ID_FILE_LIST_TRANSFER_FILE,
 	// Ack for reference push, to send more of the file
 	ID_FILE_LIST_REFERENCE_PUSH_ACK,
+
+	//0.4.7.1 all messed up. however bringing original raknet 0x4b to top from bottom so it becomes 0x22
+	/// FileListTransfer transferring large files in chunks that are read only when needed, to save memory
+		ID_FILE_LIST_REFERENCE_PUSH,
+		/// Force the ready event to all set
+		ID_READY_EVENT_FORCE_ALL_SET,
+
+	//0.4.7.1
+		/// ConnectionGraph2 plugin - In a client/server environment, a client other than ourselves has disconnected gracefully.
+	///   Packet::systemAddress is modified to reflect the systemAddress of this client.
+		ID_REMOTE_DISCONNECTION_NOTIFICATION,
+		/// ConnectionGraph2 plugin - In a client/server environment, a client other than ourselves has been forcefully dropped.
+		///  Packet::systemAddress is modified to reflect the systemAddress of this client.
+		ID_REMOTE_CONNECTION_LOST,
+		/// ConnectionGraph2 plugin: Bytes 1-4 = count. for (count items) contains {SystemAddress, RakNetGUID, 2 byte ping}
+		ID_REMOTE_NEW_INCOMING_CONNECTION,
 
 	/// DirectoryDeltaTransfer plugin - Request from a remote system for a download of a directory
 	ID_DDT_DOWNLOAD_REQUEST,
@@ -272,11 +285,7 @@ enum DefaultMessageIDTypes
 	ID_RPC_REMOTE_ERROR,
 	/// Plugin based replacement for RPC system
 	ID_RPC_PLUGIN,
-
-	/// FileListTransfer transferring large files in chunks that are read only when needed, to save memory
-	ID_FILE_LIST_REFERENCE_PUSH,
-	/// Force the ready event to all set
-	ID_READY_EVENT_FORCE_ALL_SET,
+	
 
 	/// Rooms function
 	ID_ROOMS_EXECUTE_FUNC,

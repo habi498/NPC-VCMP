@@ -397,6 +397,13 @@ funcError CFunctions::ExitVehicleEx(bool fosd,uint8_t style , uint8_t byte1, uin
         ad 03 27 00 fall from bike while jumping*/
         bsOut.Write(style); bsOut.Write(byte1); bsOut.Write(byte2);
         peer->Send(&bsOut, HIGH_PRIORITY, RELIABLE, 0, systemAddress, false);
+        //Empty the driver of the vehicle if npc was
+        CVehicle* vehicle = m_pVehiclePool->GetAt(npc->m_wVehicleId);
+        if (vehicle)
+        {
+            if (vehicle->GetDriver() == iNPC->GetID())
+                vehicle->RemoveDriver();
+        }
         if (fosd) //follow onfoot sync data
         {
             VECTOR vecPos;
@@ -439,6 +446,13 @@ funcError CFunctions::ExitVehicle()
         ad 03 27 00 fall from bike while jumping*/
         bsOut.Write((uint8_t)0x01); bsOut.Write((uint16_t)0);//normal
         peer->Send(&bsOut, HIGH_PRIORITY, RELIABLE, 0, systemAddress, false);
+        //Empty the driver of the vehicle if npc was
+        CVehicle* vehicle = m_pVehiclePool->GetAt(npc->m_wVehicleId);
+        if (vehicle)
+        {
+            if (vehicle->GetDriver() == iNPC->GetID())
+                vehicle->RemoveDriver();
+        }
         return SetLastError(funcError::NoError);
     }
     else return SetLastError(funcError::VehicleNotEntered);
@@ -1183,21 +1197,28 @@ funcError CFunctions::RequestVehicleEnter(uint16_t wVehicleId, uint8_t byteSeatI
     default:
         switch (byteSeatId)
         {
-        case 0:bsOut.Write((uint8_t)0x0b);
-            bsOut.Write((uint8_t)0x04); break;
+      /*  case 0:bsOut.Write((uint8_t)0x0b);
+            bsOut.Write((uint8_t)0x04); break;*/
+         
+        //dat 15, flag=1
+        case 0:bsOut.Write((uint8_t)0x0f);
+            bsOut.Write((uint8_t)0x01); break;
+        //dat 11, flag=4
         case 1:bsOut.Write((uint8_t)0x0b);
             bsOut.Write((uint8_t)0x04); break;
+        //dat 16, flag=2
         case 2:bsOut.Write((uint8_t)0x10);
             bsOut.Write((uint8_t)0x02); break;
+        //dat 12, flag=8
         case 3:bsOut.Write((uint8_t)0x0c);
             bsOut.Write((uint8_t)0x08); break;
         
         default:return funcError::VehicleSeatIdInvalid;
         }
         if (byteSeatId == 0)
-            bsOut.Write((uint8_t)0x12);
+            bsOut.Write((uint8_t)0x12); //obj 18
         else
-            bsOut.Write((uint8_t)0x11);
+            bsOut.Write((uint8_t)0x11); //obj 17
         break;
     }
     
@@ -1342,4 +1363,21 @@ void CFunctions::FireProjectile(uint8_t byteWeapon, VECTOR vecPos, float r1, flo
     bsOut.Write(r7);
     peer->Send(&bsOut, IMMEDIATE_PRIORITY, RELIABLE, 0, systemAddress, false);
 
+}
+void CFunctions::FireBullet(uint8_t weapon, float x, float y, float z)
+{
+#ifdef _REL047
+    SetLastError(funcError::NoError);
+    RakNet::BitStream bsOut;
+    bsOut.Write((RakNet::MessageID)(ID_GAME_MESSAGE_FIRE_BULLET));
+    WriteBit0(&bsOut);
+    bsOut.Write(weapon);
+    bsOut.Write(z);// z first
+    bsOut.Write(y);
+    bsOut.Write(x);
+    //printf("No:of bytes used is %d\n", bsOut.GetNumberOfBytesUsed());
+    //bsOut.Write(x);
+    CompressBitStream(bsOut);
+    peer->Send(&bsOut, PacketPriority::HIGH_PRIORITY, UNRELIABLE_SEQUENCED, 0, systemAddress, false);
+#endif
 }

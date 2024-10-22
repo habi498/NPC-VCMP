@@ -517,6 +517,30 @@ void call_OnVehicleSetTurnSpeedRequest(uint16_t wVehicleId, VECTOR vecSpeed, boo
     }
     sq_settop(v, top); //restores the original stack size
 }
+void call_OnBulletFired(uint8_t byteWeaponId, VECTOR vecSourcePos)
+{
+    int top = sq_gettop(v); //saves the stack size before the call
+    sq_pushroottable(v); //pushes the global table
+    sq_pushstring(v, _SC("OnBulletFired"), -1);
+    if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
+        sq_pushroottable(v); //push the 'this' (in this case is the global table)
+        sq_pushinteger(v, byteWeaponId);
+        sq_pushvector(v, vecSourcePos);
+        sq_call(v, 3, 0, 1); //calls the function 
+    }
+    sq_settop(v, top); //restores the original stack size
+}
+void call_OnStoreDownloadComplete()
+{
+    int top = sq_gettop(v); //saves the stack size before the call
+    sq_pushroottable(v); //pushes the global table
+    sq_pushstring(v, _SC("OnStoreDownloadComplete"), -1);
+    if (SQ_SUCCEEDED(sq_get(v, -2))) { //gets the field 'foo' from the global table
+        sq_pushroottable(v); //push the 'this' (in this case is the global table)
+        sq_call(v, 1, 0, 1); //calls the function 
+    }
+    sq_settop(v, top); //restores the original stack size
+}
 bool StartSquirrel(std::string file, std::string location, std::vector<std::string> params, std::string execstring)
 {
     v = sq_open(1024); // creates a VM with initial stack size 1024 

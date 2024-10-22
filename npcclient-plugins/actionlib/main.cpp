@@ -98,9 +98,18 @@ bool fn_CallOnPullingTrigger(ONFOOT_SYNC_DATA* pOfSyncData)
 		sq->pushvector(v, pOfSyncData->vecSpeed);
 		sq->pushvector(v, pOfSyncData->vecAimPos);
 		sq->pushvector(v, pOfSyncData->vecAimDir);
-		sq->pushbool(v, pOfSyncData->IsCrouching);
-		sq->pushbool(v, pOfSyncData->bIsReloading);
-		sq->call(v, 13, 1, 0);
+		if (pOfSyncData->IsCrouching)
+			sq->pushbool(v, SQTrue);
+		else
+			sq->pushbool(v, SQFalse);
+
+		if (pOfSyncData->bIsReloading)
+			sq->pushbool(v, SQTrue);
+		else
+			sq->pushbool(v, SQFalse);
+		//printf("action calculated is %d\n", pOfSyncData->byteAction);
+		//sq->pushinteger(v, pOfSyncData->byteAction);
+		sq->call(v, 13, 1, 1);
 		if (sq->gettype(v, -1) == OT_BOOL)
 		{
 			SQBool retval;
@@ -148,22 +157,26 @@ void OnCycle()
 			VECTOR dis = npcPos - tPos;
 			if (weapon > 33)return;
 			
-			if (dis.GetMagnitude() > wepdata[weapon].fRange && npc.m_bTargetOutOfRange==false)
+			if (dis.GetMagnitude() > wepdata[weapon].fRange )
 			{
-				int top = sq->gettop(v);
-				sq->pushroottable(v);
-				sq->pushstring(v, "OnTargetOutOfRange", -1);
-				if (SQ_SUCCEEDED(sq->get(v, -2)))
+				if(npc.m_bTargetOutOfRange == false)
 				{
+					int top = sq->gettop(v);
 					sq->pushroottable(v);
-					sq->pushinteger(v, npc.m_byteTargetId);
-					sq->call(v, 2, 0, 1);
+					sq->pushstring(v, "OnTargetOutOfRange", -1);
+					if (SQ_SUCCEEDED(sq->get(v, -2)))
+					{
+						sq->pushroottable(v);
+						sq->pushinteger(v, npc.m_byteTargetId);
+						sq->call(v, 2, 0, 1);
+					}
+					sq->settop(v, top);
+					npc.m_bTargetOutOfRange = true;
 				}
-				sq->settop(v, top);
-				npc.m_bTargetOutOfRange = true;
 				return;//player out of range;
 			}
 			npc.m_bTargetOutOfRange = false;
+			
 			//Now, shoot it
 			
 			uint8_t slotId = GetSlotIdFromWeaponId(weapon);
@@ -175,6 +188,11 @@ void OnCycle()
 				ammo = 0;
 			float fAngle = (float)atan2(-(tPos.X - npcPos.X), tPos.Y - npcPos.Y);
 			VECTOR vecAimPos = VECTOR(tPos.X, tPos.Y, tPos.Z);
+			uint8_t t = funcs->GetPlayerAction(npc.m_byteTargetId);
+			if (t == 42||t==43)//lying on ground/getting up, credits: vitovc
+			{
+				vecAimPos.Z -= 0.5;
+			}
 			VECTOR vecAimDir = VECTOR((float)PI, (float)PI, -fAngle);
 			uint32_t keys = 512 | 64;
 			ONFOOT_SYNC_DATA* OfSyncData;
@@ -194,9 +212,13 @@ void OnCycle()
 					OfSyncData->dwKeys = 512 | 64;
 					OfSyncData->bIsReloading = false;
 					OfSyncData->byteCurrentWeapon = weapon;
-					if(fn_CallOnPullingTrigger(OfSyncData))
+					if (fn_CallOnPullingTrigger(OfSyncData))
+					{
 						funcs->SendOnFootSyncDataEx2(*OfSyncData);
+						funcs->FireBullet(weapon, 0,0,0);
+					}
 					npc.m_dwLastFired = now;
+					npc.m_bIsFiringBullet = true;
 					if ((ammo % wepdata[weapon].byteClipsize) == 0)
 					{
 						npc.m_bIsReloadingWeapon = true;
@@ -213,7 +235,9 @@ void OnCycle()
 			}
 			else
 			{
-				if (now - npc.m_dwLastFired >= wepdata[weapon].wReloadTimeMs)
+				//npc is reloading weapon
+				if ((now - npc.m_dwLastFired)
+					>= ( wepdata[weapon].wReloadTimeMs))
 				{
 					fn_CheckWeaponChange(weapon);
 					OfSyncData->vecAimPos = vecAimPos;
@@ -228,7 +252,10 @@ void OnCycle()
 					OfSyncData->wAmmo = ammo;
 														 //Decrease ammo first due to some reasons.
 					if (fn_CallOnPullingTrigger(OfSyncData))
+					{
 						funcs->SendOnFootSyncDataEx2(*OfSyncData);
+						funcs->FireBullet(weapon, 0,0,0);
+					}
 					npc.m_dwLastFired = now;
 					if ((ammo % wepdata[weapon].byteClipsize) == 0)
 					{
@@ -286,7 +313,11 @@ bool HasEnoughAmmo(uint8_t weaponId)
 	sq->settop(v, top);
 	return false;
 }
-
+//TODO
+bool IsTargetInRangeOfGun()
+{
+	return true;
+}
 uint8_t SelectGun()
 {
 	uint8_t weapon=funcs->GetPlayerWeapon(funcs->GetNPCId());
