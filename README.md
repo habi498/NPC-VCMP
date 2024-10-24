@@ -186,3 +186,5 @@ enables npc to load ammo and shoot at any player. LibAction.
 
 **Version 1.7 beta3**( 08 October 2023)  
 --Fixed npc getting kicked when adding armour/health/weapon from serverside  
+
+**See Changelog.txt for changes after October 2023.**
