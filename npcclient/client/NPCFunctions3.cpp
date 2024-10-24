@@ -385,6 +385,8 @@ SQInteger fn_GetLocalValue(HSQUIRRELVM v)
         break;
     case B_RELOADING: sq_pushbool(v, npc->GetONFOOT_SYNC_DATA()->bIsReloading);
         break;
+    case B_AIM_UPDATE:sq_pushbool(v, npc->GetONFOOT_SYNC_DATA()->IsPlayerUpdateAiming);
+        break;
     case F_CAR_ROTATIONX:
     if (npc->m_wVehicleId)
     {
@@ -617,6 +619,13 @@ SQInteger fn_SetLocalValue(HSQUIRRELVM v)
         if (sq_gettype(v, 3) == OT_BOOL)
         {
             npc->GetONFOOT_SYNC_DATA()->bIsReloading = static_cast<bool> (fvalue); break;
+        }
+        else return sq_throwerror(v, "The value corresponding to this field must be boolean");
+        break;
+    case B_AIM_UPDATE:
+        if (sq_gettype(v, 3) == OT_BOOL)
+        {
+            npc->GetONFOOT_SYNC_DATA()->IsPlayerUpdateAiming = static_cast<bool> (fvalue); break;
         }
         else return sq_throwerror(v, "The value corresponding to this field must be boolean");
         break;

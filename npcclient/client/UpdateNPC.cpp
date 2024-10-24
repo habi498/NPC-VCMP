@@ -575,8 +575,14 @@ void SendNPCSyncData(ONFOOT_SYNC_DATA* m_pOfSyncData, PacketPriority priority)
 #ifdef NPC_SHOOTING_ENABLED
 		if (m_pOfSyncData->IsPlayerUpdateAiming)
 			bsOut.Write((uint8_t)0xa7);
-		else
-			bsOut.Write((uint8_t)0x03);
+		else 
+		{
+			/*if (m_pOfSyncData->byteAction == 0x11)
+				bsOut.Write((uint8_t)0x07);
+			else*/
+				bsOut.Write((uint8_t)0x27);
+		}
+			
 		if (m_pOfSyncData->IsPlayerUpdateAiming)
 		{
 			uint16_t wAimDirX, wAimDirY, wAimDirZ;
@@ -800,7 +806,7 @@ void CheckAction(ONFOOT_SYNC_DATA* m_pOfSyncData)
 		//new model(most probably work)
 		/*First Calculate byteAction if not provided.*/
 		//If reloading, aiming or attacking (0x10 and 0x11), set byteAction
-	if ((m_pOfSyncData->dwKeys & 64) && !(m_pOfSyncData->dwKeys & 512))
+	if ((m_pOfSyncData->dwKeys & 0x40) && !(m_pOfSyncData->dwKeys & 512))
 		m_pOfSyncData->byteAction = 0x01; //when reloading keys=64, firing 572
 	else
 	{
@@ -814,7 +820,7 @@ void CheckAction(ONFOOT_SYNC_DATA* m_pOfSyncData)
 		{
 			m_pOfSyncData->byteAction = 0x0c;
 		}
-		else if (m_pOfSyncData->dwKeys & 0x40) //attacking
+		else if (m_pOfSyncData->dwKeys & 0x200) //attacking
 		{
 			if (m_pOfSyncData->byteCurrentWeapon <= 10)//melee weapons
 				m_pOfSyncData->byteAction = 0x11;

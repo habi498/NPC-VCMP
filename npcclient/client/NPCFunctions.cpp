@@ -572,6 +572,7 @@ void RegisterConsts() {
     NPC04_RegisterSquirrelConst(v, "I_ACTION", I_ACTION);
     NPC04_RegisterSquirrelConst(v, "B_CROUCHING", B_CROUCHING);
     NPC04_RegisterSquirrelConst(v, "B_RELOADING", B_RELOADING);
+    NPC04_RegisterSquirrelConst(v, "B_AIM_UPDATE", B_AIM_UPDATE);
 
 
     NPC04_RegisterSquirrelConst(v, "PLAYERUPDATE_NORMAL", vcmpPlayerUpdateNormal);
