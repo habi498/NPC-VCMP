@@ -1,1 +1,0 @@
-cmd='/mnt/hgfs/C/Users/hhabi/source/repos/habi498/NPC-VCMP/npcclient/dependencies/readline-8.2/configure;--prefix=<INSTALL_DIR>;--enable-shared=false;--enable-install-examples=false;--with-curses'
