@@ -137,10 +137,11 @@ or invalid user data.");
         }
         data = temp; size += 4;
         memmove(data + 4, data, size - 4);
-        *(uint32_t*)(data) = RPC_STREAM_IDENTIFIER;
+        *(uint32_t*)(data) = (uint32_t)RPC_STREAM_IDENTIFIER;
         vcmpError e=VCMP->SendClientScriptData((int32_t)playerid, (const void*)data, size);
         free(data);
-        if (e == vcmpErrorNone)sq->pushbool(v, SQTrue);
+        if (e == vcmpErrorNone)
+            sq->pushbool(v, SQTrue);
         else sq->pushbool(v, SQFalse);
         return 1;
     }
@@ -161,7 +162,7 @@ SQRESULT FormatBuffer(HSQUIRRELVM v, SQInteger stackIndex, uint8_t* &buffer, siz
     buffer = temp; size += 1;
     SQUnsignedInteger sizeOfUserData, sizeOfUserDataActual; uint16_t len;
     SQUserPointer userdata;
-
+    SQInteger j;
     switch(sq->gettype(v, stackIndex))
     {
     case OT_NULL:
@@ -172,7 +173,9 @@ SQRESULT FormatBuffer(HSQUIRRELVM v, SQInteger stackIndex, uint8_t* &buffer, siz
         temp = (uint8_t*)realloc(buffer, size + 4);
         if (!temp) { free(buffer); return sq->throwerror(v, "Error in allocating memory"); }
         buffer = temp; size += 4;
-        sq->getinteger(v, stackIndex, (SQInteger*)&buffer[size - 4]);
+        sq->getinteger(v, stackIndex, &j);
+        //j will be 8 bytes but we shrink it to 4 bytes
+        *(uint32_t*)(buffer+size - 4)=(uint32_t)j;
         break;
     case OT_FLOAT:
         buffer[size - 1] = (char)('f');

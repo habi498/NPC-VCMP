@@ -316,7 +316,7 @@ SQInteger fn_GetStoreLocation(HSQUIRRELVM v)
 }
 SQInteger fn_IsStoreDownloadInProgress(HSQUIRRELVM v)
 {
-	if (bDownloadStore)return 0;//return null
+	if (!bDownloadStore)return 0;//return null
 	if (bIsDownloadInProgress)
 		sq_pushbool(v, SQTrue);
 	else

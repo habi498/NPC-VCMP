@@ -31,9 +31,9 @@
 #include "Raknet/MessageIdentifiers.h"
 #include "Raknet/BitStream.h"
 #include "Raknet/RakNetTypes.h"  // MessageID
-#include "RakNet/FileListTransfer.h"
-#include "RakNet/FileListTransferCBInterface.h"
-#include "RakNet/SuperFastHash.h"
+#include "Raknet/FileListTransfer.h"
+#include "Raknet/FileListTransferCBInterface.h"
+#include "Raknet/SuperFastHash.h"
 #endif
 #ifdef _WIN32
 

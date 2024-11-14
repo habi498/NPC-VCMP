@@ -215,7 +215,7 @@ else()
 option(DISABLE_DYNAMIC "Disable building squirrel-dynamic libraries" ON)
 #No need to include squirrel include directory, because in building squirrel, those will be included
 add_subdirectory("dependencies/squirrel-master" "dependencies/squirrel-master")
-if(OUTPUT_BITNESS EQUAL 32)  
+if(FORCE_32)  
 set_target_properties(squirrel_static PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
 set_target_properties(sqstdlib_static PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
 endif()
